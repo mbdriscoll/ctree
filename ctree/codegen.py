@@ -1,36 +1,72 @@
 from ctree.visitors import NodeVisitor
 from ctree.nodes import *
 
-CTREE_OP_TO_STR = {
-  Add:     "+",    Sub:     "-",
-  Mul:     "*",    Div:     "/",
-  Mod:     "%",
-  Gt:      ">",    Lt:      "<",
-  GtE:     ">=",   LtE:     "<=",
-  Eq:      "+=",   NotEq:   "!=",
-  BitAnd:  "&",    BitOr:   "|",
-  BitShL:  "<<",   BitShR:  ">>",
-  BitXor:  "^",    BitNot:  "~",
-  And:     "&&",   Or:      "||",
-  Xor:     "^",    Not:     "!",
-  Inc:     "++",   Dec:     "++",
-  Ref:     "&",    Deref:   "*",
+CTREE_NODE_TO_PRECEDENCE = {
+  Add:     6,   Sub:     6,
+  Mul:     5,   Div:     5,
+  Mod:     5,   Not:     3,
+  Gt:      8,   Lt:      8,
+  GtE:     8,   LtE:     8,
+  Eq:      9,   NotEq:   9,
+  BitAnd:  10,  BitOr:   12,
+  BitShL:  7,   BitShR:  7,
+  BitXor:  11,  BitNot:  3,
+  And:     13,  Or:      14,
+  PreInc:  3,   PreDec:  3,
+  PostInc: 2,   PostDec: 2,
+  Ref:     3,   Deref:   3,
 }
 
 class CodeGenerator(NodeVisitor):
   """
   Return a string containing the program text.
   """
-  def visit_BinaryOp(self, node):
+  def visit_UnaryOp(self, node, op):
+    if isinstance(node, (PostInc, PostDec)):
+      return "%s%s" % (node.arg, op)
+    else:
+      return "%s%s" % (op, node.arg)
+
+  def visit_Plus(self, node):    return self.visit_UnaryOp(node, "+")
+  def visit_Minus(self, node):   return self.visit_UnaryOp(node, "-")
+  def visit_Not(self, node):     return self.visit_UnaryOp(node, "!")
+  def visit_BitNot(self, node):  return self.visit_UnaryOp(node, "~")
+  def visit_PreInc(self, node):  return self.visit_UnaryOp(node, "++")
+  def visit_PreDec(self, node):  return self.visit_UnaryOp(node, "--")
+  def visit_PostInc(self, node): return self.visit_UnaryOp(node, "++")
+  def visit_PostDec(self, node): return self.visit_UnaryOp(node, "--")
+  def visit_Ref(self, node):     return self.visit_UnaryOp(node, "&")
+  def visit_Deref(self, node):   return self.visit_UnaryOp(node, "*")
+
+  def visit_BinaryOp(self, node, op):
     lhs = self.visit(node.left)
-    op = CTREE_OP_TO_STR[type(node.op)]
     rhs = self.visit(node.right)
     return "%s %s %s" % (lhs, op, rhs)
 
-  def visit_UnaryOp(self, node):
-    arg = self.visit(node.arg)
-    op = CTREE_OP_TO_STR[type(node.op)]
-    return "%s%s" % (op, arg)
+  def visit_Add(self, node):     return self.visit_BinaryOp(node, "+")
+  def visit_Sub(self, node):     return self.visit_BinaryOp(node, "-")
+  def visit_Mul(self, node):     return self.visit_BinaryOp(node, "*")
+  def visit_Div(self, node):     return self.visit_BinaryOp(node, "/")
+  def visit_Mod(self, node):     return self.visit_BinaryOp(node, "%")
+  def visit_Gt(self, node):      return self.visit_BinaryOp(node, ">")
+  def visit_Lt(self, node):      return self.visit_BinaryOp(node, "<")
+  def visit_GtE(self, node):     return self.visit_BinaryOp(node, ">=")
+  def visit_LtE(self, node):     return self.visit_BinaryOp(node, "<=")
+  def visit_Eq(self, node):      return self.visit_BinaryOp(node, "==")
+  def visit_NotEq(self, node):   return self.visit_BinaryOp(node, "!=")
+  def visit_BitAnd(self, node):  return self.visit_BinaryOp(node, "&")
+  def visit_BitOr(self, node):   return self.visit_BinaryOp(node, "|")
+  def visit_BitShL(self, node):  return self.visit_BinaryOp(node, "<<")
+  def visit_BitShR(self, node):  return self.visit_BinaryOp(node, ">>")
+  def visit_BitXor(self, node):  return self.visit_BinaryOp(node, "^")
+  def visit_And(self, node):     return self.visit_BinaryOp(node, "&&")
+  def visit_Or(self, node):      return self.visit_BinaryOp(node, "||")
+
+  def visit_TernaryOp(self, node):
+    cond = self.visit(node.cond)
+    then = self.visit(node.then)
+    elze = self.visit(node.elze)
+    return "%s ? %s : %s" % (cond, then, elze)
 
   def visit_Constant(self, node):
     if isinstance(node.value, str):

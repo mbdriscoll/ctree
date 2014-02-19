@@ -53,6 +53,12 @@ class ReturnStatement(Statement):
   def __init__(self, value=None):
     self.value = value
 
+class FunctionCall(Expression):
+  """Cite me."""
+  _fields = ['func', 'args']
+  def __init__(self, func, args=[]):
+    self.func = func
+    self.args = args
 
 class Token(CAstNode):
   """Section B.1.1 6.1."""
@@ -65,24 +71,6 @@ class Constant(Token):
   def __init__(self, value):
     self.value = value
 
-
-class BinaryOp(Expression):
-  """Cite me."""
-  _fields = ['left', 'right']
-  _attrs = ['op']
-  def __init__(self, left, op, right):
-    self.left = left
-    self.op = op
-    self.right = right
-
-
-class UnaryOp(Expression):
-  """Cite me."""
-  _fields = ['arg']
-  _attrs = ['op']
-  def __init__(self, op, arg):
-    self.op = op
-    self.arg = arg
 
 class SymbolRef(Expression):
   """Cite me."""
@@ -127,32 +115,54 @@ class FuncType(Type):
     self.arg_types = arg_types
 
 
-class Operator(object):
+class UnaryOp(Expression):
   """Cite me."""
-  pass
+  _fields = ['arg']
+  def __init__(self, arg):
+    self.arg = arg
 
-class Add(Operator): pass
-class Sub(Operator): pass
-class Mul(Operator): pass
-class Div(Operator): pass
-class Mod(Operator): pass
-class Gt(Operator): pass
-class Lt(Operator): pass
-class GtE(Operator): pass
-class LtE(Operator): pass
-class Eq(Operator): pass
-class NotEq(Operator): pass
-class BitAnd(Operator): pass
-class BitOr(Operator): pass
-class BitShL(Operator): pass
-class BitShR(Operator): pass
-class BitXor(Operator): pass
-class BitNot(Operator): pass
-class And(Operator): pass
-class Or(Operator): pass
-class Xor(Operator): pass
-class Not(Operator): pass
-class Inc(Operator): pass
-class Dec(Operator): pass
-class Ref(Operator): pass
-class Deref(Operator): pass
+class Plus(UnaryOp): pass
+class Minus(UnaryOp): pass
+class Not(UnaryOp): pass
+class BitNot(UnaryOp): pass
+class PreInc(UnaryOp): pass
+class PreDec(UnaryOp): pass
+class PostInc(UnaryOp): pass
+class PostDec(UnaryOp): pass
+class Ref(UnaryOp): pass
+class Deref(UnaryOp): pass
+
+
+class BinaryOp(Expression):
+  """Cite me."""
+  _fields = ['left', 'right']
+  def __init__(self, left, right):
+    self.left = left
+    self.right = right
+
+class Add(BinaryOp): pass
+class Sub(BinaryOp): pass
+class Mul(BinaryOp): pass
+class Div(BinaryOp): pass
+class Mod(BinaryOp): pass
+class Gt(BinaryOp): pass
+class Lt(BinaryOp): pass
+class GtE(BinaryOp): pass
+class LtE(BinaryOp): pass
+class Eq(BinaryOp): pass
+class NotEq(BinaryOp): pass
+class BitAnd(BinaryOp): pass
+class BitOr(BinaryOp): pass
+class BitShL(BinaryOp): pass
+class BitShR(BinaryOp): pass
+class BitXor(BinaryOp): pass
+class And(BinaryOp): pass
+class Or(BinaryOp): pass
+
+class TernaryOp(Expression):
+  """Cite me."""
+  _fields = ['cond', 'then', 'elze']
+  def __init__(self, cond, then, elze):
+    self.cond = cond
+    self.then = then
+    self.elze = elze
