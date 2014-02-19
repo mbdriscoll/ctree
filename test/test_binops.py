@@ -7,8 +7,8 @@ class TestBinaryOps(unittest.TestCase):
   def setUp(self):
     self.foo, self.bar = SymbolRef('foo'), SymbolRef('bar')
 
-  def _check(self, node_cls, expected_string):
-    node = node_cls(self.foo, self.bar)
+  def _check(self, op_cls, expected_string):
+    node = op_cls(self.foo, self.bar)
     self.assertEqual(str(node), expected_string)
 
   def test_add(self):    self._check(Add, "foo + bar")

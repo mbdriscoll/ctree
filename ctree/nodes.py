@@ -42,11 +42,6 @@ class Expression(CAstNode):
   pass
 
 
-class JumpStatement(Statement):
-  """Section B.2.3 6.6.6."""
-  pass
-
-
 class ReturnStatement(Statement):
   """Section B.2.3 6.6.6 line 4."""
   _fields = ['value']
@@ -100,7 +95,6 @@ class Type(CAstNode):
   """Cite me."""
   pass
 
-
 class Void(Type):   pass
 class Char(Type):   pass
 class Int(Type):    pass
@@ -125,51 +119,25 @@ class FuncType(Type):
 class UnaryOp(Expression):
   """Cite me."""
   _fields = ['arg']
-  def __init__(self, arg):
+  def __init__(self, op, arg):
+    self.op = op
     self.arg = arg
-
-class Plus(UnaryOp): pass
-class Minus(UnaryOp): pass
-class Not(UnaryOp): pass
-class BitNot(UnaryOp): pass
-class PreInc(UnaryOp): pass
-class PreDec(UnaryOp): pass
-class PostInc(UnaryOp): pass
-class PostDec(UnaryOp): pass
-class Ref(UnaryOp): pass
-class Deref(UnaryOp): pass
-class SizeOf(UnaryOp): pass
-
 
 class BinaryOp(Expression):
   """Cite me."""
   _fields = ['left', 'right']
-  def __init__(self, left, right):
+  def __init__(self, left, op, right):
     self.left = left
+    self.op = op
     self.right = right
 
-class Add(BinaryOp): pass
-class Sub(BinaryOp): pass
-class Mul(BinaryOp): pass
-class Div(BinaryOp): pass
-class Mod(BinaryOp): pass
-class Gt(BinaryOp): pass
-class Lt(BinaryOp): pass
-class GtE(BinaryOp): pass
-class LtE(BinaryOp): pass
-class Eq(BinaryOp): pass
-class NotEq(BinaryOp): pass
-class BitAnd(BinaryOp): pass
-class BitOr(BinaryOp): pass
-class BitShL(BinaryOp): pass
-class BitShR(BinaryOp): pass
-class BitXor(BinaryOp): pass
-class And(BinaryOp): pass
-class Or(BinaryOp): pass
-class Comma(BinaryOp): pass
-class Dot(BinaryOp): pass
-class Arrow(BinaryOp): pass
-
+class AugAssign(Expression):
+  """Cite me."""
+  _fields = ['target', 'value']
+  def __init__(self, target, op, value):
+    self.target = target
+    self.op = op
+    self.value = value
 
 class TernaryOp(Expression):
   """Cite me."""
@@ -179,32 +147,98 @@ class TernaryOp(Expression):
     self.then = then
     self.elze = elze
 
-class Assign(Expression):
-  """Cite me."""
-  _fields = ['target', 'value']
-  def __init__(self, target, value):
-    self.target = target
-    self.value = value
+class Op:
+  class _Op(object):
+    def __str__(self):
+      return self._c_str
+  class PreInc(_Op):  _c_str = "++"
+  class PreDec(_Op):  _c_str = "--"
+  class PostInc(_Op): _c_str = "++"
+  class PostDec(_Op): _c_str = "--"
+  class Ref(_Op):     _c_str = "&"
+  class Deref(_Op):   _c_str = "*"
+  class SizeOf(_Op):  _c_str = "sizeof"
+  class Add(_Op):     _c_str = "+"
+  class Sub(_Op):     _c_str = "-"
+  class Mul(_Op):     _c_str = "*"
+  class Div(_Op):     _c_str = "/"
+  class Mod(_Op):     _c_str = "%"
+  class Gt(_Op):      _c_str = ">"
+  class Lt(_Op):      _c_str = "<"
+  class GtE(_Op):     _c_str = ">="
+  class LtE(_Op):     _c_str = "<="
+  class Eq(_Op):      _c_str = "=="
+  class NotEq(_Op):   _c_str = "!="
+  class BitAnd(_Op):  _c_str = "&"
+  class BitOr(_Op):   _c_str = "|"
+  class BitNot(_Op):  _c_str = "~"
+  class BitShL(_Op):  _c_str = "<<"
+  class BitShR(_Op):  _c_str = ">>"
+  class BitXor(_Op):  _c_str = "^"
+  class And(_Op):     _c_str = "&&"
+  class Or(_Op):      _c_str = "||"
+  class Not(_Op):     _c_str = "!"
+  class Comma(_Op):   _c_str = ","
+  class Dot(_Op):     _c_str = "."
+  class Arrow(_Op):   _c_str = "->"
+  class Assign(_Op):  _c_str = "="
+  class Cast(_Op):    _c_str = "??"
 
-class AugAssign(Assign):
-  """Cite me."""
-  pass
 
-class AddAssign(AugAssign): pass
-class SubAssign(AugAssign): pass
-class MulAssign(AugAssign): pass
-class DivAssign(AugAssign): pass
-class ModAssign(AugAssign): pass
-class BitShLAssign(AugAssign): pass
-class BitShRAssign(AugAssign): pass
-class BitAndAssign(AugAssign): pass
-class BitXorAssign(AugAssign): pass
-class BitOrAssign(AugAssign): pass
-class BitNotAssign(AugAssign): pass
+# ---------------------------------------------------------------------------
+# factory routines for building UnaryOps, BinaryOps, etc.
 
-class Cast(Expression):
-  """Cite me."""
-  _fields = ['type', 'value']
-  def __init__(self, type, value):
-    self.type = type
-    self.value = value
+def PreInc(a):  return UnaryOp(Op.PreInc(), a)
+def PreDec(a):  return UnaryOp(Op.PreDec(), a)
+def PostInc(a): return UnaryOp(Op.PostInc(), a)
+def PostDec(a): return UnaryOp(Op.PostDec(), a)
+def BitNot(a):  return UnaryOp(Op.BitNot(), a)
+def Not(a):     return UnaryOp(Op.Not(), a)
+def Ref(a):     return UnaryOp(Op.Ref(), a)
+def Deref(a):   return UnaryOp(Op.Deref(), a)
+def SizeOf(a):  return UnaryOp(Op.SizeOf(), a)
+
+def Add(a,b=None):
+  if b != None:
+    return BinaryOp(a, Op.Add(), b)
+  else:
+    return UnaryOp(Op.Add(), a)
+
+def Sub(a,b=None):
+  if b != None:
+    return BinaryOp(a, Op.Sub(), b)
+  else:
+    return UnaryOp(Op.Sub(), a)
+
+def Mul(a,b):    return BinaryOp(a, Op.Mul(), b)
+def Div(a,b):    return BinaryOp(a, Op.Div(), b)
+def Mod(a,b):    return BinaryOp(a, Op.Mod(), b)
+def Gt(a,b):     return BinaryOp(a, Op.Gt(), b)
+def Lt(a,b):     return BinaryOp(a, Op.Lt(), b)
+def GtE(a,b):    return BinaryOp(a, Op.GtE(), b)
+def LtE(a,b):    return BinaryOp(a, Op.LtE(), b)
+def Eq(a,b):     return BinaryOp(a, Op.Eq(), b)
+def NotEq(a,b):  return BinaryOp(a, Op.NotEq(), b)
+def BitAnd(a,b): return BinaryOp(a, Op.BitAnd(), b)
+def BitOr(a,b):  return BinaryOp(a, Op.BitOr(), b)
+def BitShL(a,b): return BinaryOp(a, Op.BitShL(), b)
+def BitShR(a,b): return BinaryOp(a, Op.BitShR(), b)
+def BitXor(a,b): return BinaryOp(a, Op.BitXor(), b)
+def And(a,b):    return BinaryOp(a, Op.And(), b)
+def Or(a,b):     return BinaryOp(a, Op.Or(), b)
+def Comma(a,b):  return BinaryOp(a, Op.Comma(), b)
+def Dot(a,b):    return BinaryOp(a, Op.Dot(), b)
+def Arrow(a,b):  return BinaryOp(a, Op.Arrow(), b)
+def Assign(a,b): return BinaryOp(a, Op.Assign(), b)
+def Cast(a,b):   return BinaryOp(a, Op.Cast(), b)
+
+def AddAssign(a,b):    return AugAssign(a, Op.Add(), b)
+def SubAssign(a,b):    return AugAssign(a, Op.Sub(), b)
+def MulAssign(a,b):    return AugAssign(a, Op.Mul(), b)
+def DivAssign(a,b):    return AugAssign(a, Op.Div(), b)
+def ModAssign(a,b):    return AugAssign(a, Op.Mod(), b)
+def BitXorAssign(a,b): return AugAssign(a, Op.BitXor(), b)
+def BitAndAssign(a,b): return AugAssign(a, Op.BitAnd(), b)
+def BitOrAssign(a,b):  return AugAssign(a, Op.BitOr(), b)
+def BitShLAssign(a,b): return AugAssign(a, Op.BitShL(), b)
+def BitShRAssign(a,b): return AugAssign(a, Op.BitShR(), b)

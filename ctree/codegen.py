@@ -5,70 +5,30 @@ class CodeGenerator(NodeVisitor):
   """
   Return a string containing the program text.
   """
-  def visit_UnaryOp(self, node, op):
-    if isinstance(node, (PostInc, PostDec)):
-      return "%s%s" % (node.arg, op)
+  def visit_UnaryOp(self, node):
+    arg = self.visit(node.arg)
+    if isinstance(node.op, (Op.PostInc, Op.PostDec)):
+      return "%s%s" % (arg, node.op)
     else:
-      return "%s%s" % (op, node.arg)
+      return "%s%s" % (node.op, arg)
 
-  def visit_Plus(self, node):    return self.visit_UnaryOp(node, "+")
-  def visit_Minus(self, node):   return self.visit_UnaryOp(node, "-")
-  def visit_Not(self, node):     return self.visit_UnaryOp(node, "!")
-  def visit_BitNot(self, node):  return self.visit_UnaryOp(node, "~")
-  def visit_PreInc(self, node):  return self.visit_UnaryOp(node, "++")
-  def visit_PreDec(self, node):  return self.visit_UnaryOp(node, "--")
-  def visit_PostInc(self, node): return self.visit_UnaryOp(node, "++")
-  def visit_PostDec(self, node): return self.visit_UnaryOp(node, "--")
-  def visit_Ref(self, node):     return self.visit_UnaryOp(node, "&")
-  def visit_Deref(self, node):   return self.visit_UnaryOp(node, "*")
-
-  def visit_BinaryOp(self, node, op):
+  def visit_BinaryOp(self, node):
     lhs = self.visit(node.left)
     rhs = self.visit(node.right)
-    return "%s %s %s" % (lhs, op, rhs)
-
-  def visit_Add(self, node):     return self.visit_BinaryOp(node, "+")
-  def visit_Sub(self, node):     return self.visit_BinaryOp(node, "-")
-  def visit_Mul(self, node):     return self.visit_BinaryOp(node, "*")
-  def visit_Div(self, node):     return self.visit_BinaryOp(node, "/")
-  def visit_Mod(self, node):     return self.visit_BinaryOp(node, "%")
-  def visit_Gt(self, node):      return self.visit_BinaryOp(node, ">")
-  def visit_Lt(self, node):      return self.visit_BinaryOp(node, "<")
-  def visit_GtE(self, node):     return self.visit_BinaryOp(node, ">=")
-  def visit_LtE(self, node):     return self.visit_BinaryOp(node, "<=")
-  def visit_Eq(self, node):      return self.visit_BinaryOp(node, "==")
-  def visit_NotEq(self, node):   return self.visit_BinaryOp(node, "!=")
-  def visit_BitAnd(self, node):  return self.visit_BinaryOp(node, "&")
-  def visit_BitOr(self, node):   return self.visit_BinaryOp(node, "|")
-  def visit_BitShL(self, node):  return self.visit_BinaryOp(node, "<<")
-  def visit_BitShR(self, node):  return self.visit_BinaryOp(node, ">>")
-  def visit_BitXor(self, node):  return self.visit_BinaryOp(node, "^")
-  def visit_And(self, node):     return self.visit_BinaryOp(node, "&&")
-  def visit_Or(self, node):      return self.visit_BinaryOp(node, "||")
-  def visit_Comma(self, node):   return self.visit_BinaryOp(node, ",")
-  def visit_Dot(self, node):     return self.visit_BinaryOp(node, ".")
-  def visit_Arrow(self, node):   return self.visit_BinaryOp(node, "->")
+    if isinstance(node.op, Op.Cast):
+      return "(%s) %s" % (lhs, rhs)
+    else:
+      return "%s %s %s" % (lhs, node.op, rhs)
 
   def visit_Assign(self, node):
     target = self.visit(node.target)
     value = self.visit(node.value)
     return "%s = %s" % (target, value)
 
-  def visit_AugAssign(self, node, op):
+  def visit_AugAssign(self, node):
     lhs = self.visit(node.target)
     rhs = self.visit(node.value)
-    return "%s %s %s" % (lhs, op, rhs)
-
-  def visit_AddAssign(self, node):     return self.visit_AugAssign(node, "+=")
-  def visit_SubAssign(self, node):     return self.visit_AugAssign(node, "-=")
-  def visit_MulAssign(self, node):     return self.visit_AugAssign(node, "*=")
-  def visit_DivAssign(self, node):     return self.visit_AugAssign(node, "/=")
-  def visit_ModAssign(self, node):     return self.visit_AugAssign(node, "%=")
-  def visit_BitAndAssign(self, node):  return self.visit_AugAssign(node, "&=")
-  def visit_BitOrAssign(self, node):   return self.visit_AugAssign(node, "|=")
-  def visit_BitXorAssign(self, node):  return self.visit_AugAssign(node, "^=")
-  def visit_BitShLAssign(self, node):  return self.visit_AugAssign(node, "<<=")
-  def visit_BitShRAssign(self, node):  return self.visit_AugAssign(node, ">>=")
+    return "%s %s= %s" % (lhs, node.op, rhs)
 
   def visit_TernaryOp(self, node):
     cond = self.visit(node.cond)
