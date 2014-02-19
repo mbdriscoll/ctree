@@ -1,20 +1,68 @@
 from ctree.visitors import NodeVisitor
 from ctree.nodes import *
 
-CTREE_NODE_TO_PRECEDENCE = {
-  Add:     6,   Sub:     6,
-  Mul:     5,   Div:     5,
-  Mod:     5,   Not:     3,
-  Gt:      8,   Lt:      8,
-  GtE:     8,   LtE:     8,
-  Eq:      9,   NotEq:   9,
-  BitAnd:  10,  BitOr:   12,
-  BitShL:  7,   BitShR:  7,
-  BitXor:  11,  BitNot:  3,
-  And:     13,  Or:      14,
-  PreInc:  3,   PreDec:  3,
-  PostInc: 2,   PostDec: 2,
-  Ref:     3,   Deref:   3,
+CTREE_EXPR_TO_PRECEDENCE = {
+  PostInc: 2,
+  PostDec: 2,
+  FunctionCall: 2,
+  ArrayRef: 2,
+  # foo.bar: 2,
+  # foo->bar: 2,
+
+  PreInc: 3,
+  PreDec: 3,
+  Plus: 3,
+  Minus: 3,
+  Not: 3,
+  BitNot: 3,
+  # cast: 3,
+  Deref: 3,
+  Ref: 3,
+  SizeOf: 3,
+
+  Mul: 5,
+  Div: 5,
+  Mod: 5,
+
+  Add: 6,
+  Sub: 6,
+
+  BitShL: 7,
+  BitShR: 7,
+
+  Lt: 8,
+  LtE: 8,
+  Gt: 8,
+  GtE: 8,
+
+  Eq: 9,
+  NotEq: 9,
+
+  BitAnd: 10,
+
+  BitXor: 11,
+
+  BitOr: 12,
+
+  And: 13,
+
+  Or: 14,
+
+  TernaryOp: 15,
+
+  Assign: 16,
+  AddAssign: 16,
+  SubAssign: 16,
+  MulAssign: 16,
+  DivAssign: 16,
+  ModAssign: 16,
+  BitShLAssign: 16,
+  BitShRAssign: 16,
+  BitAndAssign: 16,
+  BitXorAssign: 16,
+  BitNotAssign: 16,
+
+  Comma: 18,
 }
 
 class CodeGenerator(NodeVisitor):
@@ -61,6 +109,28 @@ class CodeGenerator(NodeVisitor):
   def visit_BitXor(self, node):  return self.visit_BinaryOp(node, "^")
   def visit_And(self, node):     return self.visit_BinaryOp(node, "&&")
   def visit_Or(self, node):      return self.visit_BinaryOp(node, "||")
+  def visit_Comma(self, node):   return self.visit_BinaryOp(node, ",")
+
+  def visit_Assign(self, node):
+    target = self.visit(node.target)
+    value = self.visit(node.value)
+    return "%s = %s" % (target, value)
+
+  def visit_AugAssign(self, node, op):
+    lhs = self.visit(node.target)
+    rhs = self.visit(node.value)
+    return "%s %s %s" % (lhs, op, rhs)
+
+  def visit_AddAssign(self, node):     return self.visit_AugAssign(node, "+=")
+  def visit_SubAssign(self, node):     return self.visit_AugAssign(node, "-=")
+  def visit_MulAssign(self, node):     return self.visit_AugAssign(node, "*=")
+  def visit_DivAssign(self, node):     return self.visit_AugAssign(node, "/=")
+  def visit_ModAssign(self, node):     return self.visit_AugAssign(node, "%=")
+  def visit_BitAndAssign(self, node):  return self.visit_AugAssign(node, "&=")
+  def visit_BitOrAssign(self, node):   return self.visit_AugAssign(node, "|=")
+  def visit_BitXorAssign(self, node):  return self.visit_AugAssign(node, "^=")
+  def visit_BitShLAssign(self, node):  return self.visit_AugAssign(node, "<<=")
+  def visit_BitShRAssign(self, node):  return self.visit_AugAssign(node, ">>=")
 
   def visit_TernaryOp(self, node):
     cond = self.visit(node.cond)

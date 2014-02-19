@@ -29,3 +29,4 @@ class TestBinaryOps(unittest.TestCase):
   def test_bitor(self):  self._check(BitOr, "1 | 2")
   def test_bitshl(self): self._check(BitShL, "1 << 2")
   def test_bitshr(self): self._check(BitShR, "1 >> 2")
+  def test_comma(self):  self._check(Comma, "1 , 2")

@@ -60,6 +60,13 @@ class FunctionCall(Expression):
     self.func = func
     self.args = args
 
+class ArrayRef(Expression):
+  """Cite me."""
+  _fields = ['base', 'offset']
+  def __init__(self, base, offset):
+    self.base = base
+    self.offset = offset
+
 class Token(CAstNode):
   """Section B.1.1 6.1."""
   pass
@@ -131,6 +138,7 @@ class PostInc(UnaryOp): pass
 class PostDec(UnaryOp): pass
 class Ref(UnaryOp): pass
 class Deref(UnaryOp): pass
+class SizeOf(UnaryOp): pass
 
 
 class BinaryOp(Expression):
@@ -158,6 +166,8 @@ class BitShR(BinaryOp): pass
 class BitXor(BinaryOp): pass
 class And(BinaryOp): pass
 class Or(BinaryOp): pass
+class Comma(BinaryOp): pass
+
 
 class TernaryOp(Expression):
   """Cite me."""
@@ -166,3 +176,27 @@ class TernaryOp(Expression):
     self.cond = cond
     self.then = then
     self.elze = elze
+
+class Assign(Expression):
+  """Cite me."""
+  _fields = ['target', 'value']
+  def __init__(self, target, value):
+    self.target = target
+    self.value = value
+
+class AugAssign(Assign):
+  """Cite me."""
+  pass
+
+class AddAssign(AugAssign): pass
+class SubAssign(AugAssign): pass
+class MulAssign(AugAssign): pass
+class DivAssign(AugAssign): pass
+class ModAssign(AugAssign): pass
+class BitShLAssign(AugAssign): pass
+class BitShRAssign(AugAssign): pass
+class BitAndAssign(AugAssign): pass
+class BitXorAssign(AugAssign): pass
+class BitOrAssign(AugAssign): pass
+class BitNotAssign(AugAssign): pass
+
