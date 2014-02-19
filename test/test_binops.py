@@ -32,3 +32,15 @@ class TestBinaryOps(unittest.TestCase):
   def test_comma(self):  self._check(Comma, "foo , bar")
   def test_dot(self):    self._check(Dot, "foo . bar")
   def test_arrow(self):  self._check(Arrow, "foo -> bar")
+
+
+class TestArrayRefs(unittest.TestCase):
+
+  def _check(self, tree, expected):
+    actual = str(tree)
+    self.assertEqual(actual, expected)
+
+  def test_arrayref_00(self):
+    foo, bar = SymbolRef('foo'), SymbolRef('bar')
+    tree = ArrayRef(foo, bar)
+    self._check(tree, "foo[bar]")

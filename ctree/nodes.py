@@ -42,11 +42,32 @@ class Expression(CAstNode):
   pass
 
 
-class ReturnStatement(Statement):
+class Return(Statement):
   """Section B.2.3 6.6.6 line 4."""
   _fields = ['value']
   def __init__(self, value=None):
     self.value = value
+
+class If(Statement):
+  """Cite me."""
+  _fields = ['cond', 'then', 'elze']
+  def __init__(self, cond, then, elze=None):
+    self.cond = cond
+    self.then = then
+    self.elze = elze
+
+class While(Statement):
+  """Cite me."""
+  _fields = ['cond', 'body']
+  def __init__(self, cond, body=[]):
+    self.cond = cond
+    self.body = body
+
+class DoWhile(Statement):
+  _fields = ['body', 'cond']
+  def __init__(self, body, cond):
+    self.body = body
+    self.cond = cond
 
 class FunctionCall(Expression):
   """Cite me."""
@@ -84,10 +105,10 @@ class SymbolRef(Expression):
 class FunctionDecl(Statement):
   """Cite me."""
   _fields = ['return_type', 'name', 'params', 'defn']
-  def __init__(self, return_type, name, params, defn=None):
+  def __init__(self, return_type, name, params=[], defn=None):
     self.return_type = return_type
     self.name = name
-    self.type = type
+    self.params = params
     self.defn = defn
 
 
@@ -115,6 +136,12 @@ class FuncType(Type):
     self.return_type = return_type
     self.arg_types = arg_types
 
+class Param(Statement):
+  """Cite me."""
+  _fields = ['type', 'name']
+  def __init__(self, type, name=None):
+    self.type = type
+    self.name = name
 
 class UnaryOp(Expression):
   """Cite me."""
@@ -183,6 +210,7 @@ class Op:
   class Arrow(_Op):   _c_str = "->"
   class Assign(_Op):  _c_str = "="
   class Cast(_Op):    _c_str = "??"
+  class ArrayRef(_Op):_c_str = "??"
 
 
 # ---------------------------------------------------------------------------
@@ -231,6 +259,7 @@ def Dot(a,b):    return BinaryOp(a, Op.Dot(), b)
 def Arrow(a,b):  return BinaryOp(a, Op.Arrow(), b)
 def Assign(a,b): return BinaryOp(a, Op.Assign(), b)
 def Cast(a,b):   return BinaryOp(a, Op.Cast(), b)
+def ArrayRef(a,b): return BinaryOp(a, Op.ArrayRef(), b)
 
 def AddAssign(a,b):    return AugAssign(a, Op.Add(), b)
 def SubAssign(a,b):    return AugAssign(a, Op.Sub(), b)
