@@ -9,7 +9,7 @@ number of parentheses in the generated code.
 # wikipedia does it, but we flip it later so larger numbers mean higher
 # precedence. For the origin of this table see
 # http://en.wikipedia.org/wiki/Operators_in_C_and_C%2B%2B#Operator_precedence
-_CTREE_EXPR_TO_PRECEDENCE = {
+_EXPR_TO_PRECEDENCE = {
   PostInc: 2,
   PostDec: 2,
   FunctionCall: 2,
@@ -73,10 +73,37 @@ _CTREE_EXPR_TO_PRECEDENCE = {
   Comma: 18,
 }
 
-def precendence(node):
+def get_precendence(node):
   try:
-    pred = _CTREE_EXPR_TO_PRECEDENCE[type(node)]
+    pred = _EXPR_TO_PRECEDENCE[type(node)]
   except KeyError:
     raise Exception("Unable to determine precedence for %s." % type(node).__name__)
   # flip precedence so higher numbers mean higher precedence
   return 20 - pred
+
+_PRECEDENCE_ASSOCIATES_LTR = {
+  2: True,
+  3: False,
+  5: True,
+  6: True,
+  7: True,
+  8: True,
+  9: True,
+  10: True,
+  11: True,
+  12: True,
+  13: True,
+  14: True,
+  15: False,
+  16: False,
+  18: True
+}
+
+def is_left_associative(node):
+  try:
+    pred = get_precedence(node)
+    ltr = _PRECEDENCE_ASSOCIATES_LTR(pred)
+  except KeyError:
+    raise Exception("Cannot determine if operator %s (precedence %d) is left- or right-associative.") \
+      % (type(node).__name__, pred)
+  return ltr
