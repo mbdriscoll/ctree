@@ -14,8 +14,8 @@ _EXPR_TO_PRECEDENCE = {
   PostDec: 2,
   FunctionCall: 2,
   ArrayRef: 2,
-  # foo.bar: 2,
-  # foo->bar: 2,
+  Dot: 2,
+  Arrow: 2,
 
   PreInc: 3,
   PreDec: 3,

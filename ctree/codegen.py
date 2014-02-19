@@ -46,6 +46,8 @@ class CodeGenerator(NodeVisitor):
   def visit_And(self, node):     return self.visit_BinaryOp(node, "&&")
   def visit_Or(self, node):      return self.visit_BinaryOp(node, "||")
   def visit_Comma(self, node):   return self.visit_BinaryOp(node, ",")
+  def visit_Dot(self, node):     return self.visit_BinaryOp(node, ".")
+  def visit_Arrow(self, node):   return self.visit_BinaryOp(node, "->")
 
   def visit_Assign(self, node):
     target = self.visit(node.target)

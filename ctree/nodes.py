@@ -167,6 +167,8 @@ class BitXor(BinaryOp): pass
 class And(BinaryOp): pass
 class Or(BinaryOp): pass
 class Comma(BinaryOp): pass
+class Dot(BinaryOp): pass
+class Arrow(BinaryOp): pass
 
 
 class TernaryOp(Expression):
