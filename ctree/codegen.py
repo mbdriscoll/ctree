@@ -138,6 +138,11 @@ class CodeGenerator(NodeVisitor):
     elze = self.visit(node.elze)
     return "%s ? %s : %s" % (cond, then, elze)
 
+  def visit_Cast(self, node):
+    type = self.visit(node.type)
+    value = self.visit(node.value)
+    return "(%s) %s" % (type, value)
+
   def visit_Constant(self, node):
     if isinstance(node.value, str):
       return "'%s'" % node.value[0]

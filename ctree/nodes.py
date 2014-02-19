@@ -200,3 +200,9 @@ class BitXorAssign(AugAssign): pass
 class BitOrAssign(AugAssign): pass
 class BitNotAssign(AugAssign): pass
 
+class Cast(Expression):
+  """Cite me."""
+  _fields = ['type', 'value']
+  def __init__(self, type, value):
+    self.type = type
+    self.value = value
