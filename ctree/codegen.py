@@ -70,7 +70,7 @@ class CodeGenerator(NodeVisitor):
     result = self.visit(node)
     if isinstance(node, BinaryOp) or isinstance(node, UnaryOp):
       prec = node.op.get_precedence()
-      # Return with parentheses if the currend precedence is less than the
+      # Return with parentheses if the current precedence is less than the
       # parent precedence.  If the precedences are equal, check whether the
       # node's orientation to the parent matches associativity.  If it doesn't,
       # enclose with parentheses.
