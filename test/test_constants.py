@@ -1,6 +1,6 @@
 import unittest
 
-from ctree.nodes import Constant
+from ctree.nodes import Constant, String
 
 class TestConstants(unittest.TestCase):
   """Check that all constants convert properly."""
@@ -15,3 +15,19 @@ class TestConstants(unittest.TestCase):
   def test_char_00(self): assert str(Constant("a")) == "'a'"
   def test_char_01(self): assert str(Constant("A")) == "'A'"
   def test_char_02(self): assert str(Constant("!")) == "'!'"
+
+
+class TestStrings(unittest.TestCase):
+  """Check that strings work."""
+
+  def test_string_full(self):
+    self.assertEqual(str(String("foo")), '"foo"')
+
+  def test_string_empty(self):
+    self.assertEqual(str(String("")), '""')
+
+  def test_string_newline(self):
+    self.assertEqual(str(String(r"\n")), r'"\n"')
+
+  def test_string_tab(self):
+    self.assertEqual(str(String(r"\t")), r'"\t"')

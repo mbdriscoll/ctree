@@ -39,7 +39,9 @@ class Statement(CAstNode):
 
 class Expression(CAstNode):
   """Cite me."""
-  pass
+  def get_type(self):
+    from ctree.types import TypeFetcher
+    return TypeFetcher().visit(self)
 
 
 class Return(Statement):
@@ -91,17 +93,18 @@ class ArrayRef(Expression):
     self.base = base
     self.offset = offset
 
-class Token(CAstNode):
-  """Section B.1.1 6.1."""
-  pass
-
-
-class Constant(Token):
+class Constant(Expression):
   """Section B.1.4 6.1.3."""
   _attrs = ['value']
   def __init__(self, value):
     self.value = value
 
+
+class String(Expression):
+  """Cite me."""
+  _attrs = ["value"]
+  def __init__(self, value):
+    self.value = value
 
 class SymbolRef(Expression):
   """Cite me."""

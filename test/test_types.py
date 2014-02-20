@@ -17,3 +17,26 @@ class TestTypes(unittest.TestCase):
   def test_float_ptr(self):   assert str(Ptr(Float()))  == "float*"
   def test_long_ptr(self):    assert str(Ptr(Long()))   == "long*"
   def test_double_ptr(self):  assert str(Ptr(Double())) == "double*"
+
+
+class TestTypeFetcher(unittest.TestCase):
+
+  def _check(self, tree, expected):
+    actual = str(tree)
+    self.assertEqual(actual, expected)
+
+  def test_string_type(self):
+    s = String("foo")
+    self._check(s.get_type(), "char*")
+
+  def test_int_type(self):
+    n = Constant(123)
+    self._check(n.get_type(), "int")
+
+  def test_float_type(self):
+    n = Constant(123.4)
+    self._check(n.get_type(), "float")
+
+  def test_char_type(self):
+    n = Constant('b')
+    self._check(n.get_type(), "char")

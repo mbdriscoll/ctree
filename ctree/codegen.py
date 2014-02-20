@@ -136,3 +136,6 @@ class CodeGenerator(NodeVisitor):
     func = self.visit(node.func)
     args = ", ".join(map(self.visit, node.args))
     return "%s(%s)" % (func, args)
+
+  def visit_String(self, node):
+    return '"%s"' % node.value
