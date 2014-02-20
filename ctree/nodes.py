@@ -50,6 +50,7 @@ class Return(Statement):
   def __init__(self, value=None):
     self.value = value
 
+
 class If(Statement):
   """Cite me."""
   _fields = ['cond', 'then', 'elze']
@@ -58,6 +59,7 @@ class If(Statement):
     self.then = then
     self.elze = elze
 
+
 class While(Statement):
   """Cite me."""
   _fields = ['cond', 'body']
@@ -65,11 +67,13 @@ class While(Statement):
     self.cond = cond
     self.body = body
 
+
 class DoWhile(Statement):
   _fields = ['body', 'cond']
   def __init__(self, body, cond):
     self.body = body
     self.cond = cond
+
 
 class For(Statement):
   _fields = ['init', 'test', 'incr', 'body']
@@ -79,6 +83,7 @@ class For(Statement):
     self.incr = incr
     self.body = body
 
+
 class FunctionCall(Expression):
   """Cite me."""
   _fields = ['func', 'args']
@@ -86,12 +91,14 @@ class FunctionCall(Expression):
     self.func = func
     self.args = args
 
+
 class ArrayRef(Expression):
   """Cite me."""
   _fields = ['base', 'offset']
   def __init__(self, base, offset):
     self.base = base
     self.offset = offset
+
 
 class Constant(Expression):
   """Section B.1.4 6.1.3."""
@@ -105,6 +112,7 @@ class String(Expression):
   _attrs = ["value"]
   def __init__(self, value):
     self.value = value
+
 
 class SymbolRef(Expression):
   """Cite me."""
@@ -125,14 +133,22 @@ class FunctionDecl(Statement):
 
 class Type(CAstNode):
   """Cite me."""
-  pass
+
+  def __eq__(self, other):
+    """Equal if type signature is same string."""
+    return str(self) == str(other)
 
 class Void(Type):   pass
 class Char(Type):   pass
 class Int(Type):    pass
+class UnsignedInt(Type): pass
+class LongInt(Type): pass
+class UnsignedLongInt(Type): pass
 class Float(Type):  pass
 class Long(Type):   pass
 class Double(Type): pass
+class LongDouble(Type): pass
+class Unknown(Type): pass
 
 class Ptr(Type):
   """Cite me."""
@@ -147,6 +163,7 @@ class FuncType(Type):
     self.return_type = return_type
     self.arg_types = arg_types
 
+
 class Param(Statement):
   """Cite me."""
   _fields = ['type', 'name']
@@ -154,12 +171,14 @@ class Param(Statement):
     self.type = type
     self.name = name
 
+
 class UnaryOp(Expression):
   """Cite me."""
   _fields = ['arg']
   def __init__(self, op, arg):
     self.op = op
     self.arg = arg
+
 
 class BinaryOp(Expression):
   """Cite me."""
@@ -169,6 +188,7 @@ class BinaryOp(Expression):
     self.op = op
     self.right = right
 
+
 class AugAssign(Expression):
   """Cite me."""
   _fields = ['target', 'value']
@@ -177,6 +197,7 @@ class AugAssign(Expression):
     self.op = op
     self.value = value
 
+
 class TernaryOp(Expression):
   """Cite me."""
   _fields = ['cond', 'then', 'elze']
@@ -184,6 +205,7 @@ class TernaryOp(Expression):
     self.cond = cond
     self.then = then
     self.elze = elze
+
 
 class Op:
   class _Op(object):

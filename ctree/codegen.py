@@ -90,12 +90,16 @@ class CodeGenerator(NodeVisitor):
   def visit_SymbolRef(self, node):
     return str(node.name)
 
-  def visit_Void(self, node):    return "void"
-  def visit_Char(self, node):    return "char"
-  def visit_Int(self, node):     return "int"
-  def visit_Float(self, node):   return "float"
-  def visit_Long(self, node):    return "long"
-  def visit_Double(self, node):  return "double"
+  def visit_Void(self, node):            return "void"
+  def visit_Char(self, node):            return "char"
+  def visit_Int(self, node):             return "int"
+  def visit_UnsignedInt(self, node):     return "unsigned int"
+  def visit_LongInt(self, node):         return "long int"
+  def visit_UnsignedLongInt(self, node): return "unsigned long int"
+  def visit_Float(self, node):           return "float"
+  def visit_Long(self, node):            return "long"
+  def visit_Double(self, node):          return "double"
+  def visit_LongDouble(self, node):      return "long double"
 
   def visit_Ptr(self, node):
     return "%s*" % self.visit(node.base)

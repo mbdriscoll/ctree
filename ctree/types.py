@@ -3,7 +3,7 @@ from ctree.nodes import *
 
 class TypeFetcher(NodeVisitor):
   """
-  Dynamicall computes the type of the Expression.
+  Dynamically computes the type of the Expression.
   """
   def visit_String(self, node):
     return Ptr(Char())
@@ -21,3 +21,51 @@ class TypeFetcher(NodeVisitor):
     else:
       raise Exception("Cannot determine type for Constant of type %s." % \
                       type(n).__class__)
+
+  def visit_BinaryOp(self, node):
+    lhs = self.visit(node.left)
+    rhs = self.visit(node.right)
+    if isinstance(node.op, (Op.Add, Op.Sub, Op.Mul, Op.Div, Op.Mod,
+                            Op.BitAnd, Op.BitOr, Op.BitXor,
+                            Op.BitShL, Op.BitShR)):
+      return self._usual_arithmetic_convert(lhs, rhs)
+    elif isinstance(node.op, (Op.Lt, Op.Gt, Op.LtE, Op.GtE, Op.Eq, Op.NotEq,
+                              Op.And, Op.Or)):
+      return Int()
+    elif isinstance(node.op, Op.Comma):
+      return rhs
+    elif ininstance(node.op, Op.ArrayRef):
+      return lhs.base
+    else:
+      raise Exception("Cannot determine return type of (%s %s %s)." % \
+        (type(lhs).__name__, node.op, type(rhs).__name__))
+
+  @staticmethod
+  def _usual_arithmetic_convert(t0, t1):
+    """
+    Computes the return type of an arithmetic operator applied to arguments of
+    the built-in numeric types.
+    See C89 6.2.5.1.
+    """
+    if   t0 == LongDouble() or t1 == LongDouble(): return LongDouble()
+    elif t0 == Double()     or t1 == Double():     return Double()
+    elif t0 == Float()      or t1 == Float():      return Float()
+    else:
+      t0, t1 = TypeFetcher._type_promote(t0), TypeFetcher._type_promote(t1)
+      if   t0 == UnsignedLongInt() or t1 == UnsignedLongInt(): return UnsignedLongInt()
+      elif t0 == LongInt()         or t1 == LongInt()        : return LongInt()
+      elif t0 == UnsignedInt()     or t1 == UnsignedInt()    : return UnsignedInt()
+      elif t0 == Int()             or t1 == Int()            : return Int()
+      else:
+        raise Exception("Failed to apply usual arith conversion (c89 6.2.1.5) to types: %s, %s." % \
+                        (type(t0).__name__, type(t1).__name__))
+
+  @staticmethod
+  def _type_promote(t):
+    """
+    Promote small types to integers accd to c89 6.2.1.1.
+    """
+    if isinstance(t, (Int, UnsignedInt, LongInt, UnsignedLongInt)):
+      return t
+    else:
+      return Int()
