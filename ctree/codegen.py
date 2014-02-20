@@ -1,5 +1,6 @@
 from ctree.visitors import NodeVisitor
 from ctree.nodes import *
+from ctree.precedence import *
 
 class CodeGenerator(NodeVisitor):
   """
@@ -34,14 +35,13 @@ class CodeGenerator(NodeVisitor):
     parent = getattr(node, 'parent', None)
     if isinstance(  node, (UnaryOp, BinaryOp)) and \
        isinstance(parent, (UnaryOp, BinaryOp)):
-      prec = node.op.get_precedence()
-      parent_prec = parent.op.get_precedence()
+      prec = get_precedence(node.op)
+      parent_prec = get_precedence(parent.op)
       is_first_child = isinstance(parent, UnaryOp) or \
                       (isinstance(parent, BinaryOp) and node is parent.left)
-      assoc_left = parent.op.is_left_associative()
+      assoc_left = is_left_associative(parent.op)
       if (prec < parent_prec) or \
-         (prec == parent_prec and ((assoc_left and not is_first_child) or \
-                                   (not assoc_left and is_first_child))):
+         (prec == parent_prec and (assoc_left is not is_first_child)):
         return True
     return False
 
