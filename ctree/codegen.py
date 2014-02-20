@@ -1,5 +1,6 @@
 from ctree.visitors import NodeVisitor
 from ctree.nodes import *
+from ctree.precedence import *
 
 class CodeGenerator(NodeVisitor):
   """
@@ -51,14 +52,21 @@ class CodeGenerator(NodeVisitor):
       return "%s%s" % (node.op, arg)
 
   def visit_BinaryOp(self, node):
-    lhs = self.visit(node.left)
-    rhs = self.visit(node.right)
+    curr_prec = node.op.get_precedence()
+    lhs = self.__visit_with_precedence(curr_prec, node.left)
+    rhs = self.__visit_with_precedence(curr_prec, node.right)
     if isinstance(node.op, Op.Cast):
       return "(%s) %s" % (lhs, rhs)
     elif isinstance(node.op, Op.ArrayRef):
       return "%s[%s]" % (lhs, rhs)
     else:
       return "%s %s %s" % (lhs, node.op, rhs)
+
+  def __visit_with_precedence(self, prev_prec, node):
+    result = self.visit(node)
+    if isinstance(node, BinaryOp) and node.op.get_precedence() < prev_prec:
+        return "(" + result + ")"
+    return result
 
   def visit_Assign(self, node):
     target = self.visit(node.target)
