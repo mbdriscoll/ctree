@@ -1,3 +1,5 @@
+from ctree.nodes import *
+
 """
 Utilities for determining precedence in C, with the goal of minimizing the
 number of parentheses in the generated code.
@@ -19,8 +21,8 @@ _EXPR_TO_PRECEDENCE = {
 
   PreInc: 3,
   PreDec: 3,
-  Plus: 3,
-  Minus: 3,
+  #Plus: 3,
+  #Minus: 3,
   Not: 3,
   BitNot: 3,
   # cast: 3,
@@ -68,7 +70,7 @@ _EXPR_TO_PRECEDENCE = {
   BitShRAssign: 16,
   BitAndAssign: 16,
   BitXorAssign: 16,
-  BitNotAssign: 16,
+  #BitNotAssign: 16,
 
   Comma: 18,
 }

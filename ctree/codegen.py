@@ -44,21 +44,40 @@ class CodeGenerator(NodeVisitor):
       return "%s" % ty
 
   def visit_UnaryOp(self, node):
-    arg = self.visit(node.arg)
-    if isinstance(node.op, (Op.PostInc, Op.PostDec)):
+    curr_prec = node.op.get_precedence()
+    rightOp = isinstance(node.op, (Op.PostInc, Op.PostDec))
+    # If the operation is PostInc or PostDec, handle associativity by treating
+    # the child node as if it were the left child in a BinaryOp.  Otherwise,
+    # treat it as a right child in a BinaryOp.
+    arg = self.__visit_with_precedence(curr_prec, node.arg, rightOp)
+    if rightOp:
       return "%s%s" % (arg, node.op)
     else:
       return "%s%s" % (node.op, arg)
 
   def visit_BinaryOp(self, node):
-    lhs = self.visit(node.left)
-    rhs = self.visit(node.right)
+    curr_prec = node.op.get_precedence()
+    lhs = self.__visit_with_precedence(curr_prec, node.left, True)
+    rhs = self.__visit_with_precedence(curr_prec, node.right)
     if isinstance(node.op, Op.Cast):
       return "(%s) %s" % (lhs, rhs)
     elif isinstance(node.op, Op.ArrayRef):
       return "%s[%s]" % (lhs, rhs)
     else:
       return "%s %s %s" % (lhs, node.op, rhs)
+
+  def __visit_with_precedence(self, parent_prec, node, left=False):
+    result = self.visit(node)
+    if isinstance(node, BinaryOp) or isinstance(node, UnaryOp):
+      prec = node.op.get_precedence()
+      # Return with parentheses if the current precedence is less than the
+      # parent precedence.  If the precedences are equal, check whether the
+      # node's orientation to the parent matches associativity.  If it doesn't,
+      # enclose with parentheses.
+      if prec < parent_prec or (prec is parent_prec and
+                                node.op.is_left_associative() is not left):
+        return "(" + result + ")"
+    return result
 
   def visit_Assign(self, node):
     target = self.visit(node.target)

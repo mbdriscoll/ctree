@@ -211,39 +211,109 @@ class Op:
   class _Op(object):
     def __str__(self):
       return self._c_str
-  class PreInc(_Op):  _c_str = "++"
-  class PreDec(_Op):  _c_str = "--"
-  class PostInc(_Op): _c_str = "++"
-  class PostDec(_Op): _c_str = "--"
-  class Ref(_Op):     _c_str = "&"
-  class Deref(_Op):   _c_str = "*"
-  class SizeOf(_Op):  _c_str = "sizeof"
-  class Add(_Op):     _c_str = "+"
-  class Sub(_Op):     _c_str = "-"
-  class Mul(_Op):     _c_str = "*"
-  class Div(_Op):     _c_str = "/"
-  class Mod(_Op):     _c_str = "%"
-  class Gt(_Op):      _c_str = ">"
-  class Lt(_Op):      _c_str = "<"
-  class GtE(_Op):     _c_str = ">="
-  class LtE(_Op):     _c_str = "<="
-  class Eq(_Op):      _c_str = "=="
-  class NotEq(_Op):   _c_str = "!="
-  class BitAnd(_Op):  _c_str = "&"
-  class BitOr(_Op):   _c_str = "|"
-  class BitNot(_Op):  _c_str = "~"
-  class BitShL(_Op):  _c_str = "<<"
-  class BitShR(_Op):  _c_str = ">>"
-  class BitXor(_Op):  _c_str = "^"
-  class And(_Op):     _c_str = "&&"
-  class Or(_Op):      _c_str = "||"
-  class Not(_Op):     _c_str = "!"
-  class Comma(_Op):   _c_str = ","
-  class Dot(_Op):     _c_str = "."
-  class Arrow(_Op):   _c_str = "->"
-  class Assign(_Op):  _c_str = "="
-  class Cast(_Op):    _c_str = "??"
-  class ArrayRef(_Op):_c_str = "??"
+
+    def get_precedence(self):
+      # flip precedence so higher numbers mean higher precedence
+      return 20 - self.precedence
+
+    def is_left_associative(self):
+      return self.left_assoc
+
+  class _OpPrec2(_Op):
+    precedence = 2
+    left_assoc = True
+
+  class _OpPrec3(_Op):
+    precedence = 3
+    left_assoc = False
+
+  class _OpPrec5(_Op):
+    precedence = 5
+    left_assoc = True
+
+  class _OpPrec6(_Op):
+    precedence = 6
+    left_assoc = True
+
+  class _OpPrec7(_Op):
+    precedence = 7
+    left_assoc = True
+
+  class _OpPrec8(_Op):
+    precedence = 8
+    left_assoc = True
+
+  class _OpPrec9(_Op):
+    precedence = 9
+    left_assoc = True
+
+  class _OpPrec10(_Op):
+    precedence = 10
+    left_assoc = True
+
+  class _OpPrec11(_Op):
+    precedence = 11
+    left_assoc = True
+
+  class _OpPrec12(_Op):
+    precedence = 12
+    left_assoc = True
+
+  class _OpPrec13(_Op):
+    precedence = 13
+    left_assoc = True
+
+  class _OpPrec14(_Op):
+    precedence = 14
+    left_assoc = True
+
+  class _OpPrec15(_Op):
+    precedence = 15
+    left_assoc = False
+
+  class _OpPrec16(_Op):
+    precedence = 16
+    left_assoc = False
+
+  class _OpPrec18(_Op):
+    precedence = 18
+    left_assoc = True
+
+  class PreInc(_OpPrec3):   _c_str = "++"
+  class PreDec(_OpPrec3):   _c_str = "--"
+  class PostInc(_OpPrec2):  _c_str = "++"
+  class PostDec(_OpPrec2):  _c_str = "--"
+  class Ref(_OpPrec3):      _c_str = "&"
+  class Deref(_OpPrec3):    _c_str = "*"
+  class SizeOf(_OpPrec3):   _c_str = "sizeof"
+  class Add(_OpPrec6):      _c_str = "+"
+  class AddUnary(_OpPrec3): _c_str = "+"
+  class Sub(_OpPrec6):      _c_str = "-"
+  class SubUnary(_OpPrec3): _c_str = "-"
+  class Mul(_OpPrec5):      _c_str = "*"
+  class Div(_OpPrec5):      _c_str = "/"
+  class Mod(_OpPrec5):      _c_str = "%"
+  class Gt(_OpPrec8):       _c_str = ">"
+  class Lt(_OpPrec8):       _c_str = "<"
+  class GtE(_OpPrec8):      _c_str = ">="
+  class LtE(_OpPrec8):      _c_str = "<="
+  class Eq(_OpPrec9):       _c_str = "=="
+  class NotEq(_OpPrec9):    _c_str = "!="
+  class BitAnd(_OpPrec10):  _c_str = "&"
+  class BitOr(_OpPrec12):   _c_str = "|"
+  class BitNot(_OpPrec3):   _c_str = "~"
+  class BitShL(_OpPrec7):   _c_str = "<<"
+  class BitShR(_OpPrec7):   _c_str = ">>"
+  class BitXor(_OpPrec11):  _c_str = "^"
+  class And(_OpPrec13):     _c_str = "&&"
+  class Or(_OpPrec14):      _c_str = "||"
+  class Not(_OpPrec3):      _c_str = "!"
+  class Comma(_OpPrec18):   _c_str = ","
+  class Dot(_OpPrec2):      _c_str = "."
+  class Arrow(_OpPrec2):    _c_str = "->"
+  class Assign(_OpPrec16):  _c_str = "="
+  class Cast(_OpPrec3):     _c_str = "??"
+  class ArrayRef(_OpPrec2): _c_str = "??"
 
 
 # ---------------------------------------------------------------------------
@@ -263,13 +333,13 @@ def Add(a,b=None):
   if b != None:
     return BinaryOp(a, Op.Add(), b)
   else:
-    return UnaryOp(Op.Add(), a)
+    return UnaryOp(Op.AddUnary(), a)
 
 def Sub(a,b=None):
   if b != None:
     return BinaryOp(a, Op.Sub(), b)
   else:
-    return UnaryOp(Op.Sub(), a)
+    return UnaryOp(Op.SubUnary(), a)
 
 def Mul(a,b):    return BinaryOp(a, Op.Mul(), b)
 def Div(a,b):    return BinaryOp(a, Op.Div(), b)
