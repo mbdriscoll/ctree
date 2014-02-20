@@ -73,7 +73,7 @@ _EXPR_TO_PRECEDENCE = {
   Comma: 18,
 }
 
-def get_precendence(node):
+def get_precedence(node):
   try:
     pred = _EXPR_TO_PRECEDENCE[type(node)]
   except KeyError:
