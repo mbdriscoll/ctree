@@ -51,21 +51,23 @@ class TypeFetcher(NodeVisitor):
     elif t0 == Double()     or t1 == Double():     return Double()
     elif t0 == Float()      or t1 == Float():      return Float()
     else:
-      t0, t1 = TypeFetcher._type_promote(t0), TypeFetcher._type_promote(t1)
-      if   t0 == UnsignedLongInt() or t1 == UnsignedLongInt(): return UnsignedLongInt()
-      elif t0 == LongInt()         or t1 == LongInt()        : return LongInt()
-      elif t0 == UnsignedInt()     or t1 == UnsignedInt()    : return UnsignedInt()
-      elif t0 == Int()             or t1 == Int()            : return Int()
+      t0, t1 = TypeFetcher._integer_promote(t0), TypeFetcher._integer_promote(t1)
+      if   t0 == UnsignedLong() or t1 == UnsignedLong(): return UnsignedLong()
+      elif t0 == LongInt()      or t1 == LongInt()     : return LongInt()
+      elif t0 == UnsignedInt()  or t1 == UnsignedInt() : return UnsignedInt()
+      elif t0 == Int()          or t1 == Int()         : return Int()
       else:
         raise Exception("Failed to apply usual arith conversion (c89 6.2.1.5) to types: %s, %s." % \
                         (type(t0).__name__, type(t1).__name__))
 
   @staticmethod
-  def _type_promote(t):
+  def _integer_promote(t):
     """
     Promote small types to integers accd to c89 6.2.1.1.
     """
-    if isinstance(t, (Int, UnsignedInt, LongInt, UnsignedLongInt)):
+    if isinstance(t, (Int, UnsignedInt, LongInt, UnsignedLong)):
       return t
-    else:
+    elif isinstance(t, (Char, UnsignedChar, Short, UnsignedShort)):
       return Int()
+    else:
+      raise Exception("Cannot promote type %s to an integer-type." % type(t).__name__)

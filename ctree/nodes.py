@@ -140,10 +140,13 @@ class Type(CAstNode):
 
 class Void(Type):   pass
 class Char(Type):   pass
+class UnsignedChar(Type):   pass
+class Short(Type):   pass
+class UnsignedShort(Type):   pass
 class Int(Type):    pass
 class UnsignedInt(Type): pass
 class LongInt(Type): pass
-class UnsignedLongInt(Type): pass
+class UnsignedLong(Type): pass
 class Float(Type):  pass
 class Long(Type):   pass
 class Double(Type): pass
