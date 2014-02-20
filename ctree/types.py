@@ -53,7 +53,7 @@ class TypeFetcher(NodeVisitor):
     else:
       t0, t1 = TypeFetcher._integer_promote(t0), TypeFetcher._integer_promote(t1)
       if   t0 == UnsignedLong() or t1 == UnsignedLong(): return UnsignedLong()
-      elif t0 == LongInt()      or t1 == LongInt()     : return LongInt()
+      elif t0 == Long()         or t1 == Long()        : return Long()
       elif t0 == UnsignedInt()  or t1 == UnsignedInt() : return UnsignedInt()
       elif t0 == Int()          or t1 == Int()         : return Int()
       else:
@@ -65,7 +65,7 @@ class TypeFetcher(NodeVisitor):
     """
     Promote small types to integers accd to c89 6.2.1.1.
     """
-    if isinstance(t, (Int, UnsignedInt, LongInt, UnsignedLong)):
+    if isinstance(t, (Int, UnsignedInt, Long, UnsignedLong)):
       return t
     elif isinstance(t, (Char, UnsignedChar, Short, UnsignedShort)):
       return Int()

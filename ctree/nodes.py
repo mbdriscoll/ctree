@@ -5,6 +5,7 @@ Defines the hierarchy of AST nodes.
 
 import ast
 import logging
+import ctypes
 
 
 class CAstNode(ast.AST):
@@ -136,31 +137,36 @@ class FunctionDecl(Statement):
 
 class Type(CAstNode):
   """Cite me."""
-
   def __eq__(self, other):
     """Equal if type signature is same string."""
     return str(self) == str(other)
 
-class Void(Type):   pass
-class Char(Type):   pass
-class UnsignedChar(Type):   pass
-class Short(Type):   pass
-class UnsignedShort(Type):   pass
-class Int(Type):    pass
-class UnsignedInt(Type): pass
-class LongInt(Type): pass
-class UnsignedLong(Type): pass
-class Float(Type):  pass
-class Long(Type):   pass
-class Double(Type): pass
-class LongDouble(Type): pass
-class Unknown(Type): pass
+  def as_ctype(self):
+    return self._ctype
+
+class Void(Type):          _ctype = ctypes.c_void_p
+class Char(Type):          _ctype = ctypes.c_char
+class UnsignedChar(Type):  _ctype = ctypes.c_ubyte
+class Short(Type):         _ctype = ctypes.c_short
+class UnsignedShort(Type): _ctype = ctypes.c_ushort
+class Int(Type):           _ctype = ctypes.c_int
+class UnsignedInt(Type):   _ctype = ctypes.c_uint
+class Long(Type):          _ctype = ctypes.c_long
+class UnsignedLong(Type):  _ctype = ctypes.c_ulong
+class Float(Type):         _ctype = ctypes.c_float
+class Double(Type):        _ctype = ctypes.c_double
+class LongDouble(Type):    _ctype = ctypes.c_longdouble
+class Unknown(Type):       _ctype = None
 
 class Ptr(Type):
   """Cite me."""
   _fields = ['base']
   def __init__(self, base):
     self.base = base
+
+  def as_ctype(self):
+    return ctypes.POINTER(self.base.as_ctype())
+
 
 class FuncType(Type):
   """Cite me."""
@@ -169,6 +175,10 @@ class FuncType(Type):
     self.return_type = return_type
     self.arg_types = arg_types
 
+  def as_ctype(self):
+    rettype = self.return_type.as_ctype()
+    argtypes = [argtype.as_ctype() for argtype in self.arg_types]
+    return ctypes.CFUNCTYPE(rettype, *argtypes)
 
 class Param(Statement):
   """Cite me."""

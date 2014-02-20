@@ -1,8 +1,9 @@
 import unittest
+import ctypes as ct
 
 from ctree.nodes import *
 
-class TestTypes(unittest.TestCase):
+class TestTypeCodegen(unittest.TestCase):
 
   def test_void(self):    assert str(Void())   == "void"
   def test_char(self):    assert str(Char())   == "char"
@@ -84,3 +85,71 @@ class TestTypeFetcher(unittest.TestCase):
     a, b = Constant('b'), Constant(2.3)
     node = Add(a, b)
     self._check(node.get_type(), "float")
+
+
+class TestCtreeTypeToCtypeConversion(unittest.TestCase):
+
+  def _check(self, tree, ctypes_type):
+    self.assertEqual(tree.as_ctype(), ctypes_type)
+
+  def test_void(self):
+    self._check( Void(), ct.c_void_p )
+
+  def test_char(self):
+    self._check( Char(), ct.c_char )
+
+  def test_uchar(self):
+    self._check( UnsignedChar(), ct.c_ubyte )
+
+  def test_short(self):
+    self._check( Short(), ct.c_short )
+
+  def test_ushort(self):
+    self._check( UnsignedShort(), ct.c_ushort )
+
+  def test_int(self):
+    self._check( Int(), ct.c_int )
+
+  def test_uint(self):
+    self._check( UnsignedInt(), ct.c_uint )
+
+  def test_float(self):
+    self._check( Float(), ct.c_float )
+
+  def test_double(self):
+    self._check( Double(), ct.c_double )
+
+  def test_longdouble(self):
+    self._check( LongDouble(), ct.c_longdouble )
+
+  def test_int_ptr(self):
+    self._check( Ptr(Int()), \
+                 ct.POINTER(ct.c_int) )
+
+  def test_float_ptr(self):
+    self._check( Ptr(Float()), \
+                 ct.POINTER(ct.c_float) )
+
+  def test_float_ptr_ptr(self):
+    self._check( Ptr(Ptr(Float())), \
+                 ct.POINTER(ct.POINTER(ct.c_float)) )
+
+  def test_void_fn_void(self):
+    self._check( FuncType(Void()), \
+                 ct.CFUNCTYPE(ct.c_void_p) )
+
+  def test_int_fn_void(self):
+    self._check( FuncType(Int()), \
+                 ct.CFUNCTYPE(ct.c_int) )
+
+  def test_void_fn_int(self):
+    self._check( FuncType(Void(), [Int()]), \
+                 ct.CFUNCTYPE(ct.c_void_p, ct.c_int) )
+
+  def test_int_fn_int(self):
+    self._check( FuncType(Int(), [Int()]), \
+                 ct.CFUNCTYPE(ct.c_int, ct.c_int) )
+
+  def test_int_fn_int_float(self):
+    self._check( FuncType(Int(), [Int(), Float()]), \
+                 ct.CFUNCTYPE(ct.c_int, ct.c_int, ct.c_float) )
