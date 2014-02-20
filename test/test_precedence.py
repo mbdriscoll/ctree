@@ -30,3 +30,13 @@ class TestPrecedence(unittest.TestCase):
     a, b, c = self.args
     tree = Mul(Add(a, b), c)
     self._check(tree, "(a + b) * c")
+
+  def test_muladd_lhs_rhs(self):
+    a, b, c = self.args
+    tree = Mul(Add(a, b), Add(c, a))
+    self._check(tree, "(a + b) * (c + a)")
+
+  def test_muladd_nested(self):
+    a, b, c = self.args
+    tree = Add(a, Mul(b, Add(c, a)))
+    self._check(tree, "a + b * (c + a)")
