@@ -69,6 +69,14 @@ class DoWhile(Statement):
     self.body = body
     self.cond = cond
 
+class For(Statement):
+  _fields = ['init', 'test', 'incr', 'body']
+  def __init__(self, init, test, incr, body):
+    self.init = init
+    self.test = test
+    self.incr = incr
+    self.body = body
+
 class FunctionCall(Expression):
   """Cite me."""
   _fields = ['func', 'args']

@@ -67,3 +67,20 @@ class TestWhiles(unittest.TestCase):
     self._check(tree, """do {
     foo;
 } while (2)""")
+
+
+class TestFor(unittest.TestCase):
+
+  def _check(self, tree, expected):
+    actual = str(tree)
+    self.assertEqual(actual, expected)
+
+  def test_for_00(self):
+    init = Assign(SymbolRef("foo"), Constant(0))
+    test = Lt(SymbolRef("foo"), Constant(10))
+    incr = PostInc(SymbolRef("foo"))
+    body = [FunctionCall(SymbolRef("printf"), [SymbolRef("foo")])]
+    tree = For(init, test, incr, body)
+    self._check(tree, """for (foo = 0; foo < 10; foo++) {
+    printf(foo);
+}""")

@@ -124,3 +124,15 @@ class CodeGenerator(NodeVisitor):
     body = self._genblock(node.body)
     cond = self.visit(node.cond)
     return "do %s while (%s)" % (body, cond)
+
+  def visit_For(self, node):
+    init = self.visit(node.init)
+    test = self.visit(node.test)
+    incr = self.visit(node.incr)
+    body = self._genblock(node.body)
+    return "for (%s; %s; %s) %s" % (init, test, incr, body)
+
+  def visit_FunctionCall(self, node):
+    func = self.visit(node.func)
+    args = ", ".join(map(self.visit, node.args))
+    return "%s(%s)" % (func, args)
