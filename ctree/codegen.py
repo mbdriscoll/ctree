@@ -8,23 +8,46 @@ class CodeGenerator(NodeVisitor):
   def __init__(self):
     self._indent = 0
 
-  def tab(self):
+  # -------------------------------------------------------------------------
+  # internal support methods
+
+  def _tab(self):
     return "    " * self._indent
 
-  def increase_indent(self):
-    return self
-
-  def __enter__(self):
-    self._indent += 1
-    return self
-
-  def __exit__(self, exc_type, exc_value, traceback):
-    self._indent -= 1
-
   def _genblock(self, forest):
-    with self.increase_indent():
-      body = self.tab() + (";\n%s" % self.tab()).join(map(self.visit, forest)) + ";\n"
-    return "{\n%s%s}" % (body, self.tab())
+    self._indent += 1
+    body = self._tab() + (";\n%s" % self._tab()).join(map(self.visit, forest)) + ";\n"
+    self._indent -= 1
+    return "{\n%s%s}" % (body, self._tab())
+
+  def _parentheses(self, node):
+    """A format string that includes parentheses if needed."""
+    return "(%s)" if self._requires_parentheses(node) else "%s"
+
+  def _requires_parentheses(self, node):
+    """
+    Return True if the current precedence is less than the
+    parent precedence.  If the precedences are equal, check whether the
+    node's orientation to the parent matches associativity.  If it doesn't,
+    enclose with parentheses.
+    """
+    parent = getattr(node, 'parent', None)
+    if isinstance(  node, (UnaryOp, BinaryOp)) and \
+       isinstance(parent, (UnaryOp, BinaryOp)):
+      prec = node.op.get_precedence()
+      parent_prec = parent.op.get_precedence()
+      is_first_child = isinstance(parent, UnaryOp) or \
+                      (isinstance(parent, BinaryOp) and node is parent.left)
+      assoc_left = parent.op.is_left_associative()
+      if (prec < parent_prec) or \
+         (prec == parent_prec and ((assoc_left and not is_first_child) or \
+                                   (not assoc_left and is_first_child))):
+        return True
+    return False
+
+
+  # -------------------------------------------------------------------------
+  # visitor methods
 
   def visit_FunctionDecl(self, node):
     rettype = self.visit(node.return_type)
@@ -44,45 +67,23 @@ class CodeGenerator(NodeVisitor):
       return "%s" % ty
 
   def visit_UnaryOp(self, node):
-    curr_prec = node.op.get_precedence()
-    rightOp = isinstance(node.op, (Op.PostInc, Op.PostDec))
-    # If the operation is PostInc or PostDec, handle associativity by treating
-    # the child node as if it were the left child in a BinaryOp.  Otherwise,
-    # treat it as a right child in a BinaryOp.
-    arg = self.__visit_with_precedence(curr_prec, node.arg, rightOp)
-    if rightOp:
-      return "%s%s" % (arg, node.op)
+    arg = self.visit(node.arg)
+    if isinstance(node.op, (Op.PostInc, Op.PostDec)):
+      s = "%s%s" % (arg, node.op)
     else:
-      return "%s%s" % (node.op, arg)
+      s = "%s%s" % (node.op, arg)
+    return self._parentheses(node) % s
 
   def visit_BinaryOp(self, node):
-    curr_prec = node.op.get_precedence()
-    lhs = self.__visit_with_precedence(curr_prec, node.left, True)
-    rhs = self.__visit_with_precedence(curr_prec, node.right)
+    lhs = self.visit(node.left)
+    rhs = self.visit(node.right)
     if isinstance(node.op, Op.Cast):
-      return "(%s) %s" % (lhs, rhs)
+      s = "(%s) %s" % (lhs, rhs)
     elif isinstance(node.op, Op.ArrayRef):
-      return "%s[%s]" % (lhs, rhs)
+      s = "%s[%s]" % (lhs, rhs)
     else:
-      return "%s %s %s" % (lhs, node.op, rhs)
-
-  def __visit_with_precedence(self, parent_prec, node, left=False):
-    result = self.visit(node)
-    if isinstance(node, BinaryOp) or isinstance(node, UnaryOp):
-      prec = node.op.get_precedence()
-      # Return with parentheses if the current precedence is less than the
-      # parent precedence.  If the precedences are equal, check whether the
-      # node's orientation to the parent matches associativity.  If it doesn't,
-      # enclose with parentheses.
-      if prec < parent_prec or (prec is parent_prec and
-                                node.op.is_left_associative() is not left):
-        return "(" + result + ")"
-    return result
-
-  def visit_Assign(self, node):
-    target = self.visit(node.target)
-    value = self.visit(node.value)
-    return "%s = %s" % (target, value)
+      s = "%s %s %s" % (lhs, node.op, rhs)
+    return self._parentheses(node) % s
 
   def visit_AugAssign(self, node):
     lhs = self.visit(node.target)
@@ -93,7 +94,8 @@ class CodeGenerator(NodeVisitor):
     cond = self.visit(node.cond)
     then = self.visit(node.then)
     elze = self.visit(node.elze)
-    return "%s ? %s : %s" % (cond, then, elze)
+    s = "%s ? %s : %s" % (cond, then, elze)
+    return self._parentheses(node) % s
 
   def visit_Cast(self, node):
     type = self.visit(node.type)

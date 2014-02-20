@@ -99,22 +99,25 @@ class ArrayRef(Expression):
     self.base = base
     self.offset = offset
 
+class Literal(Expression):
+  """Cite me."""
+  pass
 
-class Constant(Expression):
+class Constant(Literal):
   """Section B.1.4 6.1.3."""
   _attrs = ['value']
   def __init__(self, value):
     self.value = value
 
 
-class String(Expression):
+class String(Literal):
   """Cite me."""
   _attrs = ["value"]
   def __init__(self, value):
     self.value = value
 
 
-class SymbolRef(Expression):
+class SymbolRef(Literal):
   """Cite me."""
   _attrs = ['name']
   def __init__(self, name):
@@ -179,6 +182,7 @@ class UnaryOp(Expression):
   """Cite me."""
   _fields = ['arg']
   def __init__(self, op, arg):
+    super().__init__()
     self.op = op
     self.arg = arg
 
