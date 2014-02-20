@@ -65,3 +65,8 @@ class TestPrecedence(unittest.TestCase):
     a, b, c = self.args
     tree = Add(Sub(Sub(a, Add(b))), c)
     self._check(tree, "-(a - +b) + c")
+
+  def test_postinc_unary(self):
+    a, b, c = self.args
+    tree = PostInc(Sub(a))
+    self._check(tree, "(-a)++")

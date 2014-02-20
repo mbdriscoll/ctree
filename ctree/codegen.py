@@ -45,8 +45,9 @@ class CodeGenerator(NodeVisitor):
 
   def visit_UnaryOp(self, node):
     curr_prec = node.op.get_precedence()
-    arg = self.__visit_with_precedence(curr_prec, node.arg)
-    if isinstance(node.op, (Op.PostInc, Op.PostDec)):
+    rightOp = isinstance(node.op, (Op.PostInc, Op.PostDec))
+    arg = self.__visit_with_precedence(curr_prec, node.arg, rightOp)
+    if rightOp:
       return "%s%s" % (arg, node.op)
     else:
       return "%s%s" % (node.op, arg)
@@ -62,11 +63,12 @@ class CodeGenerator(NodeVisitor):
     else:
       return "%s %s %s" % (lhs, node.op, rhs)
 
-  def __visit_with_precedence(self, prev_prec, node, left=False):
+  def __visit_with_precedence(self, parent_prec, node, left=False):
     result = self.visit(node)
     if isinstance(node, BinaryOp) or isinstance(node, UnaryOp):
       prec = node.op.get_precedence()
-      if  prec < prev_prec or (prec is prev_prec and (node.op.is_left_associative() is not left)):
+      if  prec < parent_prec or (prec is parent_prec and
+                                 node.op.is_left_associative() is not left):
         return "(" + result + ")"
     return result
 
