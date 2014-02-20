@@ -287,7 +287,9 @@ class Op:
   class Deref(_OpPrec3):    _c_str = "*"
   class SizeOf(_OpPrec3):   _c_str = "sizeof"
   class Add(_OpPrec6):      _c_str = "+"
+  class AddUnary(_OpPrec3): _c_str = "+"
   class Sub(_OpPrec6):      _c_str = "-"
+  class SubUnary(_OpPrec3): _c_str = "-"
   class Mul(_OpPrec5):      _c_str = "*"
   class Div(_OpPrec5):      _c_str = "/"
   class Mod(_OpPrec5):      _c_str = "%"
@@ -331,13 +333,13 @@ def Add(a,b=None):
   if b != None:
     return BinaryOp(a, Op.Add(), b)
   else:
-    return UnaryOp(Op.Add(), a)
+    return UnaryOp(Op.AddUnary(), a)
 
 def Sub(a,b=None):
   if b != None:
     return BinaryOp(a, Op.Sub(), b)
   else:
-    return UnaryOp(Op.Sub(), a)
+    return UnaryOp(Op.SubUnary(), a)
 
 def Mul(a,b):    return BinaryOp(a, Op.Mul(), b)
 def Div(a,b):    return BinaryOp(a, Op.Div(), b)

@@ -52,6 +52,16 @@ class TestPrecedence(unittest.TestCase):
     self._check(tree, "!(a && b || c)")
 
   def test_sub_postinc(self):
-    a, b = self.args
+    a, b, c = self.args
     tree = Sub(Sub(PostInc(a)), b)
     self._check(tree, "-a++ - b")
+
+  def test_sub_unary_binary(self):
+    a, b, c = self.args
+    tree = Sub(Sub(a, b))
+    self._check(tree, "-(a - b)")
+
+  def test_sub_add_unary_binary(self):
+    a, b, c = self.args
+    tree = Add(Sub(Sub(a, Add(b))), c)
+    self._check(tree, "-(a - +b) + c")
