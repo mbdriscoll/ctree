@@ -145,6 +145,9 @@ class CodeGenerator(NodeVisitor):
     else:
       return "return"
 
+  def visit_File(self, node):
+    return ";\n".join(map(self.visit, node.body)) + ";\n"
+
   def visit_If(self, node):
     cond = self.visit(node.cond)
     then = self._genblock(node.then)

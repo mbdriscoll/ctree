@@ -118,6 +118,13 @@ class Block(Statement):
     self.body = body
 
 
+class File(CAstNode):
+  """Holds a list of statements."""
+  _fields = ['body']
+  def __init__(self, *body):
+    self.body = body
+
+
 class String(Literal):
   """Cite me."""
   _attrs = ["value"]
