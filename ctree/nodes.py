@@ -32,6 +32,11 @@ class CAstNode(ast.AST):
     from ctree.codegen import CodeGenerator
     return CodeGenerator().visit(self)
 
+  def to_dot(self):
+    """Retrieve the AST in DOT format for vizualization."""
+    from ctree.dotgen import DotGenerator
+    return DotGenerator().generate_from(self)
+
 
 class Statement(CAstNode):
   """Section B.2.3 6.6."""
@@ -121,7 +126,7 @@ class Block(Statement):
 class File(CAstNode):
   """Holds a list of statements."""
   _fields = ['body']
-  def __init__(self, *body):
+  def __init__(self, body=[]):
     self.body = body
 
 
