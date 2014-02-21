@@ -156,6 +156,9 @@ class FunctionDecl(Statement):
     self.params = params
     self.defn = defn
 
+  def get_type(self):
+    arg_types = [p.type for p in self.params]
+    return FuncType(self.return_type, arg_types)
 
 class Type(CAstNode):
   """Cite me."""
@@ -213,7 +216,6 @@ class Param(Statement):
   def __init__(self, type, name=None):
     self.type = type
     self.name = name
-
 
 class UnaryOp(Expression):
   """Cite me."""

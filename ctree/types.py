@@ -12,8 +12,8 @@ class TypeFetcher(NodeVisitor):
     if node.type != None:
       return node.type
     else:
-      # TODO traverse tree
-      return Unknown()
+      decl = DeclFinder().find(node)
+      return decl.get_type()
 
   def visit_Constant(self, node):
     n = node.value
