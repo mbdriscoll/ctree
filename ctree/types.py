@@ -9,8 +9,8 @@ class TypeFetcher(NodeVisitor):
     return Ptr(Char())
 
   def visit_SymbolRef(self, node):
-    if node.decl_type != None:
-      return node.decl_type
+    if node.type != None:
+      return node.type
     else:
       # TODO traverse tree
       return Unknown()

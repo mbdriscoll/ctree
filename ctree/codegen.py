@@ -109,7 +109,7 @@ class CodeGenerator(NodeVisitor):
       return str(node.value)
 
   def visit_SymbolRef(self, node):
-    if node.decl_type:
+    if node.type:
       return "%s %s" % (node.get_type(), node.name)
     else:
       return str(node.name)

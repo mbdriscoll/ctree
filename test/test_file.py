@@ -9,9 +9,9 @@ class TestFile(unittest.TestCase):
     self.assertEqual(actual, expected)
 
   def test_simple_00(self):
-    foo = SymbolRef("foo", decl_type=Int())
+    foo = SymbolRef("foo", type=Int())
     bar = FunctionDecl(Float(), SymbolRef("bar"))
-    tree = File(foo, bar)
+    tree = File([foo, bar])
     self._check(tree, """\
 int foo;
 float bar();

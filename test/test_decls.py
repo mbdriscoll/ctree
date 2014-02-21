@@ -9,14 +9,14 @@ class TestVarDecls(unittest.TestCase):
     self.assertEqual(actual, expected)
 
   def test_simple_00(self):
-    foo = SymbolRef('foo', decl_type=Int())
+    foo = SymbolRef('foo', type=Int())
     self._check(foo, "int foo")
 
   def test_simple_01(self):
-    foo = Assign(SymbolRef('foo', decl_type=Float()), Constant(1.2))
+    foo = Assign(SymbolRef('foo', type=Float()), Constant(1.2))
     self._check(foo, "float foo = 1.2")
 
   @unittest.skip("need to unparse name inside type")
   def test_simple_02(self):
-    foo = SymbolRef('foo', decl_type=FuncType(Void(), [Float()]))
+    foo = SymbolRef('foo', type=FuncType(Void(), [Float()]))
     self._check(foo, "void (*foo)(float)")

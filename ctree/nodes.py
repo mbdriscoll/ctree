@@ -137,14 +137,14 @@ class String(Literal):
 
 class SymbolRef(Literal):
   """Cite me."""
-  def __init__(self, name, decl_type=None):
+  def __init__(self, name, type=None):
     """
     Create a new symbol with the given name. If a declaration
     type is specified, the symbol is considered a declaration
     and unparsed with the type.
     """
     self.name = name
-    self.decl_type = decl_type
+    self.type = type
 
 
 class FunctionDecl(Statement):
