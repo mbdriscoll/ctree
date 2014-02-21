@@ -109,7 +109,13 @@ class CodeGenerator(NodeVisitor):
       return str(node.value)
 
   def visit_SymbolRef(self, node):
-    return str(node.name)
+    if node.decl_type:
+      return "%s %s" % (node.get_type(), node.name)
+    else:
+      return str(node.name)
+
+  def visit_Block(self, node):
+     return self._genblock(node.body)
 
   def visit_Void(self, node):            return "void"
   def visit_Char(self, node):            return "char"
@@ -128,6 +134,10 @@ class CodeGenerator(NodeVisitor):
 
   def visit_Ptr(self, node):
     return "%s*" % self.visit(node.base)
+
+  def visit_FuncType(self, node):
+    args = ",".join(map(self.visit, node.arg_types))
+    return "%s (*)(%s)" % (node.return_type, args)
 
   def visit_Return(self, node):
     if node.value:

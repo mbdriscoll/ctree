@@ -111,6 +111,13 @@ class Constant(Literal):
     self.value = value
 
 
+class Block(Statement):
+  """Cite me."""
+  _fields = ['body']
+  def __init__(self, body):
+    self.body = body
+
+
 class String(Literal):
   """Cite me."""
   _attrs = ["value"]
@@ -121,8 +128,14 @@ class String(Literal):
 class SymbolRef(Literal):
   """Cite me."""
   _attrs = ['name']
-  def __init__(self, name):
+  def __init__(self, name, decl_type=None):
+    """
+    Create a new symbol with the given name. If a declaration
+    type is specified, the symbol is considered a declaration
+    and unparsed with the type.
+    """
     self.name = name
+    self.decl_type = decl_type
 
 
 class FunctionDecl(Statement):
@@ -144,19 +157,24 @@ class Type(CAstNode):
   def as_ctype(self):
     return self._ctype
 
-class Void(Type):          _ctype = ctypes.c_void_p
+
 class Char(Type):          _ctype = ctypes.c_char
-class UnsignedChar(Type):  _ctype = ctypes.c_ubyte
 class Short(Type):         _ctype = ctypes.c_short
-class UnsignedShort(Type): _ctype = ctypes.c_ushort
 class Int(Type):           _ctype = ctypes.c_int
-class UnsignedInt(Type):   _ctype = ctypes.c_uint
 class Long(Type):          _ctype = ctypes.c_long
+
+class UnsignedChar(Type):  _ctype = ctypes.c_ubyte
+class UnsignedShort(Type): _ctype = ctypes.c_ushort
+class UnsignedInt(Type):   _ctype = ctypes.c_uint
 class UnsignedLong(Type):  _ctype = ctypes.c_ulong
+
 class Float(Type):         _ctype = ctypes.c_float
 class Double(Type):        _ctype = ctypes.c_double
 class LongDouble(Type):    _ctype = ctypes.c_longdouble
+
+class Void(Type):          _ctype = ctypes.c_void_p
 class Unknown(Type):       _ctype = None
+
 
 class Ptr(Type):
   """Cite me."""

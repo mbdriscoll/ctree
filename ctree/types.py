@@ -8,6 +8,13 @@ class TypeFetcher(NodeVisitor):
   def visit_String(self, node):
     return Ptr(Char())
 
+  def visit_SymbolRef(self, node):
+    if node.decl_type != None:
+      return node.decl_type
+    else:
+      # TODO traverse tree
+      return Unknown()
+
   def visit_Constant(self, node):
     n = node.value
     if isinstance(n, str):
