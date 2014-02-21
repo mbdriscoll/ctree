@@ -1,3 +1,13 @@
+"""
+Illustrates the DOT-printing functionality by constructing
+a small AST and printing its DOT representation.
+
+Usage:
+  $ python AstToDot.py > graph.dot
+
+The resulting file can be viewed with a visualizer like Graphiz.
+"""
+
 from ctree.nodes import *
 
 def main():
