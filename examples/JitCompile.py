@@ -2,14 +2,25 @@
 Compiles and runs the AST defined in the Fibonacci example.
 """
 
-from ctree.jit import Module
-from ctree.nodes import FunctionDecl
+import logging
+logging.basicConfig(level=20) # print INFO messages
 
-from Fibonacci import fib_ast
+from ctree.jit import Module
+from ctree.nodes import *
+
+fib_ast = File([
+  FunctionDecl(Int(), SymbolRef("fib"), [Param(Int(), SymbolRef("n"))], [
+    If(Lt(SymbolRef("n"), Constant(2)), \
+      [Return(SymbolRef("n"))], \
+      [Return(Add(FunctionCall(SymbolRef("fib"), [Sub(SymbolRef("n"), Constant(1))]), \
+                  FunctionCall(SymbolRef("fib"), [Sub(SymbolRef("n"), Constant(2))])))])
+  ])
+])
+
 
 def main():
   module = Module()
-  module.compile(fib_ast)
+  module.load(fib_ast)
 
   fib_fn = fib_ast.body[0]
   assert isinstance(fib_fn, FunctionDecl)

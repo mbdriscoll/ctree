@@ -1,11 +1,14 @@
 import os
 import shutil
+import logging
 import tempfile
 import subprocess
 
 from ctree.nodes import *
 
 import llvm.core as ll
+
+log = logging.getLogger(__name__)
 
 class Module(object):
   """
@@ -16,20 +19,24 @@ class Module(object):
     self.ll_module = ll.Module('ctree_generated_code')
     self.ll_exec_engine = None
     self.destroy_compilation_dir_on_exit = destroy_compilation_dir_on_exit
+    log.info("Temporary compilation directory is: %s" % self.compilation_dir)
 
   def __del__(self):
+    log.info("Removing temporary compilation directory.")
     if self.destroy_compilation_dir_on_exit:
       shutil.rmtree(self.compilation_dir)
 
-  def compile(self, node):
+  def load(self, node):
     """Convert node to LLVM IR and store the result in this module."""
     # generate program text
     program_txt = str(node)
-    print ("C Program:\n%s" % program_txt)
+    log.info("Generated C Program: <<<\n%s\n>>>" % program_txt)
 
     # determine paths for C and LLVM bitcode files
     c_src_file = os.path.join(self.compilation_dir, "generated.c")
     ll_bc_file = os.path.join(self.compilation_dir, "generated.bc")
+    log.info("File for generated C: %s" % c_src_file)
+    log.info("File for generated LLVM: %s" % ll_bc_file)
 
     # write program text to C file
     with open(c_src_file, 'w') as c_file:
@@ -37,13 +44,13 @@ class Module(object):
 
     # call clang to generate LLVM bitcode file
     compile_cmd = "clang -emit-llvm -o %s -c %s" % (ll_bc_file, c_src_file)
+    log.info("Compilation command: %s" % compile_cmd)
     subprocess.check_call(compile_cmd, shell=True)
 
     # load llvm bitcode
     with open(ll_bc_file, 'rb') as bc:
       self.ll_module = ll.Module.from_bitcode(bc)
-
-    print ("LLVM Module:\n%s" % self.ll_module)
+    log.info("Generated LLVM Program: <<<\n%s\n>>>" % self.ll_module)
 
   def get_callable(self, tree):
     """Returns a python callable that dispatches to the requested C function."""
