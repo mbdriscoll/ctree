@@ -19,6 +19,9 @@ class DotGenerator(NodeVisitor):
   def label_Constant(self, node):
     return "value: %s" % node.value
 
+  def label_String(self, node):
+    return "value: %s" % node.value
+
   def label(self, node):
     """
     A string to provide useful information for visualization, debugging, etc.
@@ -32,14 +35,14 @@ class DotGenerator(NodeVisitor):
     return s
 
   def generic_visit(self, node):
-    # label this vertex
+    # label this node
     s = 'n%s [label="%s"];\n' % (id(node), self.label(node))
 
     # edge to parent
     if hasattr(node, 'parent') and node.parent != None:
       s += 'n%s -> n%s [label="parent",style=dotted];\n' % (id(node), id(node.parent))
 
-    # edges from children
+    # edges to children
     s += 'n%s [label="%s"];\n' % (id(node), self.label(node))
     for fieldname, child in ast.iter_fields(node):
       if type(child) is list:

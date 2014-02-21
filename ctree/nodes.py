@@ -111,7 +111,6 @@ class Literal(Expression):
 
 class Constant(Literal):
   """Section B.1.4 6.1.3."""
-  _attrs = ['value']
   def __init__(self, value):
     self.value = value
 
@@ -132,14 +131,12 @@ class File(CAstNode):
 
 class String(Literal):
   """Cite me."""
-  _attrs = ["value"]
   def __init__(self, value):
     self.value = value
 
 
 class SymbolRef(Literal):
   """Cite me."""
-  _attrs = ['name']
   def __init__(self, name, decl_type=None):
     """
     Create a new symbol with the given name. If a declaration
