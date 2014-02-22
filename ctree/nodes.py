@@ -37,6 +37,11 @@ class CAstNode(ast.AST):
     from ctree.dotgen import DotGenerator
     return DotGenerator().generate_from(self)
 
+  def get_root(self):
+    root = self
+    while root.parent != None:
+      root = root.parent
+    return root
 
 class Statement(CAstNode):
   """Section B.2.3 6.6."""
@@ -55,6 +60,7 @@ class Return(Statement):
   _fields = ['value']
   def __init__(self, value=None):
     self.value = value
+    super().__init__()
 
 
 class If(Statement):
@@ -64,6 +70,7 @@ class If(Statement):
     self.cond = cond
     self.then = then
     self.elze = elze
+    super().__init__()
 
 
 class While(Statement):
@@ -72,6 +79,7 @@ class While(Statement):
   def __init__(self, cond, body=[]):
     self.cond = cond
     self.body = body
+    super().__init__()
 
 
 class DoWhile(Statement):
@@ -79,6 +87,7 @@ class DoWhile(Statement):
   def __init__(self, body, cond):
     self.body = body
     self.cond = cond
+    super().__init__()
 
 
 class For(Statement):
@@ -88,6 +97,7 @@ class For(Statement):
     self.test = test
     self.incr = incr
     self.body = body
+    super().__init__()
 
 
 class FunctionCall(Expression):
@@ -96,6 +106,7 @@ class FunctionCall(Expression):
   def __init__(self, func, args=[]):
     self.func = func
     self.args = args
+    super().__init__()
 
 
 class ArrayRef(Expression):
@@ -104,6 +115,7 @@ class ArrayRef(Expression):
   def __init__(self, base, offset):
     self.base = base
     self.offset = offset
+    super().__init__()
 
 class Literal(Expression):
   """Cite me."""
@@ -113,6 +125,7 @@ class Constant(Literal):
   """Section B.1.4 6.1.3."""
   def __init__(self, value):
     self.value = value
+    super().__init__()
 
 
 class Block(Statement):
@@ -120,6 +133,15 @@ class Block(Statement):
   _fields = ['body']
   def __init__(self, body):
     self.body = body
+    super().__init__()
+
+
+class Project(CAstNode):
+  """Holds a list files."""
+  _fields = ['files']
+  def __init__(self, files=[]):
+    self.files = files
+    super().__init__()
 
 
 class File(CAstNode):
@@ -127,12 +149,14 @@ class File(CAstNode):
   _fields = ['body']
   def __init__(self, body=[]):
     self.body = body
+    super().__init__()
 
 
 class String(Literal):
   """Cite me."""
   def __init__(self, value):
     self.value = value
+    super().__init__()
 
 
 class SymbolRef(Literal):
@@ -145,6 +169,7 @@ class SymbolRef(Literal):
     """
     self.name = name
     self.type = type
+    super().__init__()
 
 
 class FunctionDecl(Statement):
@@ -155,10 +180,12 @@ class FunctionDecl(Statement):
     self.name = name
     self.params = params
     self.defn = defn
+    super().__init__()
 
   def get_type(self):
     arg_types = [p.type for p in self.params]
     return FuncType(self.return_type, arg_types)
+
 
 class Type(CAstNode):
   """Cite me."""
@@ -193,6 +220,7 @@ class Ptr(Type):
   _fields = ['base']
   def __init__(self, base):
     self.base = base
+    super().__init__()
 
   def as_ctype(self):
     return ctypes.POINTER(self.base.as_ctype())
@@ -204,6 +232,7 @@ class FuncType(Type):
   def __init__(self, return_type, arg_types=[]):
     self.return_type = return_type
     self.arg_types = arg_types
+    super().__init__()
 
   def as_ctype(self):
     rettype = self.return_type.as_ctype()
@@ -216,14 +245,15 @@ class Param(Statement):
   def __init__(self, type, name=None):
     self.type = type
     self.name = name
+    super().__init__()
 
 class UnaryOp(Expression):
   """Cite me."""
   _fields = ['arg']
   def __init__(self, op, arg):
-    super().__init__()
     self.op = op
     self.arg = arg
+    super().__init__()
 
 
 class BinaryOp(Expression):
@@ -233,6 +263,7 @@ class BinaryOp(Expression):
     self.left = left
     self.op = op
     self.right = right
+    super().__init__()
 
 
 class AugAssign(Expression):
@@ -242,6 +273,7 @@ class AugAssign(Expression):
     self.target = target
     self.op = op
     self.value = value
+    super().__init__()
 
 
 class TernaryOp(Expression):
@@ -251,6 +283,7 @@ class TernaryOp(Expression):
     self.cond = cond
     self.then = then
     self.elze = elze
+    super().__init__()
 
 
 class Op:

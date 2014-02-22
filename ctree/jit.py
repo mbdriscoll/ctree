@@ -10,7 +10,7 @@ import llvm.core as ll
 
 log = logging.getLogger(__name__)
 
-class Module(object):
+class JitModule(object):
   """
   Manages compilation of multiple ASTs.
   """
