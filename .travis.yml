@@ -12,7 +12,7 @@ env:
     - LLVM_CONFIG_PATH=/usr/bin/llvm-config-3.3
 
 install:
-  - "git clone git@github.com:llvmpy/llvmpy.git"
+  - "git clone git://github.com/llvmpy/llvmpy.git"
   - "cd llvmpy"
   - "python setup.py install"
 
