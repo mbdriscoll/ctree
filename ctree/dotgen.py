@@ -54,3 +54,8 @@ class DotGenerator(NodeVisitor):
         s += 'n%d -> n%d [label="%s"];\n' % (id(node), id(child), fieldname)
         s += self.visit(child)
     return s
+
+def to_dot(node):
+  assert isinstance(node, ast.AST), \
+    "to_dot expected an instance of ast.AST, got %s." % type(node).__name__
+  return DotGenerator().generate_from(node)

@@ -1,8 +1,6 @@
 from ctree.visitors import NodeVisitor
 from ctree.nodes import *
 
-class Scope(object):
-  
 class DeclFinder(NodeVisitor):
   """
   Returns the first use of a particular symbol.
@@ -17,3 +15,19 @@ class DeclFinder(NodeVisitor):
     assert self.decl != None, \
       "Couldn't find declaration for symbol %s." % node
     return self.decl
+
+
+class ConsistencyError(Exception):
+  pass
+
+
+class VerifyAllCAstNodes(NodeVisitor):
+  """
+  Checks that every node in the tree is an instance of
+  ctree.nodes.CAstNode. Raises an exception if a bad node
+  is found.
+  """
+  def visit(self, node):
+    if not isinstance(node, ctree.nodes.CAstNode):
+      raise ConsistencyError("Found a non-CAstNode of type %s." % type(node).__name__)
+    self.generic_visit(node)
