@@ -50,7 +50,7 @@ class DotGenerator(NodeVisitor):
           s += 'n%d -> n%d [label="%s[%d]"];\n' % \
                (id(node), id(grandchild), fieldname, i)
           s += self.visit(grandchild)
-      elif child != None:
+      elif isinstance(child, ast.AST):
         s += 'n%d -> n%d [label="%s"];\n' % (id(node), id(child), fieldname)
         s += self.visit(child)
     return s

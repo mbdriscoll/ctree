@@ -78,3 +78,13 @@ class TypeFetcher(NodeVisitor):
       return Int()
     else:
       raise Exception("Cannot promote type %s to an integer-type." % type(t).__name__)
+
+def py_type_to_ctree_type(ty):
+  if ty == int:
+    return Int()
+  elif ty == float:
+    return Float()
+  elif ty == str:
+    return Ptr(Char())
+  else:
+    raise Exception("Cannot convert to Ctree type: %s." % ty)

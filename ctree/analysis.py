@@ -28,6 +28,6 @@ class VerifyAllCAstNodes(NodeVisitor):
   is found.
   """
   def visit(self, node):
-    if not isinstance(node, ctree.nodes.CAstNode):
+    if not isinstance(node, CAstNode):
       raise ConsistencyError("Found a non-CAstNode of type %s." % type(node).__name__)
     self.generic_visit(node)
