@@ -12,7 +12,7 @@ env:
     - LLVM_CONFIG_PATH=/usr/bin/llvm-config-3.3
 
 install:
-  - "pip install llvmpy"
+  - "pip install git@github.com:llvmpy/llvmpy.git"
 
 # command to run tests
 script: nosetests
