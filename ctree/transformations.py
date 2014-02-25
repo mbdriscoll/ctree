@@ -1,8 +1,8 @@
 import ast
 
 from ctree.nodes.c import *
+from ctree.types import *
 from ctree.visitors import NodeTransformer
-from ctree.types import py_type_to_ctree_type
 
 def _eval_ast(tree):
   """Evaluate the given subtree as a python expression."""
@@ -74,13 +74,15 @@ class PyBasicConversions(NodeTransformer):
     return FunctionCall(fn, args)
 
   def visit_FunctionDef(self, node):
-    assert isinstance(node.returns, CAstNode)
+    assert isinstance(node.returns, Type), \
+      "Expected a ctree type subtree in FunctionDef.returns field."
     params = [self.visit(p) for p in node.args.args]
     defn = [self.visit(s) for s in node.body]
     return FunctionDecl(node.returns, node.name, params, defn)
 
   def visit_arg(self, node):
-    assert isinstance(node.annotation, CAstNode)
+    assert isinstance(node.annotation, Type), \
+      "Expected a ctree type subtree in arg.annotation field."
     return SymbolRef(node.arg, node.annotation)
 
 
@@ -89,12 +91,13 @@ class PyTypeRecognizer(NodeTransformer):
   Convert types in function annotations to ctree types.
   """
   def visit_arg(self, node):
-    ctree_type = py_type_to_ctree_type( _eval_ast(node.annotation) )
-    node.annotation = ctree_type
+    if node.annotation:
+      node.annotation = py_type_to_ctree_type( _eval_ast(node.annotation) )
     return self.generic_visit(node)
 
   def visit_FunctionDef(self, node):
-    node.returns = py_type_to_ctree_type(_eval_ast(node.returns))
+    if node.returns:
+      node.returns = py_type_to_ctree_type( _eval_ast(node.returns) )
     return self.generic_visit(node)
 
 
