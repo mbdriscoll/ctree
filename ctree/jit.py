@@ -60,8 +60,7 @@ class JitModule(object):
     assert isinstance(tree, FunctionDecl)
 
     # get llvm represetation of function
-    name = tree.name
-    ll_function = self.ll_module.get_function_named(name)
+    ll_function = self.ll_module.get_function_named(tree.name)
 
     # run jit compiler
     from llvm.ee import EngineBuilder
