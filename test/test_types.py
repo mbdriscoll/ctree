@@ -1,7 +1,7 @@
 import unittest
 import ctypes as ct
 
-from ctree.nodes import *
+from ctree.nodes.c import *
 
 class TestTypeCodegen(unittest.TestCase):
 

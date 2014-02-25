@@ -4,7 +4,7 @@ import logging
 import tempfile
 import subprocess
 
-from ctree.nodes import *
+from ctree.nodes.c import *
 
 import llvm.core as ll
 

@@ -1,6 +1,6 @@
 import unittest
 
-from ctree.nodes import *
+from ctree.nodes.c import *
 
 class TestReturns(unittest.TestCase):
   def _check(self, tree, expected):

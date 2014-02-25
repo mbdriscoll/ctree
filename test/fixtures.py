@@ -2,7 +2,7 @@
 A collection of pre-built ASTs for use in testing.
 """
 
-from ctree.nodes import *
+from ctree.nodes.c import *
 
 # ---------------------------------------------------------------------------
 # integer identity

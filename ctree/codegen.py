@@ -1,5 +1,5 @@
 from ctree.visitors import NodeVisitor
-from ctree.nodes import *
+from ctree.nodes.c import *
 from ctree.precedence import *
 
 class CodeGenerator(NodeVisitor):

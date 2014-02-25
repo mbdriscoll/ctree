@@ -1,5 +1,5 @@
 from ctree.visitors import NodeVisitor
-from ctree.nodes import *
+from ctree.nodes.c import *
 
 class DeclFinder(NodeVisitor):
   """
@@ -24,7 +24,7 @@ class AstValidationError(Exception):
 class VerifyOnlyCAstNodes(NodeVisitor):
   """
   Checks that every node in the tree is an instance of
-  ctree.nodes.CAstNode. Raises an exception if a bad node
+  ctree.nodes.c.CAstNode. Raises an exception if a bad node
   is found.
   """
   def visit(self, node):

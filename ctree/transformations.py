@@ -1,6 +1,6 @@
 import ast
 
-from ctree.nodes import *
+from ctree.nodes.c import *
 from ctree.visitors import NodeTransformer
 from ctree.types import py_type_to_ctree_type
 

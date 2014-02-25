@@ -1,6 +1,6 @@
 import unittest
 
-from ctree.nodes import *
+from ctree.nodes.c import *
 
 class TestBlocks(unittest.TestCase):
 

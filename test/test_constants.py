@@ -1,6 +1,6 @@
 import unittest
 
-from ctree.nodes import Constant, String
+from ctree.nodes.c import Constant, String
 
 class TestConstants(unittest.TestCase):
   """Check that all constants convert properly."""
