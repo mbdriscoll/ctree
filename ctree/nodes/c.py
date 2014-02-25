@@ -47,16 +47,40 @@ class CAstNode(ast.AST):
       root = root.parent
     return root
 
-  def find_all(self, pred):
+  def find_all(self, node_class, **kwargs):
     """
-    Returns all nodes satisfying the given predicate,
-    or None if no satisfactory nodes are found. The search
-    starts from the root node.
+    Returns a generator that yields all nodes of type
+    'node_class' type whose attributes match those specified
+    in kwargs. For example, all FunctionDecls with name 'fib'
+    can be accessed via:
+    >>> my_ast.find_all(FunctionDecl, name="fib")
     """
-    root = self.get_root()
-    return root.find_in_subtree(pred)
+    def pred(node):
+      if type(node) == node_class:
+        for attr, value in kwargs.items():
+          try:
+            if getattr(node, attr) != value:
+              break
+          except AttributeError:
+            break
+        else:
+          return True
+      return False
+    return self.find_if(pred)
 
-  def find_in_subtree(self, pred):
+  def find(self, node_class, **kwargs):
+    """
+    Returns one node of type 'node_class' whose attributes
+    match those specified in kwargs, or None if no nodes
+    can be found.
+    """
+    matching = self.find_all(node_class, **kwargs)
+    try:
+      return next(matching)
+    except StopIteration:
+      return None
+
+  def find_if(self, pred):
     """
     Returns all nodes satisfying the given predicate,
     or None if no satisfactory nodes are found. The search
@@ -65,6 +89,7 @@ class CAstNode(ast.AST):
     for node in ast.walk(self):
       if pred(node):
         yield node
+
 
 class Statement(CAstNode):
   """Section B.2.3 6.6."""

@@ -35,9 +35,8 @@ def main():
   VerifyOnlyCAstNodes().visit(my_ast)
 
   mod = JitModule().load(my_ast)
-  func_decls = my_ast.find_all(
-    lambda n: type(n) == FunctionDecl and n.name == "fib")
-  c_fib = mod.get_callable(next(func_decls))
+  fib_decl = my_ast.find(FunctionDecl, name="fib")
+  c_fib = mod.get_callable(fib_decl)
 
   for i in range(20):
     assert fib(i) == c_fib(i)
