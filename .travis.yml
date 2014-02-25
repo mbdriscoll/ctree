@@ -9,12 +9,17 @@ before_install:
 
 env:
   global:
-    - LLVM_CONFIG_PATH=/usr/bin/llvm-config-3.3
 
 install:
+  - "wget http://llvm.org/releases/3.3/llvm-3.3.src.tar.gz"
+  - "tar zxvf llvm-3.3.src.tar.gz"
+  - "mkdir llvm-build"
+  - "cd llvm-build"
+  - "../llvm-3.3.src/configure --enable-optimized --prefix=/opt"
+  - "REQUIRES_RTTI=1 make"
   - "git clone git://github.com/llvmpy/llvmpy.git"
   - "cd llvmpy"
-  - "python setup.py install"
+  - "LLVM_CONFIG_PATH=/opt/llvm-config python setup.py install"
 
 # command to run tests
 script: nosetests
