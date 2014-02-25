@@ -5,7 +5,7 @@ Parses the python AST below, transforms it to C, JITs it, and runs it.
 from ctree.nodes import *
 from ctree.dotgen import to_dot
 from ctree.transformations import *
-from ctree.analysis import VerifyAllCAstNodes
+from ctree.analysis import VerifyOnlyCAstNodes
 from ctree.jit import JitModule
 
 import logging
@@ -29,15 +29,10 @@ def main():
     FixUpParentPointers(),
   ]
 
-  for nth, tx in enumerate(transformations):
-    with open("graph.%s.dot" % nth, 'w') as ofile:
-      print(to_dot(my_ast), file=ofile)
+  for tx in transformations:
     my_ast = tx.visit(my_ast)
 
-  with open("graph.%s.dot" % (nth+1), 'w') as ofile:
-    print(to_dot(my_ast), file=ofile)
-
-  VerifyAllCAstNodes().visit(my_ast)
+  VerifyOnlyCAstNodes().visit(my_ast)
 
   mod = JitModule()
   mod.load(my_ast)

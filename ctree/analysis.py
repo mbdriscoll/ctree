@@ -17,11 +17,11 @@ class DeclFinder(NodeVisitor):
     return self.decl
 
 
-class ConsistencyError(Exception):
+class AstValidationError(Exception):
   pass
 
 
-class VerifyAllCAstNodes(NodeVisitor):
+class VerifyOnlyCAstNodes(NodeVisitor):
   """
   Checks that every node in the tree is an instance of
   ctree.nodes.CAstNode. Raises an exception if a bad node
@@ -29,5 +29,5 @@ class VerifyAllCAstNodes(NodeVisitor):
   """
   def visit(self, node):
     if not isinstance(node, CAstNode):
-      raise ConsistencyError("Found a non-CAstNode of type %s." % type(node).__name__)
+      raise AstValidationError("Found a non-CAstNode of type %s." % type(node).__name__)
     self.generic_visit(node)
