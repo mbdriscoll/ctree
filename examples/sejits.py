@@ -29,8 +29,13 @@ def main():
     FixUpParentPointers(),
   ]
 
-  for tx in transformations:
+  for nth, tx in enumerate(transformations):
+    with open("graph.%s.dot" % nth, 'w') as ofile:
+      print(to_dot(my_ast), file=ofile)
     my_ast = tx.visit(my_ast)
+
+  with open("graph.%s.dot" % (nth+1), 'w') as ofile:
+    print(to_dot(my_ast), file=ofile)
 
   VerifyAllCAstNodes().visit(my_ast)
 

@@ -1,10 +1,11 @@
 import ast
 
-from ctree.visitors import NodeTransformer
 from ctree.nodes import *
+from ctree.visitors import NodeTransformer
 from ctree.types import py_type_to_ctree_type
 
 def _eval_ast(tree):
+  """Evaluate the given subtree as a python expression."""
   return eval(compile(ast.Expression(tree), __name__, 'eval'))
 
 class PyCtxScrubber(NodeTransformer):
@@ -25,6 +26,7 @@ class PyBasicConversions(NodeTransformer):
     ast.Add:     Op.Add,
     ast.Sub:     Op.Sub,
     ast.Lt:      Op.Lt,
+    # TODO list the rest
   }
 
   def visit_Num(self, node):
@@ -71,24 +73,36 @@ class PyBasicConversions(NodeTransformer):
     fn = self.visit(node.func)
     return FunctionCall(fn, args)
 
-class PyTypeRecognizer(NodeTransformer):
-  def visit_arg(self, node):
-    py_type = _eval_ast(node.annotation)
-    ctree_type = py_type_to_ctree_type(py_type)
-    return SymbolRef(node.arg, ctree_type)
-
-  def visit_arguments(self, node):
-    return [self.visit(a) for a in node.args]
-
   def visit_FunctionDef(self, node):
-    ret_type = py_type_to_ctree_type(_eval_ast(node.returns))
+    assert isinstance(node.returns, CAstNode)
     name = SymbolRef(node.name)
     params = [self.visit(p) for p in node.args.args]
     defn = [self.visit(s) for s in node.body]
-    return FunctionDecl(ret_type, name, params, defn)
+    return FunctionDecl(node.returns, name, params, defn)
+
+  def visit_arg(self, node):
+    assert isinstance(node.annotation, CAstNode)
+    return SymbolRef(node.arg, node.annotation)
+
+
+class PyTypeRecognizer(NodeTransformer):
+  """
+  Convert types in function annotations to ctree types.
+  """
+  def visit_arg(self, node):
+    ctree_type = py_type_to_ctree_type( _eval_ast(node.annotation) )
+    node.annotation = ctree_type
+    return self.generic_visit(node)
+
+  def visit_FunctionDef(self, node):
+    node.returns = py_type_to_ctree_type(_eval_ast(node.returns))
+    return self.generic_visit(node)
 
 
 class FixUpParentPointers(NodeTransformer):
+  """
+  Add parent pointers if they're missing.
+  """
   def generic_visit(self, node):
     for fieldname, child in ast.iter_fields(node):
       if type(child) is list:
