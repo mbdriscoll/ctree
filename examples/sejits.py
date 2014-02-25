@@ -36,7 +36,7 @@ def main():
 
   mod = JitModule().load(my_ast)
   func_decls = my_ast.find_all(
-    lambda n: type(n) == FunctionDecl and n.name.name == "fib")
+    lambda n: type(n) == FunctionDecl and n.name == "fib")
   c_fib = mod.get_callable(next(func_decls))
 
   for i in range(20):

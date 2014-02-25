@@ -51,13 +51,12 @@ class CodeGenerator(NodeVisitor):
 
   def visit_FunctionDecl(self, node):
     rettype = self.visit(node.return_type)
-    name = self.visit(node.name)
     params = ", ".join(map(self.visit, node.params))
     if node.defn:
       defn = self._genblock(node.defn)
-      return "%s %s(%s) %s" % (rettype, name, params, defn)
+      return "%s %s(%s) %s" % (rettype, node.name, params, defn)
     else:
-      return "%s %s(%s)" % (rettype, name, params)
+      return "%s %s(%s)" % (rettype, node.name, params)
 
   def visit_Param(self, node):
     ty = self.visit(node.type)

@@ -75,10 +75,9 @@ class PyBasicConversions(NodeTransformer):
 
   def visit_FunctionDef(self, node):
     assert isinstance(node.returns, CAstNode)
-    name = SymbolRef(node.name)
     params = [self.visit(p) for p in node.args.args]
     defn = [self.visit(s) for s in node.body]
-    return FunctionDecl(node.returns, name, params, defn)
+    return FunctionDecl(node.returns, node.name, params, defn)
 
   def visit_arg(self, node):
     assert isinstance(node.annotation, CAstNode)

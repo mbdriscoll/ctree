@@ -60,7 +60,7 @@ class JitModule(object):
     assert isinstance(tree, FunctionDecl)
 
     # get llvm represetation of function
-    name = tree.name.name
+    name = tree.name
     ll_function = self.ll_module.get_function_named(name)
 
     # run jit compiler
