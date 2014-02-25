@@ -12,11 +12,11 @@ env:
 
 install:
   - "wget http://llvm.org/releases/3.3/llvm-3.3.src.tar.gz"
-  - "tar zxvf llvm-3.3.src.tar.gz"
+  - "tar zxf llvm-3.3.src.tar.gz"
   - "mkdir llvm-build"
   - "cd llvm-build"
   - "../llvm-3.3.src/configure --enable-optimized --prefix=/opt"
-  - "REQUIRES_RTTI=1 make"
+  - "REQUIRES_RTTI=1 make install"
   - "git clone git://github.com/llvmpy/llvmpy.git"
   - "cd llvmpy"
   - "LLVM_CONFIG_PATH=/opt/llvm-config python setup.py install"
