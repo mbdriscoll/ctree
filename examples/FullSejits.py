@@ -5,7 +5,7 @@ Parses the python AST below, transforms it to C, JITs it, and runs it.
 from ctree.nodes import *
 from ctree.dotgen import to_dot
 from ctree.transformations import *
-from ctree.analysis import VerifyOnlyCAstNodes
+from ctree.analyses import VerifyOnlyCAstNodes
 from ctree.jit import JitModule
 
 import logging
