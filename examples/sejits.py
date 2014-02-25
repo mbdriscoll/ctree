@@ -34,8 +34,7 @@ def main():
 
   VerifyOnlyCAstNodes().visit(my_ast)
 
-  mod = JitModule()
-  mod.load(my_ast)
+  mod = JitModule().load(my_ast)
   func_decls = my_ast.find_all(
     lambda n: type(n) == FunctionDecl and n.name.name == "fib")
   c_fib = mod.get_callable(next(func_decls))

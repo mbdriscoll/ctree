@@ -52,6 +52,9 @@ class JitModule(object):
       self.ll_module = ll.Module.from_bitcode(bc)
     log.info("Generated LLVM Program: <<<\n%s\n>>>" % self.ll_module)
 
+    # return self to aid in method chaining
+    return self
+
   def get_callable(self, tree):
     """Returns a python callable that dispatches to the requested C function."""
     assert isinstance(tree, FunctionDecl)
