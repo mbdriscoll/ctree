@@ -9,7 +9,8 @@ def _eval_ast(tree):
 
 class PyCtxScrubber(NodeTransformer):
   """
-  Removes ctx attributes from Python ast.Name nodes.
+  Removes pesky ctx attributes from Python ast.Name nodes,
+  yielding much cleaner python asts.
   """
   def visit_Name(self, node):
     node.ctx = None

@@ -38,10 +38,33 @@ class CAstNode(ast.AST):
     return DotGenerator().generate_from(self)
 
   def get_root(self):
+    """
+    Traverse the parent pointer list to find the eldest
+    parent without a parent, aka the root.
+    """
     root = self
     while root.parent != None:
       root = root.parent
     return root
+
+  def find_all(self, pred):
+    """
+    Returns all nodes satisfying the given predicate,
+    or None if no satisfactory nodes are found. The search
+    starts from the root node.
+    """
+    root = self.get_root()
+    return root.find_in_subtree(pred)
+
+  def find_in_subtree(self, pred):
+    """
+    Returns all nodes satisfying the given predicate,
+    or None if no satisfactory nodes are found. The search
+    starts from the current node.
+    """
+    for node in ast.walk(self):
+      if pred(node):
+        yield node
 
 class Statement(CAstNode):
   """Section B.2.3 6.6."""

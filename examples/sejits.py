@@ -1,9 +1,6 @@
 """
-Parses the python AST, transforms it to C, JITs it, and runs it.
+Parses the python AST below, transforms it to C, JITs it, and runs it.
 """
-
-import ast
-import inspect
 
 from ctree.nodes import *
 from ctree.dotgen import to_dot
@@ -24,27 +21,24 @@ def fib(n :int) -> int:
 
 def main():
   import ctree.frontend as frontend
-  intermediate_ast = frontend.get_ast(fib)
+  my_ast = frontend.get_ast(fib)
 
   transformations = [
     PyTypeRecognizer(),
-    PyCtxScrubber(),
     PyBasicConversions(),
     FixUpParentPointers(),
   ]
 
   for tx in transformations:
-    intermediate_ast = tx.visit(intermediate_ast)
+    my_ast = tx.visit(my_ast)
 
-  VerifyAllCAstNodes().visit(intermediate_ast)
-
-  #print ("C program:\n%s" % intermediate_ast)
-  #print (to_dot(intermediate_ast))
+  VerifyAllCAstNodes().visit(my_ast)
 
   mod = JitModule()
-  mod.load(intermediate_ast)
-  func_decl = intermediate_ast.body[0] # FIXME make ast lookup routines
-  c_fib = mod.get_callable(func_decl)
+  mod.load(my_ast)
+  func_decls = my_ast.find_all(
+    lambda n: type(n) == FunctionDecl and n.name.name == "fib")
+  c_fib = mod.get_callable(next(func_decls))
 
   for i in range(20):
     assert fib(i) == c_fib(i)
