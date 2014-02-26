@@ -22,9 +22,8 @@ def fib(n):
 
 
 class BasicTranslator(LazySpecializedFunction):
-  def __init__(self, func_obj):
-    func_def_ast = get_ast(func_obj).body[0]
-    super().__init__(func_def_ast)
+  def __init__(self, func):
+    super().__init__( get_ast(func) )
 
   def transform(self, tree):
     """Convert the Python AST to a C AST."""

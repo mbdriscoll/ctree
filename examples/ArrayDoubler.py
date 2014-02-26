@@ -2,7 +2,7 @@
 Parses the python AST below, transforms it to C, JITs it, and runs it.
 """
 
-import ast
+import numpy as np
 
 from ctree.frontend import get_ast
 from ctree.nodes import *
@@ -11,14 +11,17 @@ from ctree.transformations import *
 from ctree.analyses import VerifyOnlyCAstNodes
 from ctree.jit import LazySpecializedFunction
 
-import numpy as np
-
 import logging
 logging.basicConfig(level=20)
-log = logging.getLogger(__name__)
 
-class SimpleTranslator(LazySpecializedFunction):
+def doubler(A):
+  for i in range(len(A)):
+    A[i] *= 2
+
+
+class BasicTranslator(LazySpecializedFunction):
   def transform(self, tree):
+    """Convert the Python AST to a C AST."""
     transformations = [
       PyCtypesToCtreeTypes(),
       PyBasicConversions(),
@@ -26,34 +29,22 @@ class SimpleTranslator(LazySpecializedFunction):
     ]
     for tx in transformations:
       tree = tx.visit(tree)
-    tree.return_type = tree.params[0].type # hack until type inference works
+    tree.return_type = tree.params[0].type
     return tree
 
-def fib(n):
-  if n < 2:
-    return n
-  else:
-    return fib(n-1) + fib(n-2)
 
 def main():
-  py_ast = get_ast(fib).body[0]
-  c_fib = SimpleTranslator(py_ast)
+  c_doubler = BasicTranslator( get_ast(doubler) )
 
-  print( c_fib(10) )
-  print( c_fib(11) )
-  print( c_fib(12) )
-  print( c_fib(13) )
-
-  """
-  actual   = np.ones(10, dtype=np.float32)
-  expected = np.ones(10, dtype=np.float32)
+  actual   = np.ones(10, dtype=np.double)
+  expected = np.ones(10, dtype=np.double)
 
   c_doubler(actual)
   doubler(expected)
 
   np.testing.assert_array_equal(actual, expected)
-  """
-  log.info("Success.")
+  print("Success.")
+
 
 if __name__ == '__main__':
   main()

@@ -88,6 +88,10 @@ class TypedSpecializedFunction(object):
 
 class LazySpecializedFunction(object):
   def __init__(self, py_ast):
+    if isinstance(py_ast, ast.Module):
+      py_ast = py_ast.body[0]
+    assert isinstance(py_ast, ast.FunctionDef), \
+      "Expected a FunctionDef to specialize."
     self.original_tree = py_ast
     self.c_functions = {} # typesig -> callable map
 
