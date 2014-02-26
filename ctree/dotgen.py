@@ -1,5 +1,6 @@
 import ast
 
+import ctypes as ct
 from ctree.visitors import NodeVisitor
 
 class DotGenerator(NodeVisitor):
@@ -14,7 +15,29 @@ class DotGenerator(NodeVisitor):
     return "digraph myprogram {\n%s}" % self.visit(node)
 
   def label_SymbolRef(self, node):
+    s = "name: %s" % node.name
+    if node.type:
+      # declared type
+      s += "\ntype: %s" % node.type.__name__
+    else:
+      # compute type
+      s += "\n[type: %s]" % node.get_type()
+    return s
+
+  def label_arg(self, node):
+    s = "name: %s" % node.arg
+    if node.annotation:
+      s += "\ntype: %s.%s" % (node.annotation.__module__, node.annotation.__name__)
+    return s
+
+  def label_FunctionDef(self, node):
     return "name: %s" % node.name
+
+  def label_Num(self, node):
+    return "n: %s" % node.n
+
+  def label_Name(self, node):
+    return "id: %s" % node.id
 
   def label_Constant(self, node):
     return "value: %s" % node.value

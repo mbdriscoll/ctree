@@ -15,8 +15,9 @@ class TypeFetcher(NodeVisitor):
     if node.type != None:
       return node.type
     else:
-      decl = DeclFinder().find(node)
-      return decl.get_type()
+      #decl = DeclFinder().find(node)
+      #return decl.get_type()
+      return "??"
 
   def visit_Constant(self, node):
     n = node.value
