@@ -27,7 +27,6 @@ class SimpleTranslator(LazySpecializedFunction):
     for tx in transformations:
       tree = tx.visit(tree)
     tree.return_type = tree.params[0].type # hack until type inference works
-    VerifyOnlyCAstNodes().visit(tree)
     return tree
 
 def fib(n):

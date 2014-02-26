@@ -7,6 +7,7 @@ import subprocess
 
 from ctree.nodes.c import *
 from ctree.frontend import get_ast
+from ctree.analyses import VerifyOnlyCAstNodes
 
 import llvm.core as ll
 
@@ -123,6 +124,7 @@ class LazySpecializedFunction(object):
         arg.annotation = type
 
       c_ast = self.transform(py_ast)
+      VerifyOnlyCAstNodes().visit(c_ast)
       self.c_functions[typesig] = TypedSpecializedFunction(c_ast)
     else:
       log.info("specialized function cache hit!")
