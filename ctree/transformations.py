@@ -103,8 +103,9 @@ class PyCtypesToCtreeTypes(NodeTransformer):
   """
   @staticmethod
   def _convert_to_ctree_type(ctype):
-    if   ctype == ctypes.c_int:   return Int()
-    elif ctype == ctypes.c_float: return Float()
+    if   ctype == ctypes.c_int:    return Int()
+    elif ctype == ctypes.c_float:  return Float()
+    elif ctype == ctypes.c_double: return Double()
     else:
       raise Exception("Cannot determine ctree type for %s." % type(ctype))
 

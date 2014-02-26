@@ -93,7 +93,7 @@ class LazySpecializedFunction(object):
 
   def _value_to_ctype_type(self, arg):
     if   type(arg) == int:   return ctypes.c_int
-    elif type(arg) == float: return ctypes.c_float
+    elif type(arg) == float: return ctypes.c_double
 
     # check for numpy types
     try:
