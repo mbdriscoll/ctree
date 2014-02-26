@@ -4,11 +4,8 @@ Parses the python AST below, transforms it to C, JITs it, and runs it.
 
 import numpy as np
 
-from ctree.frontend import get_ast
-from ctree.nodes import *
-from ctree.dotgen import to_dot
 from ctree.transformations import *
-from ctree.analyses import VerifyOnlyCAstNodes
+from ctree.frontend import get_ast
 from ctree.jit import LazySpecializedFunction
 
 import logging
@@ -28,7 +25,6 @@ class BasicTranslator(LazySpecializedFunction):
   def transform(self, tree):
     """Convert the Python AST to a C AST."""
     transformations = [
-      PyCtypesToCtreeTypes(),
       PyBasicConversions(),
       FixUpParentPointers(),
     ]

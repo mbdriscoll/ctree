@@ -97,23 +97,6 @@ class PyTypeRecognizer(NodeTransformer):
     return self.generic_visit(node)
 
 
-class PyCtypesToCtreeTypes(NodeTransformer):
-  """
-  Convert ctype nodes to ctree Type nodes.
-  """
-  @staticmethod
-  def _convert_to_ctree_type(ctype):
-    if   ctype == ctypes.c_int:    return Int()
-    elif ctype == ctypes.c_float:  return Float()
-    elif ctype == ctypes.c_double: return Double()
-    else:
-      raise Exception("Cannot determine ctree type for %s." % type(ctype))
-
-  def visit_arg(self, node):
-    if issubclass(node.annotation, ctypes._SimpleCData):
-      node.annotation = self._convert_to_ctree_type(node.annotation)
-    return node
-
 class FixUpParentPointers(NodeTransformer):
   """
   Add parent pointers if they're missing.

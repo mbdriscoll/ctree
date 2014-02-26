@@ -23,7 +23,6 @@ class BasicTranslator(LazySpecializedFunction):
   def transform(self, tree):
     """Convert the Python AST to a C AST."""
     transformations = [
-      PyCtypesToCtreeTypes(),
       PyBasicConversions(),
       FixUpParentPointers(),
     ]

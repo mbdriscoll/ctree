@@ -8,11 +8,12 @@ Usage:
 The resulting file can be viewed with a visualizer like Graphiz.
 """
 
-from ctree.nodes import *
+import ctypes as ct
+from ctree.nodes.c import *
 
 def main():
   stmt0 = Assign(SymbolRef('foo'), Constant(123.4))
-  stmt1 = FunctionDecl(Float(), SymbolRef("bar"), [Int(), Long()], [String("baz")])
+  stmt1 = FunctionDecl(ct.c_float, SymbolRef("bar"), [Param(ct.c_int), Param(ct.c_long)], [String("baz")])
   tree = File([stmt0, stmt1])
   print (tree.to_dot())
 
