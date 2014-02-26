@@ -1,10 +1,12 @@
 import os
+import copy
 import shutil
 import logging
 import tempfile
 import subprocess
 
 from ctree.nodes.c import *
+from ctree.frontend import get_ast
 
 import llvm.core as ll
 
@@ -70,3 +72,65 @@ class JitModule(object):
     # cast c_func_ptr to python callable using ctypes
     cfunctype = tree.get_type().as_ctype()
     return cfunctype(c_func_ptr)
+
+
+class TypedSpecializedFunction(object):
+  def __init__(self, c_ast):
+    assert isinstance(c_ast, FunctionDecl)
+    self.module = JitModule().load(c_ast.get_root())
+    self.fn = self.module.get_callable(c_ast)
+
+  def __call__(self, *args, **kwargs):
+    assert not kwargs, "Passing kwargs to SpecializedFunction.__call__ isn't supported."
+    return self.fn(*args, **kwargs)
+
+
+class LazySpecializedFunction(object):
+  def __init__(self, py_ast):
+    self.original_tree = py_ast
+    self.c_functions = {} # typesig -> callable map
+
+  def _value_to_ctype_type(self, arg):
+    if   type(arg) == int:   return ctypes.c_int
+    elif type(arg) == float: return ctypes.c_float
+
+    # check for numpy types
+    try:
+      import numpy
+      if type(arg) == numpy.ndarray:
+        return type(numpy.ctypeslib.as_ctypes(arg))
+    except ImportError:
+      pass
+
+    raise Exception("Cannot determine ctype for Python object: %d (type %s)." % \
+      (arg, type(arg)))
+
+  def transform(self, tree):
+    pass
+
+  def __call__(self, *args, **kwargs):
+    assert not kwargs, "Passing kwargs to specialized functions isn't supported."
+    typesig = tuple(map(self._value_to_ctype_type, args))
+    log.info("detected specialized function call with argument type signature: %s -> ?" % typesig)
+
+    if typesig not in self.c_functions:
+      log.info("specialized function cache miss.")
+      assert isinstance(self.original_tree, ast.FunctionDef)
+      assert len(typesig) == len(self.original_tree.args.args)
+
+      py_ast = copy.deepcopy(self.original_tree)
+      for arg, type in zip(py_ast.args.args, typesig):
+        arg.annotation = type
+
+      c_ast = self.transform(py_ast)
+      self.c_functions[typesig] = TypedSpecializedFunction(c_ast)
+    else:
+      log.info("specialized function cache hit!")
+    return self.c_functions[typesig](*args, **kwargs)
+
+  def get_callable(self, name):
+    pass
+
+  # =====================================================
+
+
