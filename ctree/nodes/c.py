@@ -234,6 +234,9 @@ class FunctionDecl(Statement):
     arg_types = [p.type for p in self.params]
     return FuncType(self.return_type, arg_types)
 
+  def get_callable(self):
+    from ctree.jit import LazyTreeBuilder
+    return LazyTreeBuilder(self)
 
 class Type(CAstNode):
   """Cite me."""

@@ -50,7 +50,7 @@ class CodeGenerator(NodeVisitor):
   # visitor methods
 
   def visit_FunctionDecl(self, node):
-    rettype = self.visit(node.return_type)
+    rettype = self.visit(node.return_type) if node.return_type else Void()
     params = ", ".join(map(self.visit, node.params))
     if node.defn:
       defn = self._genblock(node.defn)

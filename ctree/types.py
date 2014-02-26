@@ -1,4 +1,5 @@
 from ctree.visitors import NodeVisitor
+from ctree.analyses import DeclFinder
 from ctree.nodes.c import *
 
 class TypeFetcher(NodeVisitor):

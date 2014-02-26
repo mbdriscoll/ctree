@@ -74,15 +74,11 @@ class PyBasicConversions(NodeTransformer):
     return FunctionCall(fn, args)
 
   def visit_FunctionDef(self, node):
-    assert isinstance(node.returns, Type), \
-      "Expected a ctree type subtree in FunctionDef.returns field."
     params = [self.visit(p) for p in node.args.args]
     defn = [self.visit(s) for s in node.body]
     return FunctionDecl(node.returns, node.name, params, defn)
 
   def visit_arg(self, node):
-    assert isinstance(node.annotation, Type), \
-      "Expected a ctree type subtree in arg.annotation field."
     return SymbolRef(node.arg, node.annotation)
 
 
@@ -100,6 +96,22 @@ class PyTypeRecognizer(NodeTransformer):
       node.returns = py_type_to_ctree_type( _eval_ast(node.returns) )
     return self.generic_visit(node)
 
+
+class PyCtypesToCtreeTypes(NodeTransformer):
+  """
+  Convert ctype nodes to ctree Type nodes.
+  """
+  @staticmethod
+  def _convert_to_ctree_type(ctype):
+    if   ctype == ctypes.c_int:   return Int()
+    elif ctype == ctypes.c_float: return Float()
+    else:
+      raise Exception("Cannot determine ctree type for %s." % type(ctype))
+
+  def visit_arg(self, node):
+    if issubclass(node.annotation, ctypes._SimpleCData):
+      node.annotation = self._convert_to_ctree_type(node.annotation)
+    return node
 
 class FixUpParentPointers(NodeTransformer):
   """
