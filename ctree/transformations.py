@@ -112,3 +112,17 @@ class FixUpParentPointers(NodeTransformer):
         setattr(child, 'parent', node)
         self.visit(child)
     return node
+
+class StripPythonDocstrings(NodeTransformer):
+  """
+  Remove docstrings like this one from classes and method defs.
+  """
+  def visit_FunctionDef(self, node):
+    if ast.get_docstring(node):
+      node.body.pop(0)
+    return self.generic_visit(node)
+
+  def visit_ClassDef(self, node):
+    if ast.get_docstring(node):
+      node.body.pop(0)
+    return self.generic_visit(node)

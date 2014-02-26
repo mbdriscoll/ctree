@@ -21,6 +21,7 @@ class OpTranslator(LazySpecializedFunction):
   def transform(self, tree):
     """Convert the Python AST to a C AST."""
     transformations = [
+      StripPythonDocstrings(),
       PyBasicConversions(),
       FixUpParentPointers(),
     ]
