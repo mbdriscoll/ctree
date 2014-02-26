@@ -24,6 +24,7 @@ class PyBasicConversions(NodeTransformer):
   """
   PY_OP_TO_CTREE_OP = {
     ast.Add:     Op.Add,
+    ast.Mult:    Op.Mul,
     ast.Sub:     Op.Sub,
     ast.Lt:      Op.Lt,
     # TODO list the rest

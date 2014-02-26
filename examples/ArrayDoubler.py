@@ -14,12 +14,10 @@ from ctree.jit import LazySpecializedFunction
 import logging
 logging.basicConfig(level=20)
 
-def doubler(A):
-  for i in range(len(A)):
-    A[i] *= 2
+# ---------------------------------------------------------------------------
+# Specializer library
 
-
-class BasicTranslator(LazySpecializedFunction):
+class OpTranslator(LazySpecializedFunction):
   def transform(self, tree):
     """Convert the Python AST to a C AST."""
     transformations = [
@@ -38,11 +36,34 @@ class BasicTranslator(LazySpecializedFunction):
     return tree
 
 
-def main():
-  c_doubler = BasicTranslator( get_ast(doubler) )
+class ArrayOp(object):
+  """
+  A class for managing independent operation on elements
+  in numpy arrays.
+  """
+  def __init__(self):
+    """Instantiate translator."""
+    self.c_apply = OpTranslator( get_ast(self.apply) )
 
-  actual   = np.ones(10, dtype=np.double)
-  expected = np.ones(10, dtype=np.double)
+  def __call__(self, *args, **kwargs):
+    """Apply the operator to the arguments."""
+    return self.c_apply(*args, **kwargs)
+
+
+# ---------------------------------------------------------------------------
+# User-defined code
+
+class Doubler(ArrayOp):
+  def apply(n):
+    """Double one element of the array."""
+    return n*2
+
+
+def main():
+  c_doubler = Doubler()
+
+  actual   = np.ones(12, dtype=np.double)
+  expected = np.ones(12, dtype=np.double)
 
   c_doubler(actual)
   doubler(expected)

@@ -1,5 +1,6 @@
 import ast
 import inspect
+import textwrap
 
 def get_ast(obj):
   """
@@ -8,5 +9,6 @@ def get_ast(obj):
   a module, class, method, function, traceback, frame,
   or code object).
   """
-  program_txt = inspect.getsource(obj)
+  indented_program_txt = inspect.getsource(obj)
+  program_txt = textwrap.dedent(indented_program_txt)
   return ast.parse(program_txt)
