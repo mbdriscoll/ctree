@@ -23,14 +23,19 @@ def main():
   import ctree.frontend as frontend
   my_ast = frontend.get_ast(fib)
 
-  transformations = [
-    PyTypeRecognizer(),
-    PyBasicConversions(),
-    FixUpParentPointers(),
-  ]
+  ast1 = PyTypeRecognizer().visit(my_ast)
+  ast2 = PyTypeRecognizer().visit(ast1)
+  ast3 = PyTypeRecognizer().visit(ast2)
+  my_ast = ast3
 
-  for tx in transformations:
-    my_ast = tx.visit(my_ast)
+  # transformations = [
+  #   PyTypeRecognizer(),
+  #   PyBasicConversions(),
+  #   FixUpParentPointers(),
+  # ]
+  #
+  # for tx in transformations:
+  #   my_ast = tx.visit(my_ast)
 
   VerifyOnlyCAstNodes().visit(my_ast)
 

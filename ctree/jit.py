@@ -19,6 +19,7 @@ class JitModule(object):
     self.ll_module = ll.Module('ctree_generated_code')
     self.ll_exec_engine = None
     self.destroy_compilation_dir_on_exit = destroy_compilation_dir_on_exit
+    self.c_program_text = ""
     log.info("Temporary compilation directory is: %s" % self.compilation_dir)
 
   def __del__(self):
@@ -30,6 +31,7 @@ class JitModule(object):
     """Convert node to LLVM IR and store the result in this module."""
     # generate program text
     program_txt = str(node)
+    self.c_program_text = program_txt
     log.info("Generated C Program: <<<\n%s\n>>>" % program_txt)
 
     # determine paths for C and LLVM bitcode files
