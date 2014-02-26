@@ -1,4 +1,5 @@
 import unittest
+import ctypes as ct
 
 from ctree.nodes.c import *
 
@@ -12,17 +13,13 @@ class TestCastOps(unittest.TestCase):
     self.assertEqual(actual, expected)
 
   def test_void(self):
-    tree = Cast(Void(), self.foo)
-    self._check(tree, "(void) foo")
-
-  def test_void_p(self):
-    tree = Cast(Ptr(Void()), self.foo)
+    tree = Cast(ct.c_void_p, self.foo)
     self._check(tree, "(void*) foo")
 
   def test_int(self):
-    tree = Cast(Int(), self.foo)
+    tree = Cast(ct.c_int, self.foo)
     self._check(tree, "(int) foo")
 
   def test_int_p(self):
-    tree = Cast(Ptr(Int()), self.foo)
+    tree = Cast(ct.POINTER(ct.c_int), self.foo)
     self._check(tree, "(int*) foo")

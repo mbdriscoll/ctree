@@ -27,9 +27,15 @@ class BasicTranslator(LazySpecializedFunction):
       PyBasicConversions(),
       FixUpParentPointers(),
     ]
-    for tx in transformations:
+
+    for nth, tx in enumerate(transformations):
+      with open("graph.%d.dot" % nth, 'w') as ofile:
+        ofile.write( to_dot(tree) )
       tree = tx.visit(tree)
-    tree.return_type = tree.params[0].type
+    with open("graph.%d.dot" % (nth+1), 'w') as ofile:
+      ofile.write( to_dot(tree) )
+
+    tree.return_type = ctypes.c_void_p
     return tree
 
 

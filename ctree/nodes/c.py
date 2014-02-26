@@ -222,7 +222,7 @@ class SymbolRef(Literal):
 
 class FunctionDecl(Statement):
   """Cite me."""
-  _fields = ['return_type', 'params', 'defn']
+  _fields = ['params', 'defn']
   def __init__(self, return_type, name, params=[], defn=None):
     self.return_type = return_type
     self.name = name
@@ -231,72 +231,23 @@ class FunctionDecl(Statement):
     super().__init__()
 
   def get_type(self):
-    arg_types = [p.type for p in self.params]
-    return FuncType(self.return_type, arg_types)
+    arg_types = [p.get_type() for p in self.params]
+    return ctypes.CFUNCTYPE(self.return_type, *arg_types)
 
   def get_callable(self):
     from ctree.jit import LazyTreeBuilder
     return LazyTreeBuilder(self)
 
-class Type(CAstNode):
-  """Cite me."""
-  def __eq__(self, other):
-    """Equal if type signature is same string."""
-    return str(self) == str(other)
-
-  def as_ctype(self):
-    return self._ctype
-
-
-class Char(Type):          _ctype = ctypes.c_char
-class Short(Type):         _ctype = ctypes.c_short
-class Int(Type):           _ctype = ctypes.c_int
-class Long(Type):          _ctype = ctypes.c_long
-
-class UnsignedChar(Type):  _ctype = ctypes.c_ubyte
-class UnsignedShort(Type): _ctype = ctypes.c_ushort
-class UnsignedInt(Type):   _ctype = ctypes.c_uint
-class UnsignedLong(Type):  _ctype = ctypes.c_ulong
-
-class Float(Type):         _ctype = ctypes.c_float
-class Double(Type):        _ctype = ctypes.c_double
-class LongDouble(Type):    _ctype = ctypes.c_longdouble
-
-class Void(Type):          _ctype = ctypes.c_void_p
-class Unknown(Type):       _ctype = None
-
-
-class Ptr(Type):
-  """Cite me."""
-  _fields = ['base']
-  def __init__(self, base):
-    self.base = base
-    super().__init__()
-
-  def as_ctype(self):
-    return ctypes.POINTER(self.base.as_ctype())
-
-
-class FuncType(Type):
-  """Cite me."""
-  _fields = ['return_type', 'arg_types']
-  def __init__(self, return_type, arg_types=[]):
-    self.return_type = return_type
-    self.arg_types = arg_types
-    super().__init__()
-
-  def as_ctype(self):
-    rettype = self.return_type.as_ctype()
-    argtypes = [argtype.as_ctype() for argtype in self.arg_types]
-    return ctypes.CFUNCTYPE(rettype, *argtypes)
-
 class Param(Statement):
   """Cite me."""
-  _fields = ['type', 'name']
+  _fields = ['name']
   def __init__(self, type, name=None):
     self.type = type
     self.name = name
     super().__init__()
+
+  def get_type(self):
+    return self.type
 
 class UnaryOp(Expression):
   """Cite me."""
@@ -337,6 +288,15 @@ class TernaryOp(Expression):
     super().__init__()
 
 
+class Cast(Expression):
+   """doc"""
+   _fields = ['value']
+   def __init__(self, ctype, value):
+     self.type = ctype
+     self.value = value
+     super().__init__()
+
+
 class Op:
   class _Op(object):
     def __str__(self):
@@ -375,7 +335,6 @@ class Op:
   class Dot(_Op):      _c_str = "."
   class Arrow(_Op):    _c_str = "->"
   class Assign(_Op):   _c_str = "="
-  class Cast(_Op):     _c_str = "??"
   class ArrayRef(_Op): _c_str = "??"
 
 
@@ -424,7 +383,6 @@ def Comma(a,b):  return BinaryOp(a, Op.Comma(), b)
 def Dot(a,b):    return BinaryOp(a, Op.Dot(), b)
 def Arrow(a,b):  return BinaryOp(a, Op.Arrow(), b)
 def Assign(a,b): return BinaryOp(a, Op.Assign(), b)
-def Cast(a,b):   return BinaryOp(a, Op.Cast(), b)
 def ArrayRef(a,b): return BinaryOp(a, Op.ArrayRef(), b)
 
 def AddAssign(a,b):    return AugAssign(a, Op.Add(), b)

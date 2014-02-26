@@ -1,3 +1,4 @@
+import ctypes
 import unittest
 
 from ctree.nodes.c import *
@@ -10,11 +11,11 @@ class TestParams(unittest.TestCase):
 
   def test_typename(self):
     nm = SymbolRef("foo")
-    ty = Int()
+    ty = ctypes.c_int
     node = Param(ty, nm)
     self._check(node, "int foo")
 
   def test_type(self):
-    ty = Int()
+    ty = ctypes.c_int
     node = Param(ty)
     self._check(node, "int")

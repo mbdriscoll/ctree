@@ -2,6 +2,7 @@
 A collection of pre-built ASTs for use in testing.
 """
 
+import ctypes as ct
 from ctree.nodes.c import *
 
 # ---------------------------------------------------------------------------
@@ -11,7 +12,7 @@ def identity(x :int) -> int:
   return x
 
 identity_ast = \
-FunctionDecl(Int(), "identity", [Param(Int(), SymbolRef("x"))], [
+FunctionDecl(ct.c_int, "identity", [Param(ct.c_int, SymbolRef("x"))], [
   Return(SymbolRef("x"))
 ])
 
@@ -25,7 +26,7 @@ def gcd(a :int, b :int) -> int:
     return gcd(b, a % b)
 
 gcd_ast = \
-FunctionDecl(Int(), "gcd", [Param(Int(), SymbolRef("a")), Param(Int(), SymbolRef("b"))], [
+FunctionDecl(ct.c_int, "gcd", [Param(ct.c_int, SymbolRef("a")), Param(ct.c_int, SymbolRef("b"))], [
   If(Eq(SymbolRef('b'),Constant(0)), \
     [Return(SymbolRef('a'))], \
     [Return(FunctionCall(SymbolRef('gcd'), [SymbolRef('b'), Mod(SymbolRef('a'), \
@@ -42,7 +43,7 @@ def fib(n :int) -> int:
     return fib(n-1) + fib(n-2)
 
 fib_ast = \
-FunctionDecl(Int(), "fib", [Param(Int(), SymbolRef("n"))], [
+FunctionDecl(ct.c_int, "fib", [Param(ct.c_int, SymbolRef("n"))], [
   If(Lt(SymbolRef("n"), Constant(2)), \
     [Return(SymbolRef("n"))], \
     [Return(Add(FunctionCall(SymbolRef("fib"), [Sub(SymbolRef("n"), Constant(1))]), \
