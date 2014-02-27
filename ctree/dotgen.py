@@ -1,6 +1,7 @@
 import ast
 
 import ctypes as ct
+
 from ctree.visitors import NodeVisitor
 
 class DotGenVisitor(NodeVisitor):
@@ -42,13 +43,29 @@ class DotGenVisitor(NodeVisitor):
         for i, grandchild in enumerate(child):
           s += 'n%d -> n%d [label="%s[%d]"];\n' % \
                (id(node), id(grandchild), fieldname, i)
-          s += grandchild._to_dot()
+          s += _to_dot(grandchild)
       elif isinstance(child, ast.AST):
         s += 'n%d -> n%d [label="%s"];\n' % (id(node), id(child), fieldname)
-        s += child._to_dot()
+        s += _to_dot(child)
     return s
 
-def to_dot(node):
+def _to_dot(node):
+  """
+  Convert node to DOT, even if it's a Python AST node.
+  """
+  from ctree.nodes.common import CtreeNode
+  from ctree.nodes.py import PyDotGen
   assert isinstance(node, ast.AST), \
     "Cannot convert %s to DOT." % type(node)
-  return "digraph myprogram {\n%s}" % node._to_dot()
+  if isinstance(node, CtreeNode):
+    return node._to_dot()
+  else:
+    return PyDotGen().visit(node)
+
+def to_dot(node):
+  """
+  Returns a DOT representation of 'node' suitable for viewing with a DOT viewer like Graphviz.
+  """
+  assert isinstance(node, ast.AST), \
+    "Cannot convert %s to DOT." % type(node)
+  return "digraph myprogram {\n%s}" % _to_dot(node)

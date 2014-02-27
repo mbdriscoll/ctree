@@ -27,6 +27,10 @@ class BasicTranslator(LazySpecializedFunction):
     fib_arg_type = pytype_to_ctype( type(args[0]) )
     fib_sig = (fib_arg_type, fib_arg_type)
 
+    from ctree.dotgen import to_dot
+    with open("graph.dot", 'w') as ofile:
+      ofile.write( to_dot(tree) )
+
     transformations = [
       PyBasicConversions(),
       FixUpParentPointers(),

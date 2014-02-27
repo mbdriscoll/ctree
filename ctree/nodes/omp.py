@@ -27,4 +27,4 @@ class OmpCodeGen(CodeGenVisitor):
   """
   Visitor to generate omp code.
   """
-  def __init__(self, indent
+  pass
