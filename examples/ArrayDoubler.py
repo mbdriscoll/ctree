@@ -11,7 +11,7 @@ from ctree.dotgen import to_dot
 from ctree.transformations import *
 from ctree.analyses import VerifyOnlyCAstNodes
 from ctree.jit import LazySpecializedFunction
-from ctree.types import numpy_dtype_to_ctype
+from ctree.types import pytype_to_ctype
 
 import logging
 logging.basicConfig(level=20)
@@ -24,7 +24,7 @@ class OpTranslator(LazySpecializedFunction):
     """Convert the Python AST to a C AST."""
     len_A, A = args
     array_type = np.ctypeslib.ndpointer(dtype=A.dtype, ndim=A.ndim, shape=A.shape, flags=A.flags)
-    inner_type = numpy_dtype_to_ctype(A.dtype)
+    inner_type = pytype_to_ctype(A.dtype)
 
     apply_all_typesig = [None, ct.c_int, array_type]
     apply_one_typesig = [inner_type, inner_type]
@@ -77,7 +77,7 @@ class ArrayOp(object):
 # User code
 
 class Doubler(ArrayOp):
-  """Double one element of the array."""
+  """Double elements of the array."""
   def apply(n):
     return n*2
 

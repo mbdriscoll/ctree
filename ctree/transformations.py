@@ -163,7 +163,7 @@ class ConvertNumpyNdpointers(NodeTransformer):
   For example: np.array(dtype='float64') -> double*
   """
   def _convert(self, orig_type):
-    return ct.POINTER(numpy_dtype_to_ctype(orig_type._dtype_))
+    return ct.POINTER(pytype_to_ctype(orig_type._dtype_))
 
   def visit_SymbolRef(self, node):
     if node.type and hasattr(node.type, '_dtype_'):

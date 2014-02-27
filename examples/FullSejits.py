@@ -20,17 +20,21 @@ def fib(n):
 
 class BasicTranslator(LazySpecializedFunction):
   def __init__(self, func):
-    super().__init__( get_ast(func) )
+    super().__init__( get_ast(func), func.__name__ )
 
-  def transform(self, tree):
+  def transform(self, tree, args):
     """Convert the Python AST to a C AST."""
+    fib_arg_type = pytype_to_ctype( type(args[0]) )
+    fib_sig = (fib_arg_type, fib_arg_type)
+
     transformations = [
       PyBasicConversions(),
       FixUpParentPointers(),
+      SetParamTypes("fib", fib_sig),
     ]
     for tx in transformations:
       tree = tx.visit(tree)
-    tree.return_type = tree.params[0].type
+
     return tree
 
 

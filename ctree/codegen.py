@@ -61,8 +61,11 @@ class CodeGenerator(NodeVisitor):
     ct.c_ulong:      "unsigned long",
     ct.c_longlong:   "long long",
     ct.c_ulonglong:  "unsigned long long",
-    ct.c_size_t:     "size_t",
-    ct.c_ssize_t:    "ssize_t",
+
+    # warning: c_ssize_t == c_long !
+    # ct.c_size_t:     "size_t",
+    # ct.c_ssize_t:    "ssize_t",
+
     ct.c_float:      "float",
     ct.c_double:     "double",
     ct.c_longdouble: "long double",
@@ -128,7 +131,6 @@ class CodeGenerator(NodeVisitor):
 
   def visit_Cast(self, node):
     type_str = self._ctype_to_str(node.type)
-    print ("AA", node.type, type(node.type))
     value = self.visit(node.value)
     return "(%s) %s" % (type_str, value)
 

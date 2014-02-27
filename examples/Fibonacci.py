@@ -14,7 +14,7 @@ import ctypes as ct
 from ctree.nodes.c import *
 
 fib_ast = \
-FunctionDecl(ct.c_int, "fib", [Param(ct.c_int, SymbolRef("n"))], [
+FunctionDecl(ct.c_int, "fib", [SymbolRef("n", ct.c_int)], [
   If(Lt(SymbolRef("n"), Constant(2)), \
     [Return(SymbolRef("n"))], \
     [Return(Add(FunctionCall(SymbolRef("fib"), [Sub(SymbolRef("n"), Constant(1))]), \

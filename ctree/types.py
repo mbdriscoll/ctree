@@ -85,6 +85,12 @@ class TypeFetcher(NodeVisitor):
 # FIXME we need an extensible way to register types for optional packages
 # like numpy
 
+_PYTYPE_TO_CTYPE = {
+  int:   c_long,
+  float: c_double,
+  str:   c_char_p,
+}
+
 try:
   import numpy as np
   _NUMPY_DTYPE_TO_CTYPE = {
@@ -97,9 +103,15 @@ try:
 except ImportError:
   _NUMPY_DTYPE_TO_CTYPE = {}
 
-def numpy_dtype_to_ctype(dtype):
+def pytype_to_ctype(pytype):
   try:
-    return _NUMPY_DTYPE_TO_CTYPE[dtype]
+    return _PYTYPE_TO_CTYPE[pytype]
   except KeyError:
-    raise Exception("Cannot convertion Numpy dtype '%s' to ctype." % dtype)
+    pass
 
+  try:
+    return _NUMPY_DTYPE_TO_CTYPE[pytype]
+  except KeyError:
+    pass
+
+  raise Exception("Cannot convertion python type '%s' to ctype." % pytype)

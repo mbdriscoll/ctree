@@ -21,11 +21,9 @@ class DotGenerator(NodeVisitor):
   def label_SymbolRef(self, node):
     s = "name: %s" % node.name
     if node.type:
-      # declared type
       s += "\ntype: %s" % node.type.__name__
-    else:
-      # compute type
-      s += "\n[type: %s]" % node.get_type()
+    if node.ctype:
+      s += "\nctype: %s" % node.ctype
     return s
 
   def label_arg(self, node):
@@ -38,7 +36,8 @@ class DotGenerator(NodeVisitor):
     return "name: %s" % node.name
 
   def label_FunctionDecl(self, node):
-    return "name: %s" % node.name
+    return "name: %s\nreturn_type: %s" % \
+      (node.name, node.return_type)
 
   def label_Param(self, node):
     s = "type: %s" % node.type
