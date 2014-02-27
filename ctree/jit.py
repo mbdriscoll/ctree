@@ -76,10 +76,10 @@ class JitModule(object):
 
 
 class TypedSpecializedFunction(object):
-  def __init__(self, c_ast):
-    assert isinstance(c_ast, FunctionDecl)
+  def __init__(self, c_ast, entry_point_name):
     self.module = JitModule().load(c_ast.get_root())
-    self.fn = self.module.get_callable(c_ast)
+    entry_point = c_ast.find(FunctionDecl, name=entry_point_name)
+    self.fn = self.module.get_callable(entry_point)
 
   def __call__(self, *args, **kwargs):
     assert not kwargs, "Passing kwargs to SpecializedFunction.__call__ isn't supported."
@@ -87,15 +87,13 @@ class TypedSpecializedFunction(object):
 
 
 class LazySpecializedFunction(object):
-  def __init__(self, py_ast):
-    if isinstance(py_ast, ast.Module):
-      py_ast = py_ast.body[0]
-    assert isinstance(py_ast, ast.FunctionDef), \
-      "Expected a FunctionDef to specialize."
+  def __init__(self, py_ast, entry_point_name):
     self.original_tree = py_ast
+    self.entry_point_name = entry_point_name
     self.c_functions = {} # typesig -> callable map
 
-  def _value_to_ctype_type(self, arg):
+  def _value_to_ctype(self, arg):
+    """Return a hashable value specifying the type of 'arg'."""
     if   type(arg) == int:   return ctypes.c_int
     elif type(arg) == float: return ctypes.c_double
 
@@ -110,32 +108,26 @@ class LazySpecializedFunction(object):
     raise Exception("Cannot determine ctype for Python object: %d (type %s)." % \
       (arg, type(arg)))
 
-  def transform(self, tree):
+  def transform(self, tree, args):
+    """
+    Convert the AST 'tree' into a C AST, optionally taking advantage of the
+    actual runtime arguments.
+    """
     pass
 
   def __call__(self, *args, **kwargs):
     assert not kwargs, "Passing kwargs to specialized functions isn't supported."
-    typesig = tuple(map(self._value_to_ctype_type, args))
-    log.info("detected specialized function call with argument type signature: %s -> ?" % typesig)
+    typesig = tuple(map(self._value_to_ctype, args))
+    log.info("detected specialized function call with argument type signature: %s -> ?" % (typesig,))
 
     if typesig not in self.c_functions:
       log.info("specialized function cache miss.")
-      assert isinstance(self.original_tree, ast.FunctionDef)
-      assert len(typesig) == len(self.original_tree.args.args)
-
-      py_ast = copy.deepcopy(self.original_tree)
-      for arg, type in zip(py_ast.args.args, typesig):
-        arg.annotation = type
-
-      c_ast = self.transform(py_ast)
+      c_ast = self.transform(self.original_tree, args)
       VerifyOnlyCAstNodes().visit(c_ast)
-      self.c_functions[typesig] = TypedSpecializedFunction(c_ast)
+      self.c_functions[typesig] = TypedSpecializedFunction(c_ast, self.entry_point_name)
     else:
       log.info("specialized function cache hit!")
     return self.c_functions[typesig](*args, **kwargs)
-
-  def get_callable(self, name):
-    pass
 
   # =====================================================
 

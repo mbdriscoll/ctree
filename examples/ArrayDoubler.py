@@ -3,6 +3,7 @@ Parses the python AST below, transforms it to C, JITs it, and runs it.
 """
 
 import numpy as np
+import ctypes as ct
 
 from ctree.frontend import get_ast
 from ctree.nodes import *
@@ -18,9 +19,31 @@ logging.basicConfig(level=20)
 # Specializer library
 
 class OpTranslator(LazySpecializedFunction):
-  def transform(self, tree):
+  _NUMPY_DTYPE_TO_CTYPE = {
+    np.dtype('float64'): ct.c_double,
+    # TODO add the rest
+  }
+
+  @staticmethod
+  def _numpy_dtype_to_ctype(dtype):
+    try:
+      return OpTranslator._NUMPY_DTYPE_TO_CTYPE[dtype]
+    except KeyError:
+      raise Exception("Cannot convertion Numpy dtype '%s' to ctype." % dtype)
+
+  def transform(self, tree, args):
     """Convert the Python AST to a C AST."""
+    len_A, A = args
+    array_type = np.ctypeslib.ndpointer(dtype=A.dtype, ndim=A.ndim, shape=A.shape, flags=A.flags)
+    apply_all_typesig = [ct.c_void_p, ct.c_int, array_type]
+
+    inner_type = self._numpy_dtype_to_ctype(A.dtype)
+    apply_one_typesig = [inner_type, inner_type]
+
     transformations = [
+      SetParamTypes("apply_all", apply_all_typesig),
+      SetParamTypes("apply",     apply_one_typesig),
+      ConvertNumpyNdpointers(),
       StripPythonDocstrings(),
       PyBasicConversions(),
       FixUpParentPointers(),
@@ -44,11 +67,25 @@ class ArrayOp(object):
   """
   def __init__(self):
     """Instantiate translator."""
-    self.c_apply = OpTranslator( get_ast(self.apply) )
+    kernel = get_ast(self.apply).body[0]
+    control = FunctionDecl(ct.c_void_p, "apply_all",
+      params=[SymbolRef("len_A", ct.c_size_t), SymbolRef("A")],
+      defn=[
+        For(Assign(SymbolRef("i", ct.c_int), Constant(0)),
+            Lt(SymbolRef("i"), SymbolRef("len_A")),
+            PostInc(SymbolRef("i")),
+            [
+              Assign(ArrayRef(SymbolRef("A"),SymbolRef("i")),
+                     FunctionCall(SymbolRef("apply"), [ArrayRef(SymbolRef("A"),SymbolRef("i"))])),
+            ]),
+      ]
+    )
+    project = File([kernel, control])
+    self.c_apply_all = OpTranslator(project, "apply_all")
 
-  def __call__(self, *args, **kwargs):
+  def __call__(self, A):
     """Apply the operator to the arguments."""
-    return self.c_apply(*args, **kwargs)
+    return self.c_apply_all(len(A), A)
 
 
 # ---------------------------------------------------------------------------

@@ -78,27 +78,21 @@ class CodeGenerator(NodeVisitor):
       return self._CTYPE_TO_STR[ctype]
     except KeyError:
       pass
-
-    raise Exception("Can't convert type %s to a string." % type(ctype))
+    raise Exception("Can't convert type %s to a string." % ctype)
 
   # -------------------------------------------------------------------------
   # visitor methods
 
   def visit_FunctionDecl(self, node):
-    rettype = self._ctype_to_str(node.return_type) if node.return_type else ct.c_void_p
+    rettype = self._ctype_to_str(node.return_type if node.return_type else ct.c_void_p)
     params = ", ".join(map(self.visit, node.params))
+    s = ""
+    if node.inline:
+      s += "inline "
+    s += "%s %s(%s)" % (rettype, node.name, params)
     if node.defn:
-      defn = self._genblock(node.defn)
-      return "%s %s(%s) %s" % (rettype, node.name, params, defn)
-    else:
-      return "%s %s(%s)" % (rettype, node.name, params)
-
-  def visit_Param(self, node):
-    ty = self._ctype_to_str(node.type)
-    if node.name != None:
-      return "%s %s" % (ty, self.visit(node.name))
-    else:
-      return "%s" % ty
+      s += " %s" % self._genblock(node.defn)
+    return s
 
   def visit_UnaryOp(self, node):
     arg = self.visit(node.arg)

@@ -126,3 +126,43 @@ class StripPythonDocstrings(NodeTransformer):
     if ast.get_docstring(node):
       node.body.pop(0)
     return self.generic_visit(node)
+
+class SetParamTypes(NodeTransformer):
+  """
+  Sets the parameter types according to the given type signature.
+  For ctree FunctionDecl nodes, sets Param.type field.
+  For ast.FunctionDef nodes, sets arg.annotation field.
+
+  The target must have the same number of parameters as there
+  are entries in the type signature.
+  """
+  def __init__(self, target, typesig):
+    self.target = target
+    self.typesig = typesig
+    super().__init__()
+
+  def visit_FunctionDecl(self, node):
+    if node.name == self.target:
+      node.return_type = self.typesig[0]
+      for ty, param in zip(self.typesig[1:], node.params):
+        param.type = ty
+    return node
+
+  def visit_FunctionDef(self, node):
+    if node.name == self.target:
+      node.returns = self.typesig[0]
+      for ty, arg in zip(self.typesig[1:], node.args.args):
+        arg.annotation = ty
+    return node
+
+class ConvertNumpyNdpointers(NodeTransformer):
+  """
+  Converts np.ctypeslib.ndpointer instance to the
+  corresponding primitive types.
+
+  For example: np.array(dtype='float64') -> double*
+  """
+  def visit_SymbolRef(self, node):
+    if node.type and hasattr(node.type, '_dtype_'):
+      node.type = ctypes.POINTER(ctypes.c_double) # FIXME
+    return node

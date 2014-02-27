@@ -228,6 +228,7 @@ class FunctionDecl(Statement):
     self.name = name
     self.params = params
     self.defn = defn
+    self.inline = False
     super().__init__()
 
   def get_type(self):
@@ -238,16 +239,9 @@ class FunctionDecl(Statement):
     from ctree.jit import LazyTreeBuilder
     return LazyTreeBuilder(self)
 
-class Param(Statement):
-  """Cite me."""
-  _fields = ['name']
-  def __init__(self, type, name=None):
-    self.type = type
-    self.name = name
-    super().__init__()
-
-  def get_type(self):
-    return self.type
+  def set_inline(self, value=True):
+    self.inline = value
+    return self
 
 class UnaryOp(Expression):
   """Cite me."""

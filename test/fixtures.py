@@ -12,7 +12,7 @@ def identity(x :int) -> int:
   return x
 
 identity_ast = \
-FunctionDecl(ct.c_int, "identity", [Param(ct.c_int, SymbolRef("x"))], [
+FunctionDecl(ct.c_int, "identity", [SymbolRef(SymbolRef("x"), ct.c_int)], [
   Return(SymbolRef("x"))
 ])
 
@@ -26,7 +26,7 @@ def gcd(a :int, b :int) -> int:
     return gcd(b, a % b)
 
 gcd_ast = \
-FunctionDecl(ct.c_int, "gcd", [Param(ct.c_int, SymbolRef("a")), Param(ct.c_int, SymbolRef("b"))], [
+FunctionDecl(ct.c_int, "gcd", [SymbolRef("a", ct.c_int), SymbolRef("b", ct.c_int)], [
   If(Eq(SymbolRef('b'),Constant(0)), \
     [Return(SymbolRef('a'))], \
     [Return(FunctionCall(SymbolRef('gcd'), [SymbolRef('b'), Mod(SymbolRef('a'), \
@@ -43,7 +43,7 @@ def fib(n :int) -> int:
     return fib(n-1) + fib(n-2)
 
 fib_ast = \
-FunctionDecl(ct.c_int, "fib", [Param(ct.c_int, SymbolRef("n"))], [
+FunctionDecl(ct.c_int, "fib", [SymbolRef("n", ct.c_int)], [
   If(Lt(SymbolRef("n"), Constant(2)), \
     [Return(SymbolRef("n"))], \
     [Return(Add(FunctionCall(SymbolRef("fib"), [Sub(SymbolRef("n"), Constant(1))]), \

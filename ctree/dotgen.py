@@ -11,6 +11,10 @@ class DotGenerator(NodeVisitor):
   We can use pydot to do this, instead of using plain string concatenation.
   """
 
+  @staticmethod
+  def _qualified_name(obj):
+    return "%s.%s" % (obj.__module__, obj.__name__)
+
   def generate_from(self, node):
     return "digraph myprogram {\n%s}" % self.visit(node)
 
@@ -26,12 +30,21 @@ class DotGenerator(NodeVisitor):
 
   def label_arg(self, node):
     s = "name: %s" % node.arg
-    if node.annotation:
-      s += "\ntype: %s.%s" % (node.annotation.__module__, node.annotation.__name__)
+    if node.annotation and not isinstance(node.annotation, ast.AST):
+      s += "\nannotation: %s" % self._qualified_name(node.annotation)
     return s
 
   def label_FunctionDef(self, node):
     return "name: %s" % node.name
+
+  def label_FunctionDecl(self, node):
+    return "name: %s" % node.name
+
+  def label_Param(self, node):
+    s = "type: %s" % node.type
+    if node.name:
+      s += "\nname: %s" % node.name
+    return s
 
   def label_Num(self, node):
     return "n: %s" % node.n
