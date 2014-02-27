@@ -38,6 +38,10 @@ class CtreeNode(ast.AST):
     """Retrieve the AST in DOT format for vizualization."""
     raise Exception("Node class %s should override _to_dot()" % type(self))
 
+  def _requires_semicolon(self):
+    """When coverted to a string, this node should be followed by a semicolon."""
+    return True
+
   def get_root(self):
     """
     Traverse the parent pointer list to find the eldest

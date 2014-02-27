@@ -15,9 +15,10 @@ class CodeGenVisitor(NodeVisitor):
 
   def _genblock(self, forest):
     self._indent += 1
-    body = self._tab() + \
-           (";\n%s" % self._tab()).join([f.codegen(self._indent) for f in forest]) + \
-           ";\n"
+    body = ""
+    for tree in forest:
+      sc = ";" if tree._requires_semicolon() else ""
+      body += self._tab() + tree.codegen(self._indent) + sc + "\n"
     self._indent -= 1
     return "{\n%s%s}" % (body, self._tab())
 

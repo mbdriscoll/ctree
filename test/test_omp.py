@@ -23,3 +23,10 @@ class TestOmpCodegen(unittest.TestCase):
   def test_num_threads(self):
     node = OmpParallel([OmpNumThreadsClause(Constant(3))])
     self.assertEqual(str(node), "#pragma omp parallel num_threads(3)")
+
+  def test_no_semicolons(self):
+    node = Block([OmpParallel(), Assign(SymbolRef("x"), Constant(3))])
+    self.assertEqual(str(node), """{
+    #pragma omp parallel
+    x = 3;
+}""")

@@ -18,6 +18,8 @@ class OmpNode(CtreeNode):
   def dotgen(self, indent=0):
     return OmpDotGen().visit(self)
 
+  def _requires_semicolon(self):
+    return False
 
 class OmpParallel(OmpNode):
   """
