@@ -25,7 +25,7 @@ class JitModule(object):
     log.info("Temporary compilation directory is: %s" % self.compilation_dir)
 
   def __del__(self):
-    log.info("Removing temporary compilation directory.")
+    log.info("Removing temporary compilation directory %s." % self.compilation_dir)
     if self.destroy_compilation_dir_on_exit:
       shutil.rmtree(self.compilation_dir)
 
@@ -67,7 +67,7 @@ class JitModule(object):
 
     # run jit compiler
     from llvm.ee import EngineBuilder
-    self.exec_engine = EngineBuilder.new(self.ll_module).mcjit(True).create()
+    self.exec_engine = EngineBuilder.new(self.ll_module).mcjit(True).opt(3).create()
     c_func_ptr = self.exec_engine.get_pointer_to_function(ll_function)
 
     # cast c_func_ptr to python callable using ctypes

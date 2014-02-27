@@ -16,11 +16,15 @@ import logging
 logging.basicConfig(level=20)
 
 # ---------------------------------------------------------------------------
-# Specializer library
+# Specializer code
 
 class OpTranslator(LazySpecializedFunction):
+  #FIXME this mapping should be more widely available
   _NUMPY_DTYPE_TO_CTYPE = {
     np.dtype('float64'): ct.c_double,
+    np.dtype('float32'): ct.c_float,
+    np.dtype('int64'):   ct.c_long,
+    np.dtype('int32'):   ct.c_int,
     # TODO add the rest
   }
 
@@ -50,13 +54,7 @@ class OpTranslator(LazySpecializedFunction):
     ]
 
     for nth, tx in enumerate(transformations):
-      with open("graph.%d.dot" % nth, 'w') as ofile:
-        ofile.write( to_dot(tree) )
       tree = tx.visit(tree)
-    with open("graph.%d.dot" % (nth+1), 'w') as ofile:
-      ofile.write( to_dot(tree) )
-
-    #tree.find(FunctionDecl, name="apply").set_inline()
 
     return tree
 
@@ -90,7 +88,7 @@ class ArrayOp(object):
 
 
 # ---------------------------------------------------------------------------
-# User-defined code
+# User code
 
 class Doubler(ArrayOp):
   """Double one element of the array."""
@@ -104,13 +102,34 @@ def py_doubler(A):
 def main():
   c_doubler = Doubler()
 
-  actual   = np.ones(12, dtype=np.double)
-  expected = np.ones(12, dtype=np.double)
+  # doubling doubles
+  actual_d   = np.ones(12, dtype=np.float64)
+  expected_d = np.ones(12, dtype=np.float64)
+  c_doubler(actual_d)
+  py_doubler(expected_d)
+  np.testing.assert_array_equal(actual_d, expected_d)
 
-  c_doubler(actual)
-  py_doubler(expected)
+  # doubling floats
+  actual_f   = np.ones(13, dtype=np.float32)
+  expected_f = np.ones(13, dtype=np.float32)
+  c_doubler(actual_f)
+  py_doubler(expected_f)
+  np.testing.assert_array_equal(actual_f, expected_f)
 
-  np.testing.assert_array_equal(actual, expected)
+  # doubling longs
+  actual_i   = np.ones(14, dtype=np.int32)
+  expected_i = np.ones(14, dtype=np.int32)
+  c_doubler(actual_i)
+  py_doubler(expected_i)
+  np.testing.assert_array_equal(actual_i, expected_i)
+
+  # demonstrate caching
+  c_doubler(actual_i)
+  c_doubler(actual_i)
+  py_doubler(expected_i)
+  py_doubler(expected_i)
+  np.testing.assert_array_equal(actual_i, expected_i)
+
   print("Success.")
 
 

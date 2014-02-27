@@ -1,4 +1,5 @@
 import ast
+import ctypes as ct
 
 from ctree.nodes.c import *
 from ctree.types import *
@@ -46,7 +47,6 @@ class PyBasicConversions(NodeTransformer):
     return BinaryOp(lhs, op, rhs)
 
   def visit_Return(self, node):
-    assert isinstance(node, ast.Return)
     val = self.visit(node.value)
     return Return(val)
 
@@ -162,8 +162,23 @@ class ConvertNumpyNdpointers(NodeTransformer):
 
   For example: np.array(dtype='float64') -> double*
   """
+  def _convert(self, orig_type):
+    try:
+      import numpy as np
+      dtype = orig_type._dtype_
+      print("convert %s" % (dtype))
+      # FIXME this mapping should be widely available
+      if   dtype == np.dtype('float64'): base_type = ct.c_double
+      elif dtype == np.dtype('float32'): base_type = ct.c_float
+      elif dtype == np.dtype('int64'):   base_type = ct.c_long
+      elif dtype == np.dtype('int32'):   base_type = ct.c_int
+      return ct.POINTER(base_type)
+    except (ImportError, UnboundLocalError):
+      pass
+    raise Exception("Unable to convert '%s' to basic ctype." % orig_type)
+
   def visit_SymbolRef(self, node):
     if node.type and hasattr(node.type, '_dtype_'):
-      setattr(node, 'ctype', node.type)
-      node.type = ctypes.POINTER(ctypes.c_double) # FIXME
+      node.ctype = node.type
+      node.type = self._convert(node.ctype)
     return node
