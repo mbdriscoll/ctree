@@ -23,15 +23,37 @@ class OmpParallel(OmpNode):
   """
   Represents '#pragma omp parallel' annotations.
   """
-  def __init__(self, if_exp=None, private=[], first_private=[], num_threads=None, shared=[], default=None, copyin=[], reduction=[]):
-    self.if_exp = if_exp
-    self.private = private
-    self.first_private = first_private
-    self.num_threads = num_threads
-    self.shared = shared
-    self.default = default
-    self.copyin = copyin
-    self.reduction = reduction
+  _fields = ['clauses']
+  def __init__(self, clauses=[]):
+    self.clauses = clauses
+
+
+class OmpParallelFor(OmpNode):
+  """ #pragma omp parallel for ... """
+  _fields = ['clauses']
+  def __init__(self, clauses=[]):
+    self.clauses = clauses
+
+
+class OmpClause(OmpNode):
+  """Base class for OpenMP clauses."""
+  pass
+
+
+class OmpIfClause(OmpClause):
+  _fields = ["exp"]
+  def __init__(self, exp=None):
+    self.exp = exp
+
+
+class OmpNumThreadsClause(OmpClause):
+  _fields = ["val"]
+  def __init__(self, val=None):
+    self.val = val
+
+
+class OmpNoWaitClause(OmpClause):
+  pass
 
 
 # ---------------------------------------------------------------------------
@@ -42,7 +64,25 @@ class OmpCodeGen(CodeGenVisitor):
   Visitor to generate omp code.
   """
   def visit_OmpParallel(self, node):
-    return "#pragma omp parallel"
+    s = "#pragma omp parallel"
+    if node.clauses:
+      s += " " + ", ".join(map(str, node.clauses))
+    return s
+
+  def visit_OmpParallelFor(self, node):
+    s = "#pragma omp parallel for"
+    if node.clauses:
+      s += " " + ", ".join(map(str, node.clauses))
+    return s
+
+  def visit_OmpIfClause(self, node):
+    return "if(%s)" % node.exp
+
+  def visit_OmpNumThreadsClause(self, node):
+    return "num_threads(%s)" % node.val
+
+  def visit_OmpNoWaitClause(self, node):
+    return "nowait"
 
 
 # ---------------------------------------------------------------------------
