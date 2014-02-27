@@ -77,3 +77,29 @@ class TypeFetcher(NodeVisitor):
       return c_int
     else:
       raise Exception("Cannot promote type %s to an integer-type." % t)
+
+
+# ---------------------------------------------------------------------------
+# numpy-specific stuff
+
+# FIXME we need an extensible way to register types for optional packages
+# like numpy
+
+try:
+  import numpy as np
+  _NUMPY_DTYPE_TO_CTYPE = {
+    np.dtype('float64'): c_double,
+    np.dtype('float32'): c_float,
+    np.dtype('int64'):   c_long,
+    np.dtype('int32'):   c_int,
+    # TODO add the rest
+  }
+except ImportError:
+  _NUMPY_DTYPE_TO_CTYPE = {}
+
+def numpy_dtype_to_ctype(dtype):
+  try:
+    return _NUMPY_DTYPE_TO_CTYPE[dtype]
+  except KeyError:
+    raise Exception("Cannot convertion Numpy dtype '%s' to ctype." % dtype)
+

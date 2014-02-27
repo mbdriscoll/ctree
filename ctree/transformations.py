@@ -163,19 +163,7 @@ class ConvertNumpyNdpointers(NodeTransformer):
   For example: np.array(dtype='float64') -> double*
   """
   def _convert(self, orig_type):
-    try:
-      import numpy as np
-      dtype = orig_type._dtype_
-      print("convert %s" % (dtype))
-      # FIXME this mapping should be widely available
-      if   dtype == np.dtype('float64'): base_type = ct.c_double
-      elif dtype == np.dtype('float32'): base_type = ct.c_float
-      elif dtype == np.dtype('int64'):   base_type = ct.c_long
-      elif dtype == np.dtype('int32'):   base_type = ct.c_int
-      return ct.POINTER(base_type)
-    except (ImportError, UnboundLocalError):
-      pass
-    raise Exception("Unable to convert '%s' to basic ctype." % orig_type)
+    return ct.POINTER(numpy_dtype_to_ctype(orig_type._dtype_))
 
   def visit_SymbolRef(self, node):
     if node.type and hasattr(node.type, '_dtype_'):

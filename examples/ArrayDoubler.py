@@ -11,6 +11,7 @@ from ctree.dotgen import to_dot
 from ctree.transformations import *
 from ctree.analyses import VerifyOnlyCAstNodes
 from ctree.jit import LazySpecializedFunction
+from ctree.types import numpy_dtype_to_ctype
 
 import logging
 logging.basicConfig(level=20)
@@ -19,27 +20,11 @@ logging.basicConfig(level=20)
 # Specializer code
 
 class OpTranslator(LazySpecializedFunction):
-  #FIXME this mapping should be more widely available
-  _NUMPY_DTYPE_TO_CTYPE = {
-    np.dtype('float64'): ct.c_double,
-    np.dtype('float32'): ct.c_float,
-    np.dtype('int64'):   ct.c_long,
-    np.dtype('int32'):   ct.c_int,
-    # TODO add the rest
-  }
-
-  @staticmethod
-  def _numpy_dtype_to_ctype(dtype):
-    try:
-      return OpTranslator._NUMPY_DTYPE_TO_CTYPE[dtype]
-    except KeyError:
-      raise Exception("Cannot convertion Numpy dtype '%s' to ctype." % dtype)
-
   def transform(self, tree, args):
     """Convert the Python AST to a C AST."""
     len_A, A = args
     array_type = np.ctypeslib.ndpointer(dtype=A.dtype, ndim=A.ndim, shape=A.shape, flags=A.flags)
-    inner_type = self._numpy_dtype_to_ctype(A.dtype)
+    inner_type = numpy_dtype_to_ctype(A.dtype)
 
     apply_all_typesig = [None, ct.c_int, array_type]
     apply_one_typesig = [inner_type, inner_type]
