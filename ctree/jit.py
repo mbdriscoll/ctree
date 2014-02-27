@@ -46,7 +46,7 @@ class JitModule(object):
       c_file.write(program_txt)
 
     # call clang to generate LLVM bitcode file
-    compile_cmd = "clang -emit-llvm -o %s -c %s" % (ll_bc_file, c_src_file)
+    compile_cmd = "clang -emit-llvm -O3 -o %s -c %s" % (ll_bc_file, c_src_file)
     log.info("Compilation command: %s" % compile_cmd)
     subprocess.check_call(compile_cmd, shell=True)
 

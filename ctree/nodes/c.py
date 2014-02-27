@@ -238,6 +238,7 @@ class FunctionDecl(Statement):
     self.params = params
     self.defn = defn
     self.inline = False
+    self.static = False
     super().__init__()
 
   def get_type(self):
@@ -250,6 +251,10 @@ class FunctionDecl(Statement):
 
   def set_inline(self, value=True):
     self.inline = value
+    return self
+
+  def set_static(self, value=True):
+    self.static = value
     return self
 
 class UnaryOp(Expression):

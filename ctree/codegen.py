@@ -88,6 +88,8 @@ class CodeGenerator(NodeVisitor):
     rettype = self._ctype_to_str(node.return_type)
     params = ", ".join(map(self.visit, node.params))
     s = ""
+    if node.static:
+      s += "static "
     if node.inline:
       s += "inline "
     s += "%s %s(%s)" % (rettype, node.name, params)

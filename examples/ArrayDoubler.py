@@ -41,6 +41,7 @@ class OpTranslator(LazySpecializedFunction):
     for nth, tx in enumerate(transformations):
       tree = tx.visit(tree)
 
+    tree.find(FunctionDecl, name="apply").set_static().set_inline()
     return tree
 
 
