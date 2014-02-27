@@ -122,7 +122,7 @@ class LazySpecializedFunction(object):
 
     if typesig not in self.c_functions:
       log.info("specialized function cache miss.")
-      c_ast = self.transform(self.original_tree, args)
+      c_ast = self.transform( copy.deepcopy(self.original_tree), args )
       VerifyOnlyCAstNodes().visit(c_ast)
       self.c_functions[typesig] = TypedSpecializedFunction(c_ast, self.entry_point_name)
     else:

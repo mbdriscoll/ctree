@@ -22,11 +22,11 @@ logging.basicConfig(level=20)
 class OpTranslator(LazySpecializedFunction):
   def transform(self, tree, args):
     """Convert the Python AST to a C AST."""
-    len_A, A = args
+    A, = args
     array_type = np.ctypeslib.ndpointer(dtype=A.dtype, ndim=A.ndim, shape=A.shape, flags=A.flags)
     inner_type = pytype_to_ctype(A.dtype)
 
-    apply_all_typesig = [None, ct.c_int, array_type]
+    apply_all_typesig = [None, array_type]
     apply_one_typesig = [inner_type, inner_type]
 
     transformations = [
@@ -42,6 +42,12 @@ class OpTranslator(LazySpecializedFunction):
       tree = tx.visit(tree)
 
     tree.find(FunctionDecl, name="apply").set_static().set_inline()
+
+    with open("graph.dot", 'w') as ofile:
+      ofile.write( to_dot(tree) )
+
+    tree.find(SymbolRef, name="len_A").replace(Constant(len(A)))
+
     return tree
 
 
@@ -53,8 +59,8 @@ class ArrayOp(object):
   def __init__(self):
     """Instantiate translator."""
     kernel = get_ast(self.apply).body[0]
-    control = FunctionDecl(None, "apply_all",
-      params=[SymbolRef("len_A"), SymbolRef("A")],
+    control = FunctionDecl(ct.c_void_p, "apply_all",
+      params=[SymbolRef("A")],
       defn=[
         For(Assign(SymbolRef("i", ct.c_int), Constant(0)),
             Lt(SymbolRef("i"), SymbolRef("len_A")),
@@ -70,7 +76,7 @@ class ArrayOp(object):
 
   def __call__(self, A):
     """Apply the operator to the arguments via a generated function."""
-    return self.c_apply_all(len(A), A)
+    return self.c_apply_all(A)
 
 
 # ---------------------------------------------------------------------------

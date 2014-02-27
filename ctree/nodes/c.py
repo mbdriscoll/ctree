@@ -90,6 +90,16 @@ class CAstNode(ast.AST):
       if pred(node):
         yield node
 
+  def replace(self, new_node):
+    """
+    Replace the current node with 'new_node'.
+    """
+    parent = self.parent
+    assert self.parent, "Tried to replace a node without a parent."
+    for fieldname, child in ast.iter_fields(parent):
+      if child is self:
+        setattr(parent, fieldname, new_node)
+    return new_node
 
 class Statement(CAstNode):
   """Section B.2.3 6.6."""
@@ -114,7 +124,7 @@ class Return(Statement):
 class If(Statement):
   """Cite me."""
   _fields = ['cond', 'then', 'elze']
-  def __init__(self, cond, then, elze=None):
+  def __init__(self, cond=None, then=None, elze=None):
     self.cond = cond
     self.then = then
     self.elze = elze
@@ -124,7 +134,7 @@ class If(Statement):
 class While(Statement):
   """Cite me."""
   _fields = ['cond', 'body']
-  def __init__(self, cond, body=[]):
+  def __init__(self, cond=None, body=[]):
     self.cond = cond
     self.body = body
     super().__init__()
@@ -132,7 +142,7 @@ class While(Statement):
 
 class DoWhile(Statement):
   _fields = ['body', 'cond']
-  def __init__(self, body, cond):
+  def __init__(self, body=[], cond=None):
     self.body = body
     self.cond = cond
     super().__init__()
@@ -140,7 +150,7 @@ class DoWhile(Statement):
 
 class For(Statement):
   _fields = ['init', 'test', 'incr', 'body']
-  def __init__(self, init, test, incr, body):
+  def __init__(self, init=None, test=None, incr=None, body=None):
     self.init = init
     self.test = test
     self.incr = incr
@@ -151,7 +161,7 @@ class For(Statement):
 class FunctionCall(Expression):
   """Cite me."""
   _fields = ['func', 'args']
-  def __init__(self, func, args=[]):
+  def __init__(self, func=None, args=[]):
     self.func = func
     self.args = args
     super().__init__()
@@ -160,7 +170,7 @@ class FunctionCall(Expression):
 class ArrayRef(Expression):
   """Cite me."""
   _fields = ['base', 'offset']
-  def __init__(self, base, offset):
+  def __init__(self, base=None, offset=None):
     self.base = base
     self.offset = offset
     super().__init__()
@@ -171,7 +181,7 @@ class Literal(Expression):
 
 class Constant(Literal):
   """Section B.1.4 6.1.3."""
-  def __init__(self, value):
+  def __init__(self, value=None):
     self.value = value
     super().__init__()
 
@@ -179,7 +189,7 @@ class Constant(Literal):
 class Block(Statement):
   """Cite me."""
   _fields = ['body']
-  def __init__(self, body):
+  def __init__(self, body=[]):
     self.body = body
     super().__init__()
 
@@ -202,14 +212,14 @@ class File(CAstNode):
 
 class String(Literal):
   """Cite me."""
-  def __init__(self, value):
+  def __init__(self, value=None):
     self.value = value
     super().__init__()
 
 
 class SymbolRef(Literal):
   """Cite me."""
-  def __init__(self, name, type=None, ctype=None):
+  def __init__(self, name=None, type=None, ctype=None):
     """
     Create a new symbol with the given name. If a declaration
     type is specified, the symbol is considered a declaration
@@ -229,10 +239,11 @@ class SymbolRef(Literal):
   def get_ctype(self):
     return self.ctype or self.type
 
+
 class FunctionDecl(Statement):
   """Cite me."""
   _fields = ['params', 'defn']
-  def __init__(self, return_type, name, params=[], defn=None):
+  def __init__(self, return_type=None, name=None, params=None, defn=None):
     self.return_type = return_type
     self.name = name
     self.params = params
@@ -260,7 +271,7 @@ class FunctionDecl(Statement):
 class UnaryOp(Expression):
   """Cite me."""
   _fields = ['arg']
-  def __init__(self, op, arg):
+  def __init__(self, op=None, arg=None):
     self.op = op
     self.arg = arg
     super().__init__()
@@ -269,7 +280,7 @@ class UnaryOp(Expression):
 class BinaryOp(Expression):
   """Cite me."""
   _fields = ['left', 'right']
-  def __init__(self, left, op, right):
+  def __init__(self, left=None, op=None, right=None):
     self.left = left
     self.op = op
     self.right = right
@@ -279,7 +290,7 @@ class BinaryOp(Expression):
 class AugAssign(Expression):
   """Cite me."""
   _fields = ['target', 'value']
-  def __init__(self, target, op, value):
+  def __init__(self, target=None, op=None, value=None):
     self.target = target
     self.op = op
     self.value = value
@@ -289,7 +300,7 @@ class AugAssign(Expression):
 class TernaryOp(Expression):
   """Cite me."""
   _fields = ['cond', 'then', 'elze']
-  def __init__(self, cond, then, elze):
+  def __init__(self, cond=None, then=None, elze=None):
     self.cond = cond
     self.then = then
     self.elze = elze
@@ -299,7 +310,7 @@ class TernaryOp(Expression):
 class Cast(Expression):
    """doc"""
    _fields = ['value']
-   def __init__(self, ctype, value):
+   def __init__(self, ctype=None, value=None):
      self.type = ctype
      self.value = value
      super().__init__()

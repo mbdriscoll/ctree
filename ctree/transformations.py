@@ -1,4 +1,5 @@
 import ast
+import copy
 import ctypes as ct
 
 from ctree.nodes.c import *
