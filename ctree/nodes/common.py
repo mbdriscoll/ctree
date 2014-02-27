@@ -6,6 +6,7 @@ import ast
 import ctypes as ct
 
 from ctree.codegen import CodeGenVisitor
+from ctree.dotgen import DotGenVisitor
 
 class CtreeNode(ast.AST):
   """Base class for all AST nodes in ctree."""
@@ -31,12 +32,11 @@ class CtreeNode(ast.AST):
     return self.codegen()
 
   def codegen(self, indent=0):
-    raise Exception("Node class should override codegen()")
+    raise Exception("Node class %s should override codegen()" % type(self))
 
-  def to_dot(self):
+  def _to_dot(self):
     """Retrieve the AST in DOT format for vizualization."""
-    from ctree.dotgen import DotGenerator
-    return DotGenerator().generate_from(self)
+    raise Exception("Node class %s should override _to_dot()" % type(self))
 
   def get_root(self):
     """
@@ -111,6 +111,10 @@ class CommonNode(CtreeNode):
   def codegen(self, indent=0):
     return CommonCodeGen(indent).visit(self)
 
+  def _to_dot(self):
+    return CommonDotGen().visit(self)
+
+
 class Project(CommonNode):
   """Holds a list files."""
   _fields = ['files']
@@ -127,10 +131,12 @@ class File(CommonNode):
     super().__init__()
 
 
-# ---------------------------------------------------------------------------
-# Common node code gen
-
 class CommonCodeGen(CodeGenVisitor):
   """Manages conversion of all common nodes to txt."""
   def visit_File(self, node):
     return ";\n".join(map(str, node.body)) + ";\n"
+
+
+class CommonDotGen(DotGenVisitor):
+  """Manages coversion of all common nodes to dot."""
+  pass

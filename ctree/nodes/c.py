@@ -12,6 +12,9 @@ class CNode(CtreeNode):
   def codegen(self, indent=0):
     return CCodeGen(indent).visit(self)
 
+  def _to_dot(self):
+    return CDotGen().visit(self)
+
 
 class Statement(CNode):
   """Section B.2.3 6.6."""
@@ -470,3 +473,53 @@ class CCodeGen(CodeGenVisitor):
 
   def visit_String(self, node):
     return '"%s"' % node.value
+
+
+# ---------------------------------------------------------------------------
+# dot generator
+
+from ctree.dotgen import DotGenVisitor
+
+class CDotGen(DotGenVisitor):
+  """
+  Manages generation of DOT.
+  """
+  def label_SymbolRef(self, node):
+    s = "name: %s" % node.name
+    if node.type:
+      s += "\ntype: %s" % node.type.__name__
+    if node.ctype:
+      s += "\nctype: %s" % node.ctype
+    return s
+
+  def label_arg(self, node):
+    s = "name: %s" % node.arg
+    if node.annotation and not isinstance(node.annotation, ast.AST):
+      s += "\nannotation: %s" % self._qualified_name(node.annotation)
+    return s
+
+  def label_FunctionDef(self, node):
+    return "name: %s" % node.name
+
+  def label_FunctionDecl(self, node):
+    return "name: %s\nreturn_type: %s" % \
+      (node.name, node.return_type)
+
+  def label_Param(self, node):
+    s = "type: %s" % node.type
+    if node.name:
+      s += "\nname: %s" % node.name
+    return s
+
+  def label_Num(self, node):
+    return "n: %s" % node.n
+
+  def label_Name(self, node):
+    return "id: %s" % node.id
+
+  def label_Constant(self, node):
+    return "value: %s" % node.value
+
+  def label_String(self, node):
+    return "value: %s" % node.value
+
