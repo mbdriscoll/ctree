@@ -6,9 +6,10 @@ import tempfile
 import subprocess
 
 import ctree
+import ctypes
 from ctree.nodes.c import *
 from ctree.frontend import get_ast
-from ctree.analyses import VerifyOnlyCAstNodes
+from ctree.analyses import VerifyOnlyCtreeNodes
 
 import llvm.core as ll
 
@@ -126,7 +127,7 @@ class LazySpecializedFunction(object):
     if typesig not in self.c_functions:
       log.info("specialized function cache miss.")
       c_ast = self.transform( copy.deepcopy(self.original_tree), args )
-      VerifyOnlyCAstNodes().visit(c_ast)
+      VerifyOnlyCtreeNodes().visit(c_ast)
       self.c_functions[typesig] = TypedSpecializedFunction(c_ast, self.entry_point_name)
     else:
       log.info("specialized function cache hit!")

@@ -9,7 +9,6 @@ from ctree.frontend import get_ast
 from ctree.nodes import *
 from ctree.dotgen import to_dot
 from ctree.transformations import *
-from ctree.analyses import VerifyOnlyCAstNodes
 from ctree.jit import LazySpecializedFunction
 from ctree.types import pytype_to_ctype
 
