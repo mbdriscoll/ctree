@@ -24,8 +24,8 @@ def main():
   my_ast = frontend.get_ast(fib)
 
   ast1 = PyTypeRecognizer().visit(my_ast)
-  ast2 = PyTypeRecognizer().visit(ast1)
-  ast3 = PyTypeRecognizer().visit(ast2)
+  ast2 = PyBasicConversions().visit(ast1)
+  ast3 = FixUpParentPointers().visit(ast2)
   my_ast = ast3
 
   # transformations = [

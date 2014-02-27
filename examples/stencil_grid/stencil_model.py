@@ -10,7 +10,7 @@ import types
 import ast
 from assert_utils import *
 
-from asp.tree_grammar import *
+from examples.stencil_grid.tree_grammar import *
 parse('''
 # Tree grammar for stencil semantic model, based on language specification and other feedback
 

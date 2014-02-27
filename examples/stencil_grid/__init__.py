@@ -9,4 +9,5 @@ __all__ = [
     "stencil_optimize_cpp",
     "stencil_python_front_end",
     "stencil_unroll_neighbor_iter",
+    "tree_grammar",
 ]

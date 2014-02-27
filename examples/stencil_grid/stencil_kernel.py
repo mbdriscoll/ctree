@@ -1,4 +1,8 @@
-"""The main driver, intercepts the kernel() call and invokes the other components.
+"""
+This version was taken from the stencil_specializer project and has all asp stuff removed
+in order to work on a direct c-tree llvm implementation
+
+The main driver, intercepts the kernel() call and invokes the other components.
 
 Stencil kernel classes are subclassed from the StencilKernel class
 defined here. At initialization time, the text of the kernel() method
