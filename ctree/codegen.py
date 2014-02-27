@@ -69,6 +69,7 @@ class CodeGenerator(NodeVisitor):
     ct.c_char_p:     "char*",
     ct.c_wchar_p:    "wchar_t*",
     ct.c_void_p:     "void*",
+    None:            "void"
   }
 
   def _ctype_to_str(self, ctype):
@@ -84,7 +85,7 @@ class CodeGenerator(NodeVisitor):
   # visitor methods
 
   def visit_FunctionDecl(self, node):
-    rettype = self._ctype_to_str(node.return_type if node.return_type else ct.c_void_p)
+    rettype = self._ctype_to_str(node.return_type)
     params = ", ".join(map(self.visit, node.params))
     s = ""
     if node.inline:

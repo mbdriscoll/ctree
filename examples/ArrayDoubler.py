@@ -35,9 +35,9 @@ class OpTranslator(LazySpecializedFunction):
     """Convert the Python AST to a C AST."""
     len_A, A = args
     array_type = np.ctypeslib.ndpointer(dtype=A.dtype, ndim=A.ndim, shape=A.shape, flags=A.flags)
-    apply_all_typesig = [ct.c_void_p, ct.c_int, array_type]
-
     inner_type = self._numpy_dtype_to_ctype(A.dtype)
+
+    apply_all_typesig = [None, ct.c_int, array_type]
     apply_one_typesig = [inner_type, inner_type]
 
     transformations = [
@@ -56,7 +56,8 @@ class OpTranslator(LazySpecializedFunction):
     with open("graph.%d.dot" % (nth+1), 'w') as ofile:
       ofile.write( to_dot(tree) )
 
-    tree.return_type = ctypes.c_void_p
+    #tree.find(FunctionDecl, name="apply").set_inline()
+
     return tree
 
 
@@ -68,8 +69,8 @@ class ArrayOp(object):
   def __init__(self):
     """Instantiate translator."""
     kernel = get_ast(self.apply).body[0]
-    control = FunctionDecl(ct.c_void_p, "apply_all",
-      params=[SymbolRef("len_A", ct.c_size_t), SymbolRef("A")],
+    control = FunctionDecl(None, "apply_all",
+      params=[SymbolRef("len_A"), SymbolRef("A")],
       defn=[
         For(Assign(SymbolRef("i", ct.c_int), Constant(0)),
             Lt(SymbolRef("i"), SymbolRef("len_A")),
@@ -84,7 +85,7 @@ class ArrayOp(object):
     self.c_apply_all = OpTranslator(project, "apply_all")
 
   def __call__(self, A):
-    """Apply the operator to the arguments."""
+    """Apply the operator to the arguments via a generated function."""
     return self.c_apply_all(len(A), A)
 
 
@@ -92,10 +93,13 @@ class ArrayOp(object):
 # User-defined code
 
 class Doubler(ArrayOp):
+  """Double one element of the array."""
   def apply(n):
-    """Double one element of the array."""
     return n*2
 
+def py_doubler(A):
+  for i in range(len(A)):
+    A[i] *= 2
 
 def main():
   c_doubler = Doubler()
@@ -104,7 +108,7 @@ def main():
   expected = np.ones(12, dtype=np.double)
 
   c_doubler(actual)
-  doubler(expected)
+  py_doubler(expected)
 
   np.testing.assert_array_equal(actual, expected)
   print("Success.")

@@ -209,16 +209,25 @@ class String(Literal):
 
 class SymbolRef(Literal):
   """Cite me."""
-  def __init__(self, name, type=None):
+  def __init__(self, name, type=None, ctype=None):
     """
     Create a new symbol with the given name. If a declaration
     type is specified, the symbol is considered a declaration
     and unparsed with the type.
+
+    The ctype field is used when the ctype used to do Python
+    type-checking differs from the type declared at the C level.
+    This arises in the case of Numpy arrays where ctypes checks
+    against a np.ctypeslib.ndpointer, but the C code can have
+    a basic "double*" type (or something equivalent).
     """
     self.name = name
     self.type = type
+    self.ctype = ctype
     super().__init__()
 
+  def get_ctype(self):
+    return self.ctype or self.type
 
 class FunctionDecl(Statement):
   """Cite me."""
@@ -232,7 +241,7 @@ class FunctionDecl(Statement):
     super().__init__()
 
   def get_type(self):
-    arg_types = [p.get_type() for p in self.params]
+    arg_types = [p.get_ctype() for p in self.params]
     return ctypes.CFUNCTYPE(self.return_type, *arg_types)
 
   def get_callable(self):

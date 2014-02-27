@@ -164,5 +164,6 @@ class ConvertNumpyNdpointers(NodeTransformer):
   """
   def visit_SymbolRef(self, node):
     if node.type and hasattr(node.type, '_dtype_'):
+      setattr(node, 'ctype', node.type)
       node.type = ctypes.POINTER(ctypes.c_double) # FIXME
     return node
