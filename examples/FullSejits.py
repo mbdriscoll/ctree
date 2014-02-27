@@ -2,14 +2,14 @@
 Parses the python AST below, transforms it to C, JITs it, and runs it.
 """
 
+import logging
+logging.basicConfig(level=20)
+
 import numpy as np
 
 from ctree.transformations import *
 from ctree.frontend import get_ast
 from ctree.jit import LazySpecializedFunction
-
-import logging
-logging.basicConfig(level=20)
 
 def fib(n):
   if n < 2:

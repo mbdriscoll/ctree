@@ -5,6 +5,7 @@ import logging
 import tempfile
 import subprocess
 
+import ctree
 from ctree.nodes.c import *
 from ctree.frontend import get_ast
 from ctree.analyses import VerifyOnlyCAstNodes
@@ -46,7 +47,9 @@ class JitModule(object):
       c_file.write(program_txt)
 
     # call clang to generate LLVM bitcode file
-    compile_cmd = "clang -emit-llvm -O3 -o %s -c %s" % (ll_bc_file, c_src_file)
+    CC = ctree.config['jit']['CC']
+    CFLAGS = ctree.config['jit']['CFLAGS']
+    compile_cmd = "%s -emit-llvm %s -o %s -c %s" % (CC, CFLAGS, ll_bc_file, c_src_file)
     log.info("Compilation command: %s" % compile_cmd)
     subprocess.check_call(compile_cmd, shell=True)
 
