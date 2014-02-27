@@ -21,7 +21,7 @@ logging.basicConfig(level=20)
 class OpTranslator(LazySpecializedFunction):
   def transform(self, tree, args):
     """Convert the Python AST to a C AST."""
-    A, = args
+    A = args[0]
     array_type = np.ctypeslib.ndpointer(dtype=A.dtype, ndim=A.ndim, shape=A.shape, flags=A.flags)
     inner_type = pytype_to_ctype(A.dtype)
 
@@ -37,14 +37,10 @@ class OpTranslator(LazySpecializedFunction):
       FixUpParentPointers(),
     ]
 
-    for nth, tx in enumerate(transformations):
+    for tx in transformations:
       tree = tx.visit(tree)
 
     tree.find(FunctionDecl, name="apply").set_static().set_inline()
-
-    with open("graph.dot", 'w') as ofile:
-      ofile.write( to_dot(tree) )
-
     tree.find(SymbolRef, name="len_A").replace(Constant(len(A)))
 
     return tree

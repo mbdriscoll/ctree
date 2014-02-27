@@ -2,6 +2,8 @@
 Support for Python ast nodes in the 'ast' module.
 """
 
+import ast
+
 # ---------------------------------------------------------------------------
 # dot generator
 
