@@ -33,8 +33,11 @@ log.info("checking for config files at: %s" % cfg_paths)
 found = config.read(cfg_paths)
 log.info("found config files: %s" % found)
 
-# FIXME print out configuration
-log.info("using configuration: (FIXME) %s" % config)
+import io
+with io.StringIO() as configfile:
+  config.write(configfile)
+  config_txt = configfile.getvalue()
+log.info("using configuration:\n%s" % config_txt)
 
 
 # ---------------------------------------------------------------------------
