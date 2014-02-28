@@ -1,5 +1,5 @@
 """
-DOT generation for OpenMP.
+DOT generation for Cilk.
 """
 
 from ctree.dotgen import DotGenVisitor
@@ -7,7 +7,7 @@ from ctree.dotgen import DotGenVisitor
 # ---------------------------------------------------------------------------
 # DOT generator
 
-class OmpDotGen(DotGenVisitor):
+class CilkDotGen(DotGenVisitor):
   """
   Visitor to generator DOT.
   """

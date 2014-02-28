@@ -5,7 +5,7 @@ OpenMP nodes supported by ctree.
 import logging
 log = logging.getLogger(__name__)
 
-from ctree.nodes.common import CtreeNode
+from ctree.ast import CtreeNode
 
 # ---------------------------------------------------------------------------
 # load omp runtime into memory so it can be used from LLVM's jit

@@ -1,7 +1,7 @@
 import unittest
 import ctypes as ct
 
-from ctree.nodes.common import *
+from ctree.ast import *
 from ctree.c.nodes import *
 
 class TestFile(unittest.TestCase):

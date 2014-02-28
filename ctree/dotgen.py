@@ -53,8 +53,8 @@ def _to_dot(node):
   """
   Convert node to DOT, even if it's a Python AST node.
   """
-  from ctree.nodes.common import CtreeNode
-  from ctree.nodes.py import PyDotGen
+  from ctree.ast import CtreeNode
+  from ctree.py.dotgen import PyDotGen
   assert isinstance(node, ast.AST), \
     "Cannot convert %s to DOT." % type(node)
   if isinstance(node, CtreeNode):

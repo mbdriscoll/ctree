@@ -3,7 +3,7 @@ Code generator for C constructs.
 """
 
 import ctypes as ct
-from ctree.nodes.common import CtreeNode
+from ctree.ast import CtreeNode
 from ctree.codegen import CodeGenVisitor
 from ctree.c.nodes import *
 from ctree.precedence import *

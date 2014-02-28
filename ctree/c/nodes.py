@@ -3,7 +3,7 @@ AST nodes for C constructs.
 """
 
 import ctypes as ct
-from ctree.nodes.common import CtreeNode
+from ctree.ast import CtreeNode
 
 class CNode(CtreeNode):
   """Base class for all C nodes in ctree."""
