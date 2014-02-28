@@ -131,8 +131,8 @@ class LazySpecializedFunction(object):
     tuner_subconfig = self._next_tuning_config()
     program_config = (args_subconfig, tuner_subconfig)
 
-    log.info("arguments yield subconfig: %s" % (args_subconfig,))
-    log.info("tuner yields subconfig: %s" % (tuner_subconfig,))
+    log.info("specializer returned subconfig for arguments: %s" % (args_subconfig,))
+    log.info("tuner returned subconfig: %s" % (tuner_subconfig,))
 
     if program_config in self.c_functions:
       ctree.stats.log("specialized function cache hit")
