@@ -119,6 +119,18 @@ class CtreeNode(ast.AST):
         return
     raise Exception("Couldn't perform insertion.")
 
+  def insert_after(self, younger_sibling):
+    """
+    Insert the given node just before 'self' in the current scope. Requires
+    that 'self' be contained in a list.
+    """
+    parent = self.parent
+    assert self.parent, "Tried to insert_before a node without a parent."
+    for fieldname, child in ast.iter_fields(parent):
+      if isinstance(child, list) and self in child:
+        child.insert(child.index(self)+1, younger_sibling)
+        return
+    raise Exception("Couldn't perform insertion.")
 
 # ---------------------------------------------------------------------------
 # Common nodes
