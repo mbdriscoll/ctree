@@ -65,50 +65,6 @@ class Timer(object):
   def dict(self):
     return {k: self.watches[k].dict() for k in self.watches}
 
-class AstToDot(ast.NodeVisitor):
-  '''
-  Prints the AST to the given stream in DOT format.
-  '''
-  def __init__(self, ostream=sys.stdout):
-    self.ostream = ostream
-
-  def __enter__(self):
-    print("graph mygraph {", file=self.ostream)
-    return self
-
-  def __exit__(self, type, value, traceback):
-    print("}", file=self.ostream)
-
-  def label(self, node):
-    s = str(type(node).__name__)
-    for attr in ['n', 'name', 'id', 'attr', 's', 'arg', 'type']:
-      if hasattr(node, attr):
-        s += "\\n%s: %s" % (attr, getattr(node, attr))
-    return s
-
-  def visit_Name(self, node):
-    print('n%s [label="%s"];' % (id(node), self.label(node)), file=self.ostream)
-
-  def visit_Str(self, node):
-    print('n%s [label="%s"];' % (id(node), self.label(node)), file=self.ostream)
-
-  def visit_str(self, node):
-    print('n%s [label="%s"];' % (id(node), self.label(node)), file=self.ostream)
-
-  def generic_visit(self, node):
-    print('n%s [label="%s"];' % (id(node), self.label(node)), file=self.ostream)
-    for fieldname, child in ast.iter_fields(node):
-      if type(child) not in [ast.Load, ast.Store, ast.Param, type(None), str, int]:
-        if type(child) is list:
-          for i, grandchild in enumerate(child):
-            print('n%d -- n%d [label="%s[%d]"];' % \
-                  (id(node), id(grandchild), fieldname, i), file=self.ostream)
-            self.visit(grandchild)
-        else:
-          print('n%d -- n%d [label="%s"];' % \
-                (id(node), id(child), fieldname), file=self.ostream)
-          self.visit(child)
-          
 
 class DotManager(object):
     """
@@ -119,12 +75,10 @@ class DotManager(object):
         import io
         from IPython.display import Image
 
-        output_string = io.StringIO()
-        with open("x.dot","w") as file:
-            with AstToDot(ostream=output_string) as printer:
-                printer.visit(ast_node)
+        import ctree.dotgen.to_dot
+        dot_text = to_dot(ast_node)
 
-        return DotManager.dot_text_to_image(output_string.getvalue())
+        return DotManager.dot_text_to_image(dot_text)
 
     @staticmethod
     def dot_text_to_image(text):
