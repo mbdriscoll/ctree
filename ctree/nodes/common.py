@@ -104,6 +104,8 @@ class CtreeNode(ast.AST):
     for fieldname, child in ast.iter_fields(parent):
       if child is self:
         setattr(parent, fieldname, new_node)
+      elif isinstance(child, list) and self in child:
+        child[ child.index(self) ] = new_node
     return new_node
 
   def insert_before(self, older_sibling):
