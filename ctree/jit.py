@@ -145,6 +145,11 @@ class LazySpecializedFunction(object):
 
     return self.c_functions[program_config](*args)
 
+  def tune(*args, **kwargs):
+    # TODO here's the tuning hook!
+    for program_config in self._next_tuning_config():
+      pass
+
 
   # =====================================================
   # Methods to be overridden by the user

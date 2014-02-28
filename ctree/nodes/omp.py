@@ -2,10 +2,25 @@
 OpenMP nodes supported by ctree.
 """
 
+import logging
+log = logging.getLogger(__name__)
+
 from ctree.nodes.common import CtreeNode
 from ctree.visitors import NodeVisitor
 from ctree.codegen import CodeGenVisitor
 from ctree.dotgen import DotGenVisitor
+
+# ---------------------------------------------------------------------------
+# load omp runtime into memory so it can be used from LLVM's jit
+
+import ctypes, ctypes.util
+libiomp5 = ctypes.util.find_library("iomp5")
+log.info("loading libiomp5 from %s" % libiomp5)
+iomp_handle = ctypes.cdll.LoadLibrary(libiomp5)
+try:
+  iomp_handle.__kmpc_barrier
+except:
+  raise Exception("Failed to load OpenMP runtime.")
 
 # ---------------------------------------------------------------------------
 # openmp nodes

@@ -2,6 +2,9 @@
 Parses the python AST below, transforms it to C, JITs it, and runs it.
 """
 
+import logging
+logging.basicConfig(level=20)
+
 import numpy as np
 import ctypes as ct
 
@@ -12,9 +15,6 @@ from ctree.dotgen import to_dot
 from ctree.transformations import *
 from ctree.jit import LazySpecializedFunction
 from ctree.types import pytype_to_ctype, get_ctype
-
-import logging
-logging.basicConfig(level=20)
 
 # ---------------------------------------------------------------------------
 # Specializer code
