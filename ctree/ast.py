@@ -156,11 +156,7 @@ class Project(CommonNode):
 
 class File(CommonNode):
   """Holds a list of statements."""
-  _fields = ['body']
-  def __init__(self, body=[]):
-    self.body = body
-    super().__init__()
-
+  pass
 
 class CommonCodeGen(CodeGenVisitor):
   """Manages conversion of all common nodes to txt."""

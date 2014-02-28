@@ -162,3 +162,7 @@ class CCodeGen(CodeGenVisitor):
 
   def visit_String(self, node):
     return '"%s"' % node.value
+
+  def visit_CFile(self, node):
+    stmts = self._genblock(node.body, insert_curly_brackets=False, increase_indent=False)
+    return '// <file: %s.%s>%s' % (node.name, node._ext, stmts)

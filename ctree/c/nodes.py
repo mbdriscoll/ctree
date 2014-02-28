@@ -3,7 +3,7 @@ AST nodes for C constructs.
 """
 
 import ctypes as ct
-from ctree.ast import CtreeNode
+from ctree.ast import CtreeNode, File
 
 class CNode(CtreeNode):
   """Base class for all C nodes in ctree."""
@@ -15,6 +15,14 @@ class CNode(CtreeNode):
     from ctree.c.dotgen import CDotGen
     return CDotGen().visit(self)
 
+
+class CFile(CNode, File):
+  """Represents a .c file."""
+  _fields = ['body']
+  def __init__(self, name="generated", body=[]):
+    self.name = name
+    self.body = body
+    self._ext = "c"
 
 class Statement(CNode):
   """Section B.2.3 6.6."""
