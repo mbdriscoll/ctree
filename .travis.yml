@@ -10,7 +10,7 @@ before_install:
 install:
   - pip install coveralls
   - git clone git://github.com/llvmpy/llvmpy.git
-  - LLVM_CONFIG_PATH=/usr/bin/llvm-config-3.3 python llvmpy/setup.py install
+  - cd llvmpy; LLVM_CONFIG_PATH=/usr/bin/llvm-config-3.3 python setup.py install; cd..
 
 # command to run tests
 script:
