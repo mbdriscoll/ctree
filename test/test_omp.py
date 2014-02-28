@@ -1,6 +1,6 @@
 import unittest
 
-from ctree.nodes.omp import *
+from ctree.omp.nodes import *
 from ctree.c.nodes import *
 
 class TestOmpCodegen(unittest.TestCase):
