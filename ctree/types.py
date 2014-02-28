@@ -114,7 +114,7 @@ def pytype_to_ctype(pytype):
   except KeyError:
     pass
 
-  raise Exception("Cannot determine ctype for Python object: %d (type %s)." % \
+  raise Exception("Cannot determine ctype for Python object: %s (type %s)." % \
     (pytype, type(pytype)))
 
 
