@@ -32,3 +32,24 @@ class VerifyOnlyCtreeNodes(NodeVisitor):
     if not isinstance(node, CtreeNode):
       raise AstValidationError("Expected a pure C ast, but found a non-CtreeNode: %s." % node)
     self.generic_visit(node)
+
+
+class VerifyParentPointers(NodeVisitor):
+  """
+  Checks that parent pointers are set correctly, and throws
+  an AstValidationError if they're not.
+  """
+  def _check(self, child, parent):
+    if child.parent != parent:
+      raise AstValidationError("Expect parent of %s to be %s, but got %s instead." % \
+        (child, parent, child.parent))
+
+  def generic_visit(self, node):
+    for fieldname, child in ast.iter_fields(node):
+      if type(child) is list:
+        for grandchild in child:
+          self._check(grandchild, node)
+          self.visit(grandchild)
+      elif isinstance(child, ast.AST):
+        self._check(child, node)
+        self.visit(child)
