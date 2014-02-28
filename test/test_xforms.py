@@ -133,3 +133,64 @@ class TestStripDocstrings(unittest.TestCase):
       get_ast(self.Bar),
     ]) )
     self._check(tree)
+
+
+class TestBasicConversions(unittest.TestCase):
+  def _check(self, py_ast, expected_c_ast):
+    actual_c_ast = PyBasicConversions().visit(py_ast)
+    self.assertEqual(str(actual_c_ast), str(expected_c_ast))
+
+  def test_num_float(self):
+    py_ast = ast.Num(123.4)
+    c_ast = Constant(123.4)
+    self._check(py_ast, c_ast)
+
+  def test_num_int(self):
+    py_ast = ast.Num(123)
+    c_ast = Constant(123)
+    self._check(py_ast, c_ast)
+
+  def test_str(self):
+    py_ast = ast.Str("foo bar")
+    c_ast = String("foo bar")
+    self._check(py_ast, c_ast)
+
+  def test_name(self):
+    py_ast = ast.Name("baz", ast.Load())
+    c_ast = SymbolRef("baz")
+    self._check(py_ast, c_ast)
+
+  def test_binop(self):
+    py_ast = ast.BinOp(ast.Num(1), ast.Add(), ast.Num(2))
+    c_ast = Add(Constant(1), Constant(2))
+    self._check(py_ast, c_ast)
+
+  def test_return(self):
+    py_ast = ast.Return()
+    c_ast = Return()
+    self._check(py_ast, c_ast)
+
+  def test_if_else(self):
+    py_ast = ast.If(ast.Num(1), [ast.Num(2)], [ast.Num(3)])
+    c_ast = If(Constant(1), [Constant(2)], [Constant(3)])
+    self._check(py_ast, c_ast)
+
+  def test_if(self):
+    py_ast = ast.If(ast.Num(1), [ast.Num(2)], [])
+    c_ast = If(Constant(1), [Constant(2)])
+    self._check(py_ast, c_ast)
+
+  def test_ifexp(self):
+    py_ast = ast.IfExp(ast.Num(1), ast.Num(2), ast.Num(3))
+    c_ast = TernaryOp(Constant(1), Constant(2), Constant(3))
+    self._check(py_ast, c_ast)
+
+  def test_compare(self):
+    py_ast = ast.Compare(ast.Num(1), [ast.Lt()], [ast.Num(2)])
+    c_ast = Lt(Constant(1), Constant(2))
+    self._check(py_ast, c_ast)
+
+  def test_arg(self):
+    py_ast = ast.arg("foo", None)
+    c_ast = SymbolRef("foo")
+    self._check(py_ast, c_ast)

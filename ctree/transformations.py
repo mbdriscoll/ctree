@@ -7,10 +7,6 @@ from ctree.nodes.c import *
 from ctree.types import *
 from ctree.visitors import NodeTransformer
 
-def _eval_ast(tree):
-  """Evaluate the given subtree as a python expression."""
-  return eval(compile(ast.Expression(tree), __name__, 'eval'))
-
 class PyCtxScrubber(NodeTransformer):
   """
   Removes pesky ctx attributes from Python ast.Name nodes,
@@ -49,8 +45,10 @@ class PyBasicConversions(NodeTransformer):
     return BinaryOp(lhs, op, rhs)
 
   def visit_Return(self, node):
-    val = self.visit(node.value)
-    return Return(val)
+    if hasattr(node, 'value'):
+      return Return(self.visit(node.value))
+    else:
+      return Return()
 
   def visit_If(self, node):
     assert isinstance(node, ast.If)
@@ -58,6 +56,12 @@ class PyBasicConversions(NodeTransformer):
     then = [self.visit(t) for t in node.body]
     elze = [self.visit(t) for t in node.orelse] or None
     return If(cond, then, elze)
+
+  def visit_IfExp(self, node):
+    cond = self.visit(node.test)
+    then = self.visit(node.body)
+    elze = self.visit(node.orelse)
+    return TernaryOp(cond, then, elze)
 
   def visit_Compare(self, node):
     assert len(node.ops) == 1, \
@@ -85,21 +89,6 @@ class PyBasicConversions(NodeTransformer):
     return SymbolRef(node.arg, node.annotation)
 
 
-class PyTypeRecognizer(NodeTransformer):
-  """
-  Convert types in function annotations to ctree types.
-  """
-  def visit_arg(self, node):
-    if node.annotation:
-      node.annotation = py_type_to_ctree_type( _eval_ast(node.annotation) )
-    return self.generic_visit(node)
-
-  def visit_FunctionDef(self, node):
-    if node.returns:
-      node.returns = py_type_to_ctree_type( _eval_ast(node.returns) )
-    return self.generic_visit(node)
-
-
 class FixUpParentPointers(NodeTransformer):
   """
   Add parent pointers if they're missing.
@@ -114,6 +103,7 @@ class FixUpParentPointers(NodeTransformer):
         setattr(child, 'parent', node)
         self.visit(child)
     return node
+
 
 class StripPythonDocstrings(NodeTransformer):
   """
