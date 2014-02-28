@@ -13,14 +13,14 @@ from ctree.dotgen import DotGenVisitor
 # ---------------------------------------------------------------------------
 # load omp runtime into memory so it can be used from LLVM's jit
 
-import ctypes, ctypes.util
-libiomp5 = ctypes.util.find_library("iomp5")
-log.info("loading libiomp5 from %s" % libiomp5)
-iomp_handle = ctypes.cdll.LoadLibrary(libiomp5)
 try:
+  import ctypes, ctypes.util
+  libiomp5 = ctypes.util.find_library("iomp5")
+  log.info("loading libiomp5 from %s" % libiomp5)
+  iomp_handle = ctypes.cdll.LoadLibrary(libiomp5)
   iomp_handle.__kmpc_barrier
 except:
-  raise Exception("Failed to load OpenMP runtime.")
+  log.warn("Failed to load OpenMP runtime.")
 
 # ---------------------------------------------------------------------------
 # openmp nodes
