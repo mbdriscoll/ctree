@@ -10,6 +10,10 @@ env:
   - LLVM_VERSION=3.2
 #  - LLVM_VERSION=3.1
 
+matrix:
+  allow_failures:
+    - LLVM_VERSION=3.2
+
 before_install:
   - sudo apt-get update -qq
   - sudo apt-get install -qq llvm-$LLVM_VERSION
