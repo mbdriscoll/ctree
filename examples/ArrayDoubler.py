@@ -10,7 +10,7 @@ from ctree.nodes import *
 from ctree.dotgen import to_dot
 from ctree.transformations import *
 from ctree.jit import LazySpecializedFunction
-from ctree.types import pytype_to_ctype
+from ctree.types import pytype_to_ctype, get_ctype
 
 import logging
 logging.basicConfig(level=20)
@@ -19,12 +19,16 @@ logging.basicConfig(level=20)
 # Specializer code
 
 class OpTranslator(LazySpecializedFunction):
-  def transform(self, tree, args):
-    """Convert the Python AST to a C AST."""
+  def args_to_subconfig(self, args):
     A = args[0]
-    array_type = np.ctypeslib.ndpointer(dtype=A.dtype, ndim=A.ndim, shape=A.shape, flags=A.flags)
-    inner_type = pytype_to_ctype(A.dtype)
+    return (len(A), A.dtype, A.ndim, A.shape)
 
+  def transform(self, tree, program_config):
+    """Convert the Python AST to a C AST."""
+    len_A, A_dtype, A_ndim, A_shape = program_config[0]
+    inner_type = pytype_to_ctype(A_dtype)
+
+    array_type = np.ctypeslib.ndpointer(A_dtype, A_ndim, A_shape)
     apply_all_typesig = [None, array_type]
     apply_one_typesig = [inner_type, inner_type]
 
@@ -41,7 +45,7 @@ class OpTranslator(LazySpecializedFunction):
       tree = tx.visit(tree)
 
     tree.find(FunctionDecl, name="apply").set_static().set_inline()
-    tree.find(SymbolRef, name="len_A").replace(Constant(len(A)))
+    tree.find(SymbolRef, name="len_A").replace(Constant(len_A))
 
     return tree
 

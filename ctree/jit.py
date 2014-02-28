@@ -79,7 +79,10 @@ class JitModule(object):
     return cfunctype(c_func_ptr)
 
 
-class TypedSpecializedFunction(object):
+class _ConcreteSpecializedFunction(object):
+  """
+  A function backed by generated code.
+  """
   def __init__(self, c_ast, entry_point_name):
     self.module = JitModule().load(c_ast.get_root())
     entry_point = c_ast.find(FunctionDecl, name=entry_point_name)
@@ -91,48 +94,77 @@ class TypedSpecializedFunction(object):
 
 
 class LazySpecializedFunction(object):
+  """
+  A callable object that will produce executable
+  code just-in-time.
+  """
   def __init__(self, py_ast, entry_point_name):
     self.original_tree = py_ast
     self.entry_point_name = entry_point_name
     self.c_functions = {} # typesig -> callable map
 
-  def _value_to_ctype(self, arg):
-    """Return a hashable value specifying the type of 'arg'."""
-    if   type(arg) == int:   return ctypes.c_int
-    elif type(arg) == float: return ctypes.c_double
-
-    # check for numpy types
+  def _args_to_subconfig_safely(self, args):
+    """
+    Ask the instance for the component of the program configuration
+    that comes from the arguments, and then verify that it's hashable.
+    """
+    subconfig = self.args_to_subconfig(args)
     try:
-      import numpy
-      if type(arg) == numpy.ndarray:
-        return type(numpy.ctypeslib.as_ctypes(arg))
-    except ImportError:
-      pass
+      hash(subconfig)
+    except TypeError:
+      raise Exception("args_to_subconfig must return a hashable type")
+    return subconfig
 
-    raise Exception("Cannot determine ctype for Python object: %d (type %s)." % \
-      (arg, type(arg)))
+  def _next_tuning_config(self):
+    return ()
 
-  def transform(self, tree, args):
+  def __call__(self, *args, **kwargs):
+    """
+    Determines the program_configuration to be run. If it has yet to be built,
+    build it. Then, execute it.
+    """
+    assert not kwargs, "Passing kwargs to specialized functions isn't supported."
+    log.info("detected specialized function call with arg types: %s" % [type(a) for a in args])
+
+    args_subconfig = self._args_to_subconfig_safely(args)
+    tuner_subconfig = self._next_tuning_config()
+    program_config = (args_subconfig, tuner_subconfig)
+
+    log.info("arguments yield subconfig: %s" % (args_subconfig,))
+    log.info("tuner yields subconfig: %s" % (tuner_subconfig,))
+
+    if program_config in self.c_functions:
+      log.info("specialized function cache hit!")
+    else:
+      log.info("specialized function cache miss.")
+      c_ast = self.transform( copy.deepcopy(self.original_tree), program_config )
+      VerifyOnlyCtreeNodes().visit(c_ast)
+      self.c_functions[program_config] = _ConcreteSpecializedFunction(c_ast, self.entry_point_name)
+
+    return self.c_functions[program_config](*args)
+
+
+  # =====================================================
+  # Methods to be overridden by the user
+
+  def transform(self, tree, program_config):
     """
     Convert the AST 'tree' into a C AST, optionally taking advantage of the
     actual runtime arguments.
     """
-    pass
+    return tree
 
-  def __call__(self, *args, **kwargs):
-    assert not kwargs, "Passing kwargs to specialized functions isn't supported."
-    typesig = tuple(map(self._value_to_ctype, args))
-    log.info("detected specialized function call with argument type signature: %s -> ?" % (typesig,))
+  def set_tuning_space(self, space):
+    """
+    Define the space of possible implementations.
+    """
+    raise NotImplementedError()
 
-    if typesig not in self.c_functions:
-      log.info("specialized function cache miss.")
-      c_ast = self.transform( copy.deepcopy(self.original_tree), args )
-      VerifyOnlyCtreeNodes().visit(c_ast)
-      self.c_functions[typesig] = TypedSpecializedFunction(c_ast, self.entry_point_name)
-    else:
-      log.info("specialized function cache hit!")
-    return self.c_functions[typesig](*args, **kwargs)
-
-  # =====================================================
-
-
+  def args_to_subconfig(self, args):
+    """
+    Extract features from the arguments to define uniqueness of
+    this particular invocation.
+    """
+    log.warn("arguments will not influence program_config. " + \
+      "Consider overriding args_to_subconfig() in %s." % type(self).__name__)
+    return ()
