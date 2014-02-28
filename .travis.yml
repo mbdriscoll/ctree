@@ -22,7 +22,7 @@ install:
   - cd ..
 
 script:
-  - nosetests --with-coverage --cover-package=ctree
+  - nosetests --with-coverage --cover-package=ctree --cover-min-percentage=90
 
 after_success:
   coveralls
