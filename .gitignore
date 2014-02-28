@@ -43,3 +43,6 @@ nosetests.xml
 
 # mac icon cache
 .DS_Store
+
+# coverage html report
+htmlcov
