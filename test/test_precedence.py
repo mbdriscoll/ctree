@@ -125,3 +125,11 @@ class TestAssociativityPrecedence(unittest.TestCase):
     elze = TernaryOp(a, b, c)
     tree = TernaryOp(c, b, elze)
     self._check(tree, "c ? b : a ? b : c")
+
+  def test_bad_precedence_arg(self):
+    with self.assertRaises(Exception):
+      get_precedence( Constant(2.3) )
+
+  def test_bad_associativity_arg(self):
+    with self.assertRaises(Exception):
+      get_associativity( Constant(2.3) )

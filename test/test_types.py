@@ -60,3 +60,19 @@ class TestTypeFetcher(unittest.TestCase):
     a, b = Constant('b'), Constant(2.3)
     node = Add(a, b)
     self._check(node.get_type(), ctypes.c_double)
+
+  def test_binop_compare(self):
+    a, b = Constant('b'), Constant(2.3)
+    node = Lt(a, b)
+    self._check(node.get_type(), ctypes.c_int)
+
+  def test_binop_compare(self):
+    a, b = Constant('b'), Constant(2.3)
+    node = Comma(a, b)
+    self._check(node.get_type(), ctypes.c_double)
+
+  def test_bad_constant(self):
+    class nothing: pass
+    a = Constant(nothing())
+    with self.assertRaises(Exception):
+      self._check(a.get_type(), ctypes.c_int)
