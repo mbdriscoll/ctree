@@ -42,8 +42,8 @@ class OpTranslator(LazySpecializedFunction):
       FixUpParentPointers(),
     ]
 
-    for tx in transformations:
-      tree = tx.visit(tree)
+    for xf in transformations:
+      tree = xf.visit(tree)
 
     tree.find(FunctionDecl, name="apply").set_static().set_inline()
     tree.find(SymbolRef, name="len_A").replace(Constant(len_A))
