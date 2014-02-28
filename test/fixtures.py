@@ -75,7 +75,8 @@ def choose(p, a, b):
     return b
 
 choose_ast = \
-FunctionDecl(ct.c_long, "choose", [ct.c_double, ct.c_long, ct.c_long], [
+FunctionDecl(ct.c_long, "choose",
+  [SymbolRef("p", ct.c_double), SymbolRef("a", ct.c_long), SymbolRef("b", ct.c_long)], [
   If(Lt(SymbolRef("p"), Constant(0.5)), [
     Return(SymbolRef("a")),
   ], [

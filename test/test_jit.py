@@ -26,3 +26,12 @@ class TestJit(unittest.TestCase):
     c_gcd_fn = mod.get_callable(gcd_ast)
     self.assertEqual(gcd(44, 122), c_gcd_fn(44, 122))
     self.assertEqual(gcd(27, 39), c_gcd_fn(27, 39))
+
+  def test_choose(self):
+    mod = JitModule()
+    mod.load(choose_ast)
+    c_choose_fn = mod.get_callable(choose_ast)
+    self.assertEqual(choose(0.2, 44, 122), c_choose_fn(0.2, 44, 122))
+    self.assertEqual(choose(0.8, 44, 122), c_choose_fn(0.8, 44, 122))
+    self.assertEqual(choose(0.3, 27, 39), c_choose_fn(0.3, 27, 39))
+    self.assertEqual(choose(0.7, 27, 39), c_choose_fn(0.7, 27, 39))
