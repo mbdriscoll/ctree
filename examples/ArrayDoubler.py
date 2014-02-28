@@ -6,7 +6,8 @@ import numpy as np
 import ctypes as ct
 
 from ctree.frontend import get_ast
-from ctree.nodes import *
+from ctree.nodes.c import *
+from ctree.nodes.omp import *
 from ctree.dotgen import to_dot
 from ctree.transformations import *
 from ctree.jit import LazySpecializedFunction
@@ -46,6 +47,7 @@ class OpTranslator(LazySpecializedFunction):
 
     tree.find(FunctionDecl, name="apply").set_static().set_inline()
     tree.find(SymbolRef, name="len_A").replace(Constant(len_A))
+    tree.find(For).insert_before( OmpParallelFor() )
 
     return tree
 
