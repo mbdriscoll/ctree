@@ -6,7 +6,7 @@ Example taking from Shoaib Kamil stencil_specializer
 
 import inspect
 import ast
-from ctree.util import AstToDot
+from ctree.dotgen import to_dot
 
 
 def func(x: int, y: int) -> int:
@@ -26,5 +26,5 @@ def kernel(in_img, filter_d, filter_s, out_img):
 if __name__ == '__main__':
     tree = ast.parse(inspect.getsource(kernel))
 
-    with AstToDot() as printer:
-        printer.visit(tree)
+    with open("graph.dot", 'w') as ofile:
+      ofile.write( to_dot(tree) )
