@@ -35,3 +35,28 @@ log.info("found config files: %s" % found)
 
 # FIXME print out configuration
 log.info("using configuration: (FIXME) %s" % config)
+
+
+# ---------------------------------------------------------------------------
+# stats
+
+import atexit
+import collections
+
+class Counter(object):
+  """Tracks events, reports counts upon garbage collections."""
+  def __init__(self):
+    self._counter = collections.Counter()
+
+  def log(self, event_str):
+    self._counter[event_str] += 1
+
+  def report(self):
+    kvs = ""
+    for kv in self._counter.items():
+      kvs += "  %s: %s\n" % kv
+    log.info("execution statistics: <<<\n%s>>>" % kvs)
+
+
+stats = Counter()
+atexit.register(stats.report)

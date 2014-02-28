@@ -123,6 +123,7 @@ class LazySpecializedFunction(object):
     Determines the program_configuration to be run. If it has yet to be built,
     build it. Then, execute it.
     """
+    ctree.stats.log("specialized function call")
     assert not kwargs, "Passing kwargs to specialized functions isn't supported."
     log.info("detected specialized function call with arg types: %s" % [type(a) for a in args])
 
@@ -134,6 +135,7 @@ class LazySpecializedFunction(object):
     log.info("tuner yields subconfig: %s" % (tuner_subconfig,))
 
     if program_config in self.c_functions:
+      ctree.stats.log("function cache hit")
       log.info("specialized function cache hit!")
     else:
       log.info("specialized function cache miss.")
