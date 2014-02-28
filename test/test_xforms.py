@@ -3,13 +3,13 @@ import unittest
 
 from fixtures import *
 from ctree.transformations import *
-from ctree.nodes import c
+from ctree.c.nodes import *
 from ctree.frontend import get_ast
 
 class TestSetParam(unittest.TestCase):
 
   def _check(self, func_type, tree):
-    if isinstance(tree, c.FunctionDecl):
+    if isinstance(tree, FunctionDecl):
       self.assertEqual(tree.return_type, ct.c_long)
       for param, expected_type in zip(tree.params, func_type[1:]):
         self.assertEqual(param.type, expected_type)

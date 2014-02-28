@@ -1,6 +1,6 @@
 import unittest
 
-from ctree.nodes.c import *
+from ctree.c.nodes import *
 from ctree.jit import LazySpecializedFunction
 from ctree.transformations import SetParamTypes
 from ctree.types import get_ctype

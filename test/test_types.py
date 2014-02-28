@@ -1,7 +1,7 @@
 import unittest
 import ctypes
 
-from ctree.nodes.c import *
+from ctree.c.nodes import *
 
 class TestTypeProperties(unittest.TestCase):
   def test_float_equality(self):

@@ -9,7 +9,7 @@ import numpy as np
 import ctypes as ct
 
 from ctree.frontend import get_ast
-from ctree.nodes.c import *
+from ctree.c.nodes import *
 from ctree.nodes.omp import *
 from ctree.dotgen import to_dot
 from ctree.transformations import *

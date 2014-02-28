@@ -3,7 +3,7 @@ A collection of pre-built ASTs for use in testing.
 """
 
 import ctypes as ct
-from ctree.nodes.c import *
+from ctree.c.nodes import *
 
 # ---------------------------------------------------------------------------
 # integer identity

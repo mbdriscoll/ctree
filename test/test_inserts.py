@@ -1,7 +1,7 @@
 import unittest
 from textwrap import dedent
 
-from ctree.nodes.c import *
+from ctree.c.nodes import *
 
 class TestAstInsertion(unittest.TestCase):
 

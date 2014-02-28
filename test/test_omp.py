@@ -1,7 +1,7 @@
 import unittest
 
 from ctree.nodes.omp import *
-from ctree.nodes.c import *
+from ctree.c.nodes import *
 
 class TestOmpCodegen(unittest.TestCase):
   def test_parallel(self):

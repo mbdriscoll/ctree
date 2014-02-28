@@ -1,4 +1,4 @@
-from ctree.nodes.c import *
+from ctree.c.nodes import *
 
 """
 Utilities for determining precedence in C, with the goal of minimizing the

@@ -11,7 +11,7 @@ The resulting file can be viewed with a visualizer like Graphiz.
 import ctypes as ct
 
 from ctree.nodes.common import *
-from ctree.nodes.c import *
+from ctree.c.nodes import *
 
 from ctree.dotgen import to_dot
 

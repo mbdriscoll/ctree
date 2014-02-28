@@ -7,7 +7,7 @@ import subprocess
 
 import ctree
 import ctypes
-from ctree.nodes.c import *
+from ctree.c.nodes import *
 from ctree.frontend import get_ast
 from ctree.analyses import VerifyOnlyCtreeNodes
 
