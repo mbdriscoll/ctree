@@ -16,7 +16,7 @@ before_install:
   #- sudo apt-get install -qq llvm-$LLVM_VERSION
 
 install:
-  #- pip install coveralls Sphinx
+  - pip install coveralls Sphinx
   #- git clone git://github.com/llvmpy/llvmpy.git
   #- cd llvmpy
   #- LLVM_CONFIG_PATH=/usr/bin/llvm-config-$LLVM_VERSION python setup.py install
