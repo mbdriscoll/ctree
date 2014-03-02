@@ -13,7 +13,7 @@ setup(
     'ctree.sse',
   ],
 
-  package_data = {
-    'ctree': ['defaults.cfg'],
-  },
+  #package_data = {
+  #  'ctree': ['defaults.cfg'],
+  #},
 )

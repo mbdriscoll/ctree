@@ -34,6 +34,8 @@ install:
 
   # return to build dir
   - cd ${TRAVIS_BUILD_DIR}
+  - python -c "import sys; print(sys.path)"
+  - echo ${PYTHONPATH}
 
 script:
 
