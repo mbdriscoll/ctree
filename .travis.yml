@@ -21,7 +21,7 @@ before_install:
 install:
 
   # coverage and doc generator
-  - pip install Sphinx # coveralls
+  - pip install Sphinx coveralls
 
   # install llvmpy
   - git clone git://github.com/llvmpy/llvmpy.git ${HOME}/llvmpy
@@ -57,20 +57,21 @@ after_success:
   # build documentation
   - make -C doc html
 
-  # public documentation
+  # merge documentation
   - git clone "https://github.com/ucb-sejits/ctree-docs.git" ${HOME}/ctree-docs
   - cd ${HOME}/ctree-docs
   - git fetch origin gh-pages
   - git checkout gh-pages
   - rsync -a ${TRAVIS_BUILD_DIR}/doc/_build/html/ ./
-  - rm -r doc/_build
   - git add .
   - git status
+
+  # commit documentation
+  - git config --global user.name 'Ctree Doc Bot'
+  - git config --global user.email 'mbdriscoll+ctreeoauth@gmail.com'
   - git commit -m "Updating documentation for commit(s) ${TRAVIS_REPO_SLUG}@${TRAVIS_COMMIT_RANGE}."
 
   # set up oauth for push
-  - git config --global user.name 'Ctree Doc Bot'
-  - git config --global user.email 'mbdriscoll+ctreeoauth@gmail.com'
   - git config credential.helper "store --file=.git/credentials"
   - echo "https://${GH_TOKEN}:x-oauth-basic@github.com" > .git/credentials
 
