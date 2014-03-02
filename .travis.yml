@@ -33,12 +33,12 @@ install:
   - python setup.py install
 
   # return home
-  - cd ${HOME}
+  - cd ${TRAVIS_BUILD_DIR}/test
 
 script:
 
   # run test suite
-  - nosetests --where=${TRAVIS_BUILD_DIR}/test --with-coverage --cover-package=ctree --cover-min-percentage=90
+  - nosetests --with-coverage --cover-package=ctree --cover-min-percentage=90
 
 
 after_success:
@@ -50,9 +50,6 @@ after_success:
   - "if [[ $(echo ${TRAVIS_JOB_NUMBER} | cut -d. -f2) -ne 1 ]]; then echo 'Not sub-job #1; skipping doc build.'; exit 0; fi"
 
   # publish coverage report
-  - ls -lah .
-  - ls -lah ${TRAVIS_BUILD_DIR}
-  - ls -lah ${TRAVIS_BUILD_DIR}/test
   - coveralls
 
   # publish documentation
