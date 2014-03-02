@@ -7,7 +7,6 @@ python:
 env:
   global:
     - secure: "GaaeITRlfMwQ6ybEIdxs3JXVa2NO/Zad6qX/OjLmZcqCupAWdhxmTSpBH9L4TIsFYTNknyUK/+i9dgUDccMlqWudm4NG4DzRWjKyUJYpENT8Gk2MzqcB3Nesc4EUoigMy0rfySXIB3bc25Igu25Hc0o51qTIfE4rIdXdF8RMbsI="
-
   - LLVM_VERSION=3.3
 
 before_install:
@@ -27,7 +26,6 @@ script:
 after_success:
   # publish coverage report
   - coveralls
-
   # publish documentation
   - make -C html
   - git checkout gh-pages
