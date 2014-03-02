@@ -38,11 +38,16 @@ script:
 
 after_success:
 
+  # return early if not building ucb-sejits/ctree
+  - if [[ "x$TRAVIS_REPO_SLUG" != "xucb-sejits/ctree" ]]; then echo 'skipping coveralls/sphinx for non ucb-sejits/ctree builds.'; exit 0; fi
+
+  # return early if not the first build in the job
+  - if [[ $(echo $TRAVIS_JOB_NUMBER | cut -d. -f2) -ne 1 ]]; then echo 'Not sub-job #1; skipping doc build.'; exit 0; fi
+
   # publish coverage report
   - coveralls
 
   # publish documentation
-  - "if [[ $(echo $TRAVIS_JOB_NUMBER | cut -d. -f2) -ne 1 ]]; then echo 'Not sub-job #1; skipping doc build.'; exit 0; fi"
   - make -C doc html
   - git fetch origin gh-pages:gh-pages
   - git checkout gh-pages
