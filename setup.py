@@ -3,7 +3,9 @@ from distutils.core import setup
 setup(
   name='ctree',
   version='0.95a',
-  packages=['ctree',
+
+  packages = [
+    'ctree',
     'ctree.c',
     'ctree.cilk',
     'ctree.cpp',
@@ -13,7 +15,7 @@ setup(
     'ctree.sse',
   ],
 
-  #package_data = {
-  #  'ctree': ['defaults.cfg'],
-  #},
+  package_data = {
+    'ctree': ['defaults.cfg'],
+  },
 )
