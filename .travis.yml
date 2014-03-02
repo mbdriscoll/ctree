@@ -17,10 +17,11 @@ before_install:
 
 install:
   - pip install coveralls Sphinx
+  - cd $HOME
   - git clone git://github.com/llvmpy/llvmpy.git
   - cd llvmpy
   - LLVM_CONFIG_PATH=/usr/bin/llvm-config-$LLVM_VERSION python setup.py install
-  - cd ..
+  - cd ${TRAVIS_BUILD_DIR}
 
 script:
   # run test suite
