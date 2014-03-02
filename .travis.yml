@@ -34,7 +34,7 @@ after_success:
 
   # publish documentation
   - make -C html
-  - git fetch origin gh-pages
+  - git fetch
   - git checkout gh-pages
   - cp -r docs/_build/html/* ./
   - rsync -a docs/_build/html .
