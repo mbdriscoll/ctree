@@ -20,12 +20,6 @@ class CDotGen(DotGenVisitor):
     return "name: %s\nreturn_type: %s" % \
       (node.name, node.return_type)
 
-  def label_Param(self, node):
-    s = "type: %s" % node.type
-    if node.name:
-      s += "\nname: %s" % node.name
-    return s
-
   def label_Constant(self, node):
     return "value: %s" % node.value
 
