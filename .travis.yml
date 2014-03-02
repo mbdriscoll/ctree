@@ -5,10 +5,10 @@ python:
   - "3.3"
 
 env:
-#  - LLVM_VERSION=3.4
+  global:
+    - secure: "GaaeITRlfMwQ6ybEIdxs3JXVa2NO/Zad6qX/OjLmZcqCupAWdhxmTSpBH9L4TIsFYTNknyUK/+i9dgUDccMlqWudm4NG4DzRWjKyUJYpENT8Gk2MzqcB3Nesc4EUoigMy0rfySXIB3bc25Igu25Hc0o51qTIfE4rIdXdF8RMbsI="
+
   - LLVM_VERSION=3.3
-#  - LLVM_VERSION=3.2
-#  - LLVM_VERSION=3.1
 
 before_install:
   - sudo apt-get update -qq
@@ -25,4 +25,17 @@ script:
   - nosetests --with-coverage --cover-package=ctree --cover-min-percentage=90
 
 after_success:
+  # publish coverage report
   - coveralls
+
+  # publish documentation
+  - make -C html
+  - git checkout gh-pages
+  - cp -r docs/_build/html/* ./
+  - rsync -a docs/_build/html .
+  - git config --global user.name 'Ctree Doc Bot'
+  - git config --global user.email $GIT_EMAIL
+  - git add .
+  - git commit -m "Updating documentation for commit $TRAVIS_COMMIT."
+  - git remote add origin_oauth https://$GIT_NAME:$GH_TOKEN@github.com/ucb-sejits/ctree.git
+  - git push origin gh-pages
