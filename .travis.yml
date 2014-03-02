@@ -35,7 +35,7 @@ after_success:
   # publish documentation
   - make -C doc html
   - git fetch origin gh-pages
-  - git checkout gh-pages
+  - git checkout -b gh-pages origin/gh-pages
   - rsync -a doc/_build/html/ ./
   - rm -r doc/_build
   - git config --global user.name 'Ctree Doc Bot'
