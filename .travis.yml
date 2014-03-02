@@ -16,7 +16,7 @@ before_install:
   #- sudo apt-get install -qq llvm-$LLVM_VERSION
 
 install:
-  - pip install coveralls Sphinx
+  #- pip install coveralls Sphinx
   #- git clone git://github.com/llvmpy/llvmpy.git
   #- cd llvmpy
   #- LLVM_CONFIG_PATH=/usr/bin/llvm-config-$LLVM_VERSION python setup.py install
@@ -33,6 +33,7 @@ after_success:
   #- coveralls
 
   # publish documentation
+  - env
   - make -C doc html
   - git fetch origin gh-pages:gh-pages
   - git checkout gh-pages
@@ -44,4 +45,4 @@ after_success:
   - git status
   - git remote add oauth_origin https://$GIT_NAME:$GH_TOKEN@github.com/ucb-sejits/ctree.git
   - git commit -m 'Updating documentation for commit $TRAVIS_COMMIT.'
-  - git push oauth_origin gh-pages
+  - git push --quiet oauth_origin gh-pages
