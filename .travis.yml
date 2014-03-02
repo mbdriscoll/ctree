@@ -32,12 +32,13 @@ install:
   - cd ${TRAVIS_BUILD_DIR}
   - python setup.py install
 
+  # return home
+  - cd ${HOME}
 
 script:
 
   # run test suite
-  - cd ${TRAVIS_BUILD_DIR}/test
-  - nosetests --with-coverage --cover-package=ctree --cover-min-percentage=90
+  - nosetests --where=${TRAVIS_BUILD_DIR}/test --with-coverage --cover-package=ctree --cover-min-percentage=90
 
 
 after_success:
