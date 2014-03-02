@@ -43,5 +43,6 @@ after_success:
   - git add .
   - git status
   - git commit -m "Updating documentation for commit $TRAVIS_COMMIT."
-  - git remote add oa https://$GIT_NAME:$GH_TOKEN@github.com/ucb-sejits/ctree.git
-  - git push -q oa gh-pages
+  - git config credential.helper "store --file=.git/credentials"
+  - echo "https://${GIT_NAME}:${GH_TOKEN}@github.com" > .git/credentials
+  - git push https://${GIT_NAME}@github.com/ucb-sejits/ctree.git gh-pages
