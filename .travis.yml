@@ -7,7 +7,7 @@ python:
 env:
   global:
     # encrypted OAuth token so Travis can commit docs back to Github
-    - secure: "hT/arLbW8Yi6TFcIJhwU2GQzQpMSgCc0gJePzqtvHoqw6sPOlPCzNK1A7WLrYNn4Yf+byYqOppBi+l1+d5Z5DNVuV4y6SDrP9E6HMaAr3kIAvZNNXjr6qW+I1C2Iswm9oYWZBjm0Mn8fVAGXztSHlCn7npgA5PNN0pKPWOHdRSw="
+    - secure: "exjwYI5XtSjquJirXb1QuruUfT0W/q1E6XUEIoyVSs2+JFouU6PIVMUglckBlaC29t4riq+3Ms9XRCOSZ5ULVFCwbFQwjLrg8phlB/Qw21kzGmbqidCtwfDLKsDJ34Y6tekjb84j/GQ3w9XPDQsRx5Q1UxPKgMvBPNmFAZve17o="
   matrix:
     - LLVM_VERSION=3.3
 
@@ -32,7 +32,7 @@ after_success:
   - coveralls
 
   # publish documentation
-  - if [[ $(echo $TRAVIS_JOB_NUMBER | cut -d. -f2) -ne 1 ]]; then 'Not first sub-job; skipping doc build.'; exit 0; fi
+  - if [[ $(echo $TRAVIS_JOB_NUMBER | cut -d. -f2) -ne 1 ]]; then echo 'Not sub-job #1; skipping doc build.'; exit 0; fi
   - make -C doc html
   - git fetch origin gh-pages:gh-pages
   - git checkout gh-pages
@@ -44,5 +44,5 @@ after_success:
   - git status
   - git commit -m "Updating documentation for commit $TRAVIS_COMMIT."
   - git config credential.helper "store --file=.git/credentials"
-  - echo "https://${GIT_NAME}:${GH_TOKEN}@github.com" > .git/credentials
+  - echo "https://${GH_TOKEN}:x-oauth-basic@github.com" > .git/credentials
   - git push https://${GIT_NAME}@github.com/ucb-sejits/ctree.git gh-pages
