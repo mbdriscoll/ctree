@@ -49,7 +49,7 @@ after_success:
 
   # publish documentation
   - "PYTHONPATH=${TRAVIS_BUILD_DIR} make -C doc html"
-  - git fetch origin gh-pages:gh-pages
+  - "git fetch origin gh-pages:gh-pages"
   - git checkout gh-pages
   - rsync -a doc/_build/html/ ./
   - rm -r doc/_build
