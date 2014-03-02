@@ -1,7 +1,7 @@
 .. install:
 
 Ctree Installation
-==============
+==================
 
 Dependecies
 -----------
