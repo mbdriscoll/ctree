@@ -45,4 +45,4 @@ after_success:
   - git commit -m "Updating documentation for commit $TRAVIS_COMMIT."
   - git config credential.helper "store --file=.git/credentials"
   - echo "https://${GH_TOKEN}:x-oauth-basic@github.com" > .git/credentials
-  - git push https://${GIT_NAME}@github.com/ucb-sejits/ctree.git gh-pages
+  - git push https://github.com/ucb-sejits/ctree.git gh-pages
