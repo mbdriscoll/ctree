@@ -42,7 +42,7 @@ after_success:
   - git config --global user.email $GIT_EMAIL
   - git add .
   - git status
-  - git commit -m "Updating documentation for commit $TRAVIS_COMMIT."
+  - git commit -m "Updating documentation for commit(s) $TRAVIS_COMMIT_RANGE."
   - git config credential.helper "store --file=.git/credentials"
   - "echo https://${GH_TOKEN}:x-oauth-basic@github.com > .git/credentials"
   - "git push https://github.com/ucb-sejits/ctree.git gh-pages"
