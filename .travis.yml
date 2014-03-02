@@ -7,7 +7,7 @@ python:
 env:
   global:
     # encrypted OAuth token so Travis can commit docs back to Github
-    - secure: "GaaeITRlfMwQ6ybEIdxs3JXVa2NO/Zad6qX/OjLmZcqCupAWdhxmTSpBH9L4TIsFYTNknyUK/+i9dgUDccMlqWudm4NG4DzRWjKyUJYpENT8Gk2MzqcB3Nesc4EUoigMy0rfySXIB3bc25Igu25Hc0o51qTIfE4rIdXdF8RMbsI="
+    - secure: "GpFIwX6B6SEDBtFjYEGt8Uoa2m2Ho1Y15Q6b7vnRdSVzDx0DKvLlmXKmtEzayu84n0VbonaPepUODdNIaiqwpqIW+S26+ntJsNP3BLWfEZS77tzEdDIpaLXNQaXJCh+KYWe+fHxTreDPZhTKGWmcuwmPvKTSyrPuT/puD7UzkPw="
   matrix:
     - LLVM_VERSION=3.3
 
@@ -33,13 +33,14 @@ after_success:
   - coveralls
 
   # publish documentation
-  - make -C html
-  - git fetch
+  - make -C doc html
+  - git fetch origin gh-pages
   - git checkout gh-pages
-  - cp -r docs/_build/html/* ./
-  - rsync -a docs/_build/html .
+  - rsync -a doc/_build/html/ ./
+  - rm -r doc/_build
   - git config --global user.name 'Ctree Doc Bot'
   - git config --global user.email $GIT_EMAIL
   - git add .
+  - git status
   - git commit -m 'Updating documentation for commit $TRAVIS_COMMIT.'
-  - git push "https://$GIT_NAME:$GH_TOKEN@github.com/ucb-sejits/ctree.git" gh-pages:gh-pages
+  - git push https://$GIT_NAME:$GH_TOKEN@github.com/ucb-sejits/ctree.git gh-pages:gh-pages
