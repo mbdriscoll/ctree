@@ -32,14 +32,14 @@ install:
   - cd ${TRAVIS_BUILD_DIR}
   - python setup.py install
 
-  # return to build dir
-  - cd ${TRAVIS_BUILD_DIR}
-  - python -c "import sys; print(sys.path)"
-  - echo ${PYTHONPATH}
-
 script:
 
-  # run test suite
+  # run test suite from home directory to verify installation
+  - cd ${HOME}
+  - nosetests --where=${TRAVIS_BUILD_DIR}/tree
+
+  # run test suite again from build dir to get coverage info
+  - cd ${TRAVIS_BUILD_DIR}
   - nosetests --with-coverage --cover-package=ctree --cover-min-percentage=90
 
 
