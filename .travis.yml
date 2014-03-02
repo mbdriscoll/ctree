@@ -50,6 +50,9 @@ after_success:
   - "if [[ $(echo ${TRAVIS_JOB_NUMBER} | cut -d. -f2) -ne 1 ]]; then echo 'Not sub-job #1; skipping doc build.'; exit 0; fi"
 
   # publish coverage report
+  - ls -lah .
+  - ls -lah ${TRAVIS_BUILD_DIR}
+  - ls -lah ${TRAVIS_BUILD_DIR}/test
   - coveralls
 
   # publish documentation
