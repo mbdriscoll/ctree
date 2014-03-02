@@ -46,3 +46,6 @@ nosetests.xml
 
 # coverage html report
 htmlcov
+
+# virtualenv subdirs
+venv
