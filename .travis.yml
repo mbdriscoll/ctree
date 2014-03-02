@@ -34,6 +34,7 @@ after_success:
 
   # publish documentation
   - make -C html
+  - git fetch origin gh-pages
   - git checkout gh-pages
   - cp -r docs/_build/html/* ./
   - rsync -a docs/_build/html .
@@ -41,4 +42,4 @@ after_success:
   - git config --global user.email $GIT_EMAIL
   - git add .
   - git commit -m 'Updating documentation for commit $TRAVIS_COMMIT.'
-  - git push "https://$GIT_NAME:$GH_TOKEN@github.com/ucb-sejits/ctree.git" gh-pages
+  - git push "https://$GIT_NAME:$GH_TOKEN@github.com/ucb-sejits/ctree.git" gh-pages:gh-pages
