@@ -1,15 +1,22 @@
-.. ctree documentation master file, created by
-   sphinx-quickstart on Sat Mar  1 21:02:18 2014.
-   You can adapt this file completely to your liking, but it should at least
-   contain the root `toctree` directive.
+.. index:
 
+===================
 ctree documentation
-=================================
+===================
 
-Contents:
+
+Getting Started
+===============
+
+* :doc:`Installation <install>`
+* :doc:`Tutorial <tutorial>`
+
+
+Module documentation
+====================
 
 .. toctree::
-   :maxdepth: 5
+   :maxdepth: 4
 
    ctree
 
@@ -20,4 +27,3 @@ Indices and tables
 * :ref:`genindex`
 * :ref:`modindex`
 * :ref:`search`
-
