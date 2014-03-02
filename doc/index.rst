@@ -9,7 +9,7 @@ ctree documentation
 Contents:
 
 .. toctree::
-   :maxdepth: 5
+   :maxdepth: 6
 
    ctree
 

@@ -7,7 +7,7 @@ python:
 env:
   global:
     # encrypted OAuth token so Travis can commit docs back to Github
-    - secure: "exjwYI5XtSjquJirXb1QuruUfT0W/q1E6XUEIoyVSs2+JFouU6PIVMUglckBlaC29t4riq+3Ms9XRCOSZ5ULVFCwbFQwjLrg8phlB/Qw21kzGmbqidCtwfDLKsDJ34Y6tekjb84j/GQ3w9XPDQsRx5Q1UxPKgMvBPNmFAZve17o="
+    - secure: "lMJDFi1WZMAproIpCIJwjB9ahwRmV5pjMx8Cb7nE/CHRcrHE0tFlU22OWH7D9Qbj2cXz7xmOg3QUJpVqegY2yZxvVx14Eb9ZoWbGs31FrnNY1IpmIXV7cFRnG4IaVnFh41rkDpDstw97OHnnVRdiRivYeqKSNatc5ceGxDUH7qU="
   matrix:
     - LLVM_VERSION=3.3
 
@@ -53,8 +53,6 @@ after_success:
   - git checkout gh-pages
   - rsync -a doc/_build/html/ ./
   - rm -r doc/_build
-  - git config --global user.name 'Ctree Doc Bot'
-  - git config --global user.email $GIT_EMAIL
   - git add .
   - git status
   - git commit -m "Updating documentation for commit(s) $TRAVIS_COMMIT_RANGE."
