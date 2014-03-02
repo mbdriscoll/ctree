@@ -7,7 +7,7 @@ python:
 env:
   global:
     # encrypted OAuth token so Travis can commit docs back to Github
-    - secure: "GpFIwX6B6SEDBtFjYEGt8Uoa2m2Ho1Y15Q6b7vnRdSVzDx0DKvLlmXKmtEzayu84n0VbonaPepUODdNIaiqwpqIW+S26+ntJsNP3BLWfEZS77tzEdDIpaLXNQaXJCh+KYWe+fHxTreDPZhTKGWmcuwmPvKTSyrPuT/puD7UzkPw="
+    - secure: "hT/arLbW8Yi6TFcIJhwU2GQzQpMSgCc0gJePzqtvHoqw6sPOlPCzNK1A7WLrYNn4Yf+byYqOppBi+l1+d5Z5DNVuV4y6SDrP9E6HMaAr3kIAvZNNXjr6qW+I1C2Iswm9oYWZBjm0Mn8fVAGXztSHlCn7npgA5PNN0pKPWOHdRSw="
   matrix:
     - LLVM_VERSION=3.3
 
@@ -25,8 +25,6 @@ install:
 script:
   # run test suite
   - nosetests --with-coverage --cover-package=ctree --cover-min-percentage=90
-  echo hi
-
 
 after_success:
 
