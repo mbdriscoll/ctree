@@ -14,8 +14,8 @@ env:
 
 before_install:
 
-  - sudo apt-get update -qq
-  - sudo apt-get install -qq llvm-$LLVM_VERSION
+  #- sudo apt-get update -qq
+  #- sudo apt-get install -qq llvm-$LLVM_VERSION
 
 
 install:
