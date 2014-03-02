@@ -2,7 +2,9 @@
 SSE vector nodes supported by ctree.
 """
 
-class SSENode(CAstNode):
+from ctree.ast import CtreeNode
+
+class SSENode(CtreeNode):
   """Base class for all SSE nodes supported by ctree."""
   def codegen(self, indent=0):
     from ctree.sse.codegen import SseCodeGen

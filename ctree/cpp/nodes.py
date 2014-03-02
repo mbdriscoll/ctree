@@ -2,7 +2,9 @@
 C preprocessor nodes supported by ctree.
 """
 
-class CppNode(CAstNode):
+from ctree.ast import CtreeNode
+
+class CppNode(CtreeNode):
   """Base class for all C Preprocessor nodes in ctree."""
   def codegen(self, indent=0):
     from ctree.cpp.codegen import CppCodeGen

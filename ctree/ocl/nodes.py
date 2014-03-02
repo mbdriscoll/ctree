@@ -2,7 +2,9 @@
 OpenCL nodes supported by ctree.
 """
 
-class OclNode(CAstNode):
+from ctree.ast import CtreeNode
+
+class OclNode(CtreeNode):
   """Base class for all OpenCL nodes supported by ctree."""
   def codegen(self, indent=0):
     from ctree.ocl.codegen import OclCodeGen

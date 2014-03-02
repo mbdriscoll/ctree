@@ -15,7 +15,7 @@ before_install:
   - sudo apt-get install -qq llvm-$LLVM_VERSION
 
 install:
-  - pip install coveralls
+  - pip install coveralls Sphinx
   - git clone git://github.com/llvmpy/llvmpy.git
   - cd llvmpy
   - LLVM_CONFIG_PATH=/usr/bin/llvm-config-$LLVM_VERSION python setup.py install
@@ -25,4 +25,4 @@ script:
   - nosetests --with-coverage --cover-package=ctree --cover-min-percentage=90
 
 after_success:
-  coveralls
+  - coveralls
