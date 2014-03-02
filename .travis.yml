@@ -33,8 +33,8 @@ after_success:
   #- coveralls
 
   # publish documentation
-  - set -ex
   - make -C doc html
+  - set -ex
   - git fetch origin gh-pages:gh-pages
   - git checkout gh-pages
   - rsync -a doc/_build/html/ ./
