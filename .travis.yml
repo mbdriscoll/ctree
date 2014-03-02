@@ -59,8 +59,8 @@ after_success:
 
   - git config --global user.name 'Ctree Doc Bot'
   - git config --global user.email 'mbdriscoll+ctreeoauth@gmail.com'
-  - git config credential.helper "store --file=.git/credentials"
-  - echo "https://${GH_TOKEN}:x-oauth-basic@github.com" > .git/credentials
+  - git config credential.helper "store --file=${HOME}/.gitcredentials"
+  - echo "https://${GH_TOKEN}:x-oauth-basic@github.com" > ${HOME}/.gitcredentials
 
   - cd ${HOME}
   - git clone "https://github.com/ucb-sejits/ctree-docs.git"
