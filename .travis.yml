@@ -36,6 +36,6 @@ after_success:
   - git config --global user.name 'Ctree Doc Bot'
   - git config --global user.email $GIT_EMAIL
   - git add .
-  - git commit -m "Updating documentation for commit $TRAVIS_COMMIT."
-  - git remote add origin_oauth https://$GIT_NAME:$GH_TOKEN@github.com/ucb-sejits/ctree.git
+  - git commit -m 'Updating documentation for commit $TRAVIS_COMMIT.'
+  - git remote add origin_oauth "https://$GIT_NAME:$GH_TOKEN@github.com/ucb-sejits/ctree.git"
   - git push origin gh-pages
