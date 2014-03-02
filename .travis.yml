@@ -48,15 +48,15 @@ after_success:
   - coveralls
 
   # publish documentation
-  - PYTHONPATH=${TRAVIS_BUILD_DIR} make -C doc html
+  - "PYTHONPATH=${TRAVIS_BUILD_DIR} make -C doc html"
   - git fetch origin gh-pages:gh-pages
   - git checkout gh-pages
   - rsync -a doc/_build/html/ ./
   - rm -r doc/_build
   - git add .
   - git status
-  = git config --global user.name "Ctree Doc Bot"
-  = git config --global user.email "mbdriscoll-ctreeoauth@gmail.com"
+  = "git config --global user.name 'Ctree Doc Bot'"
+  = "git config --global user.email 'mbdriscoll-ctreeoauth@gmail.com'"
   - git commit -m "Updating documentation for commit(s) $TRAVIS_COMMIT_RANGE."
   - git config credential.helper "store --file=.git/credentials"
   - "echo https://${GH_TOKEN}:x-oauth-basic@github.com > .git/credentials"
