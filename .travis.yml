@@ -21,7 +21,7 @@ before_install:
 install:
 
   # coverage and doc generator
-  - pip install coveralls Sphinx
+  - pip install nose coveralls Sphinx
 
   # install llvmpy
   - git clone git://github.com/llvmpy/llvmpy.git ${HOME}/llvmpy
