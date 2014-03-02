@@ -25,6 +25,7 @@ install:
 script:
   # run test suite
   #- nosetests --with-coverage --cover-package=ctree --cover-min-percentage=90
+  echo hi
 
 
 after_success:
