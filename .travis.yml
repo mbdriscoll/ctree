@@ -33,9 +33,12 @@ after_success:
   - coveralls
 
   # publish documentation
+  - git --version
   - make -C doc html
   - git fetch origin gh-pages
-  - git checkout -b gh-pages origin/gh-pages
+  - git branch -l
+  - git branch -r
+  - git checkout gh-pages
   - rsync -a doc/_build/html/ ./
   - rm -r doc/_build
   - git config --global user.name 'Ctree Doc Bot'
