@@ -32,8 +32,8 @@ install:
   - cd ${TRAVIS_BUILD_DIR}
   - python setup.py install
 
-  # return home
-  - cd ${TRAVIS_BUILD_DIR}/test
+  # return to build dir
+  - cd ${TRAVIS_BUILD_DIR}
 
 script:
 
@@ -53,7 +53,6 @@ after_success:
   - coveralls
 
   # publish documentation
-  - cd ${TRAVIS_BUILD_DIR}
   - make -C doc html
   - git fetch origin gh-pages:gh-pages
   - git checkout gh-pages
