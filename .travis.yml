@@ -7,7 +7,7 @@ python:
 env:
   global:
     # encrypted OAuth token so Travis can commit docs back to Github
-    - secure: "Fgsce4FcT6AZeRMLeZcyKh4HbGI1xrZcxd5s03kAMATHIr8+6S6VVa8MhRgdtDQ7AhIcmpBgXThe2ODArtsGlbuQnkMMRoCOY7xq3j7nchR+xjCQkkWIm2Cji6bklGNi4a51JzvpB+Nu1cyrGYE1zQ3+knM9bMFSTu2DcFIl6F4="
+    - secure: "QBB2KT4EFUdSkH9fjo5J/02zuZlD0FbVsKwYJgW6c4INp1UY/nx0nrsgjPSZQMD2HBztdfEZInugoVrOJwXBzWJ5Ioc19T9oYhnzaIF6oJRo1mTYDhragvdwiLfb0AyylGq7bgP4lgoMBtE1Oxauf0rKVEYiVeEhvHJup/di6A4="
   matrix:
     - LLVM_VERSION=3.3
 
