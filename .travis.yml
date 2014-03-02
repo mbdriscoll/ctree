@@ -45,4 +45,4 @@ after_success:
   - git status
   - git remote add oa https://$GIT_NAME:$GH_TOKEN@github.com/ucb-sejits/ctree.git
   - git commit -m "Updating documentation for commit $TRAVIS_COMMIT."
-  - if [[$(echo $TRAVIS_JOB_NUMBER | cut -d. -f2) -eq 1]]; then git push -q oa gh-pages; else echo "Not first sub-job; skipping push." fi
+  - "if [[$(echo $TRAVIS_JOB_NUMBER | cut -d. -f2) -eq 1]]; then git push -q oa gh-pages; else echo 'Not first sub-job; skipping push.' fi"
