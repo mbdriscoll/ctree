@@ -14,8 +14,8 @@ env:
 
 before_install:
 
-  #- sudo apt-get update -qq
-  #- sudo apt-get install -qq llvm-$LLVM_VERSION
+  - sudo apt-get update -qq
+  - sudo apt-get install -qq llvm-$LLVM_VERSION
 
 
 install:
@@ -24,23 +24,23 @@ install:
   - pip install Sphinx # coveralls
 
   # install llvmpy
-  #- git clone git://github.com/llvmpy/llvmpy.git ${HOME}/llvmpy
-  #- cd ${HOME}/llvmpy
-  #- LLVM_CONFIG_PATH=/usr/bin/llvm-config-$LLVM_VERSION python setup.py install
+  - git clone git://github.com/llvmpy/llvmpy.git ${HOME}/llvmpy
+  - cd ${HOME}/llvmpy
+  - LLVM_CONFIG_PATH=/usr/bin/llvm-config-$LLVM_VERSION python setup.py install
 
   # install ctree via setup.py
-  #- cd ${TRAVIS_BUILD_DIR}
-  #- python setup.py install
+  - cd ${TRAVIS_BUILD_DIR}
+  - python setup.py install
 
 script:
 
   # run test suite from home directory to verify installation
-  #- cd ${HOME}
-  #- nosetests --where=${TRAVIS_BUILD_DIR}/test
+  - cd ${HOME}
+  - nosetests --where=${TRAVIS_BUILD_DIR}/test
 
   # run test suite again from build dir to get coverage info
   - cd ${TRAVIS_BUILD_DIR}
-  #- nosetests --with-coverage --cover-package=ctree --cover-min-percentage=90
+  - nosetests --with-coverage --cover-package=ctree --cover-min-percentage=90
 
 
 after_success:
@@ -52,7 +52,7 @@ after_success:
   - "if [[ $(echo ${TRAVIS_JOB_NUMBER} | cut -d. -f2) -ne 1 ]]; then echo 'Not sub-job #1; skipping doc build.'; exit 0; fi"
 
   # publish coverage report
-  #- coveralls
+  - coveralls
 
   # build documentation
   - make -C doc html
