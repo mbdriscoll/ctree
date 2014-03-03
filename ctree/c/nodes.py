@@ -2,6 +2,12 @@
 AST nodes for C constructs.
 """
 
+import os
+import subprocess
+
+import logging
+log = logging.getLogger(__name__)
+
 import ctypes as ct
 from ctree.ast import CtreeNode, File
 
@@ -24,6 +30,42 @@ class CFile(CNode, File):
     self.body = body
     self._ext = "c"
     super().__init__()
+
+  def c_filename(self):
+    return "%s.%s" % (self.name, self._ext)
+
+  def bc_filename(self):
+    return "%s.bc" % self.name
+
+  def codegen(self, compilation_dir):
+    from ctree.c.codegen import CCodeGen
+    program_txt = CCodeGen(0).visit(self)
+    log.info("Generated C program: <<<\n%s\n>>>" % program_txt)
+
+    c_src_file = os.path.join(compilation_dir, self.c_filename())
+    ll_bc_file = os.path.join(compilation_dir, self.bc_filename())
+    log.info("File for generated C: %s" % c_src_file)
+    log.info("File for generated LLVM: %s" % ll_bc_file)
+
+    # write program text to C file
+    with open(c_src_file, 'w') as c_file:
+      c_file.write(program_txt)
+
+    # call clang to generate LLVM bitcode file
+    import ctree
+    CC = ctree.config['jit']['CC']
+    CFLAGS = ctree.config['jit']['CFLAGS']
+    compile_cmd = "%s -emit-llvm %s -o %s -c %s" % (CC, CFLAGS, ll_bc_file, c_src_file)
+    log.info("Compilation command: %s" % compile_cmd)
+    subprocess.check_call(compile_cmd, shell=True)
+
+    # load llvm bitcode
+    import llvm.core
+    with open(ll_bc_file, 'rb') as bc:
+      ll_module = llvm.core.Module.from_bitcode(bc)
+    log.info("Generated LLVM Program: <<<\n%s\n>>>" % ll_module)
+
+    return ll_module
 
 class Statement(CNode):
   """Section B.2.3 6.6."""

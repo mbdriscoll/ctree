@@ -3,10 +3,10 @@ import copy
 import shutil
 import logging
 import tempfile
-import subprocess
 
 import ctree
 import ctypes
+from ctree.ast import *
 from ctree.c.nodes import *
 from ctree.frontend import get_ast
 from ctree.analyses import VerifyOnlyCtreeNodes
@@ -19,48 +19,19 @@ class JitModule(object):
   """
   Manages compilation of multiple ASTs.
   """
-  def __init__(self, destroy_compilation_dir_on_exit=True):
+  def __init__(self):
     self.compilation_dir = tempfile.mkdtemp(prefix="ctree-", dir=tempfile.gettempdir())
-    self.ll_module = ll.Module('ctree_generated_code')
+    self.ll_module = ll.Module.new('ctree')
     self.ll_exec_engine = None
-    self.destroy_compilation_dir_on_exit = destroy_compilation_dir_on_exit
     log.info("Temporary compilation directory is: %s" % self.compilation_dir)
 
   def __del__(self):
-    log.info("Removing temporary compilation directory %s." % self.compilation_dir)
-    if self.destroy_compilation_dir_on_exit:
+    if not ctree.config["jit"]["PRESERVE_SRC_DIR"]:
+      log.info("Removing temporary compilation directory %s." % self.compilation_dir)
       shutil.rmtree(self.compilation_dir)
 
-  def load(self, node):
-    """Convert node to LLVM IR and store the result in this module."""
-    # generate program text
-    program_txt = str(node)
-    log.info("Generated C Program: <<<\n%s\n>>>" % program_txt)
-
-    # determine paths for C and LLVM bitcode files
-    c_src_file = os.path.join(self.compilation_dir, "generated.c")
-    ll_bc_file = os.path.join(self.compilation_dir, "generated.bc")
-    log.info("File for generated C: %s" % c_src_file)
-    log.info("File for generated LLVM: %s" % ll_bc_file)
-
-    # write program text to C file
-    with open(c_src_file, 'w') as c_file:
-      c_file.write(program_txt)
-
-    # call clang to generate LLVM bitcode file
-    CC = ctree.config['jit']['CC']
-    CFLAGS = ctree.config['jit']['CFLAGS']
-    compile_cmd = "%s -emit-llvm %s -o %s -c %s" % (CC, CFLAGS, ll_bc_file, c_src_file)
-    log.info("Compilation command: %s" % compile_cmd)
-    subprocess.check_call(compile_cmd, shell=True)
-
-    # load llvm bitcode
-    with open(ll_bc_file, 'rb') as bc:
-      self.ll_module = ll.Module.from_bitcode(bc)
-    log.info("Generated LLVM Program: <<<\n%s\n>>>" % self.ll_module)
-
-    # return self to aid in method chaining
-    return self
+  def _link_in(self, submodule):
+    self.ll_module.link_in(submodule)
 
   def get_callable(self, tree):
     """Returns a python callable that dispatches to the requested C function."""
@@ -84,9 +55,10 @@ class _ConcreteSpecializedFunction(object):
   A function backed by generated code.
   """
   def __init__(self, c_ast, entry_point_name):
-    self.module = JitModule().load(c_ast.get_root())
+    assert isinstance(c_ast, (File, Project)), \
+      "_ConcreteSpecializedFunction expected a File or Project where it got a %s." % type(c_ast)
+    self.module = c_ast.get_root().codegen()
     entry_point = c_ast.find(FunctionDecl, name=entry_point_name)
-    print("entry_point: %s, %s" % (entry_point_name, entry_point))
     self.fn = self.module.get_callable(entry_point)
 
   def __call__(self, *args, **kwargs):

@@ -2,6 +2,9 @@
 Defines the hierarchy of AST nodes.
 """
 
+import logging
+log = logging.getLogger(__name__)
+
 import ast
 import ctypes as ct
 
@@ -154,11 +157,23 @@ class Project(CommonNode):
     super().__init__()
 
   def codegen(self):
-    return "\n".join([stmt.codegen() for stmt in self.files])
+    """
+    Code generates each file in the project and links their
+    bytecode together to get the master bytecode file.
+    """
+    from ctree.jit import JitModule
+    module = JitModule()
+    for f in self.files:
+      submodule = f.codegen(module.compilation_dir)
+      if submodule:
+        module._link_in(submodule)
+    log.info("Full LLVM program is: <<<\n%s\n>>>" % module.ll_module)
+    return module
 
 class File(CommonNode):
   """Holds a list of statements."""
-  pass
+  def codegen(self, *args):
+    raise Exception("%s should override codegen()." % type(self))
 
 class CommonCodeGen(CodeGenVisitor):
   """Manages conversion of all common nodes to txt."""
