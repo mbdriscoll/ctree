@@ -80,7 +80,14 @@ _EXPR_TO_PRECEDENCE = {
 
 def get_precedence(node):
   try:
-    pred = _EXPR_TO_PRECEDENCE[type(node).__name__]
+    if isinstance(node, (UnaryOp, BinaryOp)):
+      op = type(node.op)
+    elif isinstance(node, TernaryOp):
+      op = TernaryOp
+    else:
+      raise Exception("Cannot determine operator for node %d.\n", node)
+
+    pred = _EXPR_TO_PRECEDENCE[op.__name__]
     # flip precedence so higher numbers mean higher precedence
     return 20 - pred
   except KeyError:

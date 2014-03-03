@@ -21,15 +21,16 @@ class CCodeGen(CodeGenVisitor):
     enclose with parentheses.
     """
     parent = getattr(node, 'parent', None)
-    if isinstance(  node, (UnaryOp, BinaryOp)) and \
-       isinstance(parent, (UnaryOp, BinaryOp)):
-      prec = get_precedence(node.op)
-      parent_prec = get_precedence(parent.op)
-      is_first_child = isinstance(parent, UnaryOp) or \
-                      (isinstance(parent, BinaryOp) and node is parent.left)
-      assoc_left = is_left_associative(parent.op)
+    if isinstance(  node, (UnaryOp, BinaryOp, TernaryOp)) and \
+       isinstance(parent, (UnaryOp, BinaryOp, TernaryOp)):
+      prec = get_precedence(node)
+      parent_prec = get_precedence(parent)
+      is_not_last_child = isinstance(parent, UnaryOp) or \
+                      (isinstance(parent, BinaryOp) and node is parent.left) or \
+                      (isinstance(parent, TernaryOp) and node is not parent.elze)
+      assoc_left = is_left_associative(parent)
       if (prec < parent_prec) or \
-         (prec == parent_prec and (assoc_left is not is_first_child)):
+         (prec == parent_prec and (assoc_left is not is_not_last_child)):
         return True
     return False
 

@@ -107,19 +107,17 @@ class TestAssociativityPrecedence(unittest.TestCase):
     tree = AddAssign(a, AddAssign(b, c))
     self._check(tree, "a += b += c")
 
-  @unittest.skip("Pending paren handling for ternary ops")
   def test_ternary_cond(self):
     a, b, c = self.args
     cond = TernaryOp(a, b, c)
     tree = TernaryOp(cond, c, b)
     self._check(tree, "(a ? b : c) ? c : b")
 
-  @unittest.skip("Pending paren handling for ternary ops")
   def test_ternary_then(self):
     a, b, c = self.args
     then = TernaryOp(a, b, c)
     tree = TernaryOp(c, then, a)
-    self._check(tree, "c ? (a ? b : c) : b")
+    self._check(tree, "c ? (a ? b : c) : a")
 
   def test_ternary_else(self):
     a, b, c = self.args
