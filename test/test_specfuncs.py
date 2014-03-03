@@ -4,7 +4,7 @@ from ctree.ast import *
 from ctree.c.nodes import *
 
 from ctree.jit import LazySpecializedFunction
-from ctree.transformations import SetParamTypes
+from ctree.transformations import SetTypeSignature
 from ctree.types import get_ctype
 
 from fixtures import *
@@ -17,7 +17,7 @@ class TestTranslator(LazySpecializedFunction):
     arg_types = program_config[0]
     func_type = [arg_types[0]] + list(arg_types)
 
-    tree = SetParamTypes(self.entry_point_name, func_type).visit(tree)
+    tree = SetTypeSignature(self.entry_point_name, func_type).visit(tree)
     tree = Project([CFile("generated", [tree])])
 
     return tree

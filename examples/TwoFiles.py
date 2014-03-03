@@ -35,8 +35,8 @@ class OpTranslator(LazySpecializedFunction):
     apply_one_typesig = [inner_type, inner_type]
 
     transformations = [
-      SetParamTypes("apply_all", apply_all_typesig),
-      SetParamTypes("apply",     apply_one_typesig),
+      SetTypeSignature("apply_all", apply_all_typesig),
+      SetTypeSignature("apply",     apply_one_typesig),
       ConvertNumpyNdpointers(),
       StripPythonDocstrings(),
       PyBasicConversions(),

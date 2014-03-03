@@ -6,7 +6,7 @@ from ctree.transformations import *
 from ctree.c.nodes import *
 from ctree.frontend import get_ast
 
-class TestSetParam(unittest.TestCase):
+class TestSetTypeSig(unittest.TestCase):
 
   def _check(self, func_type, tree):
     if isinstance(tree, FunctionDecl):
@@ -24,42 +24,42 @@ class TestSetParam(unittest.TestCase):
 
   def test_no_args(self):
     func_type = [ct.c_long]
-    func_decl = SetParamTypes("get_two", func_type).visit(get_two_ast)
+    func_decl = SetTypeSignature("get_two", func_type).visit(get_two_ast)
     self._check(func_type, func_decl)
 
   def test_one_arg(self):
     func_type = [ct.c_long, ct.c_long]
-    func_decl = SetParamTypes("fib", func_type).visit(fib_ast)
+    func_decl = SetTypeSignature("fib", func_type).visit(fib_ast)
     self._check(func_type, func_decl)
 
   def test_two_args(self):
     func_type = [ct.c_long, ct.c_long, ct.c_long]
-    func_decl = SetParamTypes("gcd", func_type).visit(gcd_ast)
+    func_decl = SetTypeSignature("gcd", func_type).visit(gcd_ast)
     self._check(func_type, func_decl)
 
   def test_mixed_args(self):
     func_type = [ct.c_long, ct.c_double, ct.c_long, ct.c_long]
-    func_decl = SetParamTypes("choose", func_type).visit(choose_ast)
+    func_decl = SetTypeSignature("choose", func_type).visit(choose_ast)
     self._check(func_type, func_decl)
 
   def test_no_args(self):
     func_type = [ct.c_long]
-    func_decl = SetParamTypes("get_two", func_type).visit( get_ast(get_two) )
+    func_decl = SetTypeSignature("get_two", func_type).visit( get_ast(get_two) )
     self._check(func_type, func_decl)
 
   def test_one_arg(self):
     func_type = [ct.c_long, ct.c_long]
-    func_decl = SetParamTypes("fib", func_type).visit( get_ast(fib) )
+    func_decl = SetTypeSignature("fib", func_type).visit( get_ast(fib) )
     self._check(func_type, func_decl)
 
   def test_two_args(self):
     func_type = [ct.c_long, ct.c_long, ct.c_long]
-    func_decl = SetParamTypes("gcd", func_type).visit( get_ast(gcd) )
+    func_decl = SetTypeSignature("gcd", func_type).visit( get_ast(gcd) )
     self._check(func_type, func_decl)
 
   def test_mixed_args(self):
     func_type = [ct.c_long, ct.c_double, ct.c_long, ct.c_long]
-    func_decl = SetParamTypes("choose", func_type).visit( get_ast(choose) )
+    func_decl = SetTypeSignature("choose", func_type).visit( get_ast(choose) )
     self._check(func_type, func_decl)
 
 

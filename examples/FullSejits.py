@@ -34,7 +34,7 @@ class BasicTranslator(LazySpecializedFunction):
     transformations = [
       PyBasicConversions(),
       FixUpParentPointers(),
-      SetParamTypes("fib", fib_sig),
+      SetTypeSignature("fib", fib_sig),
     ]
     for tx in transformations:
       tree = tx.visit(tree)

@@ -57,8 +57,8 @@ class OpTranslator(LazySpecializedFunction):
     ])
 
     transformations = [
-      SetParamTypes("apply_all", apply_all_typesig),
-      SetParamTypes("apply",     apply_one_typesig),
+      SetTypeSignature("apply_all", apply_all_typesig),
+      SetTypeSignature("apply",     apply_one_typesig),
       ConvertNumpyNdpointers(),
       StripPythonDocstrings(),
       PyBasicConversions(),
@@ -117,7 +117,7 @@ def main():
   py_doubler(expected_f)
   np.testing.assert_array_equal(actual_f, expected_f)
 
-  # doubling longs
+  # doubling ints
   actual_i   = np.ones(14, dtype=np.int32)
   expected_i = np.ones(14, dtype=np.int32)
   c_doubler(actual_i)

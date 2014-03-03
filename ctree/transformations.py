@@ -119,14 +119,11 @@ class StripPythonDocstrings(NodeTransformer):
       node.body.pop(0)
     return self.generic_visit(node)
 
-class SetParamTypes(NodeTransformer):
+class SetTypeSignature(NodeTransformer):
   """
-  Sets the parameter types according to the given type signature.
-  For ctree FunctionDecl nodes, sets Param.type field.
-  For ast.FunctionDef nodes, sets arg.annotation field.
-
-  The target must have the same number of parameters as there
-  are entries in the type signature.
+  Sets the type signature of the target method/function.
+  For ctree FunctionDecl nodes, sets decl.return_type and arg.type fields.
+  For ast.FunctionDef nodes, sets def.returns and arg.annotation fields.
   """
   def __init__(self, target, typesig):
     self.target = target
