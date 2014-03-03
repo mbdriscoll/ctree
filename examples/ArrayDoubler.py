@@ -20,11 +20,19 @@ from ctree.types import pytype_to_ctype, get_ctype
 
 class OpTranslator(LazySpecializedFunction):
   def args_to_subconfig(self, args):
+    """
+    Analyze arguments and return a 'subconfig', a hashable object
+    that classifies them. Arguments with identical subconfigs
+    might be processed by the same generated code.
+    """
     A = args[0]
     return (len(A), A.dtype, A.ndim, A.shape)
 
   def transform(self, py_ast, program_config):
-    """Convert the Python AST to a C AST."""
+    """
+    Convert the Python AST to a C AST according to the directions
+    given in program_config.
+    """
     len_A, A_dtype, A_ndim, A_shape = program_config[0]
     inner_type = pytype_to_ctype(A_dtype)
 
