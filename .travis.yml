@@ -69,7 +69,7 @@ after_success:
   # commit documentation
   - git config --global user.name 'Ctree Doc Bot'
   - git config --global user.email 'mbdriscoll+ctreeoauth@gmail.com'
-  - git commit -m "Updating documentation from Travis Build #${TRAVIS_BUILD_ID}."
+  - git commit -m "Updating documentation from Travis Build ${TRAVIS_BUILD_ID}."
 
   # set up oauth for push
   - git config credential.helper "store --file=.git/credentials"
