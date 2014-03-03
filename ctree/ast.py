@@ -177,7 +177,7 @@ class File(CommonNode):
 
   def _compile(self, program_text, compilation_dir):
     """Construct an LLVM module with the translated contents of this file."""
-    raise Expcetion("%s should override _compile()." % type(self))
+    raise Exception("%s should override _compile()." % type(self))
 
 class CommonCodeGen(CodeGenVisitor):
   """Manages conversion of all common nodes to txt."""

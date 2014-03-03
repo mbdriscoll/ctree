@@ -31,3 +31,12 @@ class TestStrings(unittest.TestCase):
 
   def test_string_tab(self):
     self.assertEqual(str(String(r"\t")), r'"\t"')
+
+  def test_string_multi_two(self):
+    self.assertEqual(str(String("foo", "bar")), '"foo" "bar"')
+
+  def test_string_multi_three(self):
+    self.assertEqual(str(String("foo", "bar", "baz")), '"foo" "bar" "baz"')
+
+  def test_string_none(self):
+    self.assertEqual(str(String()), '""')

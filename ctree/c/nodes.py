@@ -159,8 +159,8 @@ class Block(Statement):
 
 class String(Literal):
   """Cite me."""
-  def __init__(self, value=None):
-    self.value = value
+  def __init__(self, *values):
+    self.values = values
     super().__init__()
 
 

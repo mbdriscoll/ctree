@@ -24,7 +24,7 @@ class CDotGen(DotGenVisitor):
     return "value: %s" % node.value
 
   def label_String(self, node):
-    return "value: %s" % node.value
+    return 'values: "%s"' % '" "'.join(node.values)
 
   def label_CFile(self, node):
     return "name: %s" % node.name
