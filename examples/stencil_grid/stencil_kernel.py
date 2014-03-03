@@ -31,15 +31,21 @@ from ctree.jit import LazySpecializedFunction
 import ctree.types
 from ctree.frontend import get_ast
 
+class VisitIterators(NodeTransformer):
+    def visit_For(self, node):
+        targ = node.target.id
+        return self.visit(node.iter)
+
 class SpecializedTranslator(LazySpecializedFunction):
   def __init__(self, func):
     super().__init__( get_ast(func), func.__name__ )
 
   def transform(self, tree, args):
     """Convert the Python AST to a C AST."""
-    arg0_type = type(args[0])
-    fib_arg_type = ctree.types.pytype_to_ctype(arg0_type)
-    fib_sig = (fib_arg_type, fib_arg_type)
+    A = args[0]
+    array_type = numpy.ctypeslib.ndpointer(dtype=A.dtype, ndim=A.ndim, shape=A.shape, flags=A.flags)
+    # fib_arg_type = ctree.types.pytype_to_ctype(arg0_type)
+    fib_sig = (None, array_type)
 
     transformations = [
       transform.PyBasicConversions(),
