@@ -133,4 +133,4 @@ class TestAssociativityPrecedence(unittest.TestCase):
 
   def test_bad_associativity_arg(self):
     with self.assertRaises(Exception):
-      get_associativity( Constant(2.3) )
+      is_left_associative( Constant(2.3) )

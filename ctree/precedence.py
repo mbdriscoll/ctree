@@ -109,7 +109,7 @@ def is_left_associative(node):
   try:
     pred = get_precedence(node)
     return _PRECEDENCE_ASSOCIATES_LTR[20 - pred]
-  except KeyError:
+  except (Exception, KeyError):
     pass
   raise Exception("Cannot determine if operator %s is left- or right-associative." \
     % (type(node).__name__))
