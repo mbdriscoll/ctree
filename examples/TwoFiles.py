@@ -1,7 +1,5 @@
 """
 Parses the python AST below, transforms it to C, JITs it, and runs it.
-Similar to ArrayDoubler, but puts kernel and control functions in
-separate C files.
 """
 
 import logging
@@ -22,17 +20,46 @@ from ctree.types import pytype_to_ctype, get_ctype
 
 class OpTranslator(LazySpecializedFunction):
   def args_to_subconfig(self, args):
+    """
+    Analyze arguments and return a 'subconfig', a hashable object
+    that classifies them. Arguments with identical subconfigs
+    might be processed by the same generated code.
+    """
     A = args[0]
     return (len(A), A.dtype, A.ndim, A.shape)
 
-  def transform(self, tree, program_config):
-    """Convert the Python AST to a C AST."""
+  def transform(self, py_ast, program_config):
+    """
+    Convert the Python AST to a C AST according to the directions
+    given in program_config.
+    """
     len_A, A_dtype, A_ndim, A_shape = program_config[0]
     inner_type = pytype_to_ctype(A_dtype)
 
     array_type = np.ctypeslib.ndpointer(A_dtype, A_ndim, A_shape)
     apply_all_typesig = [None, array_type]
     apply_one_typesig = [inner_type, inner_type]
+
+    kernel = CFile("kernel", [py_ast.body[0]])
+
+    control = CFile("control", [
+      FunctionDecl(ct.c_void_p, "apply", [SymbolRef("x")], []),
+      FunctionDecl(ct.c_void_p, "apply_all",
+        params=[SymbolRef("A")],
+        defn=[
+          For(Assign(SymbolRef("i", ct.c_int), Constant(0)),
+              Lt(SymbolRef("i"), SymbolRef("len_A")),
+              PostInc(SymbolRef("i")),
+              [
+                Assign(ArrayRef(SymbolRef("A"),SymbolRef("i")),
+                       FunctionCall(SymbolRef("apply"), [
+                                    ArrayRef(SymbolRef("A"),SymbolRef("i"))])),
+              ]),
+        ]
+      ),
+    ])
+
+    tree = Project([kernel, control])
 
     transformations = [
       SetTypeSignature("apply_all", apply_all_typesig),
@@ -58,26 +85,7 @@ class ArrayOp(object):
   """
   def __init__(self):
     """Instantiate translator."""
-    kernel = CFile("kernel", [get_ast(self.apply).body[0]])
-    control = CFile("control", [
-     FunctionDecl(ct.c_void_p, "apply",
-      params=[SymbolRef("x")],
-      defn=[]
-     ),
-     FunctionDecl(ct.c_void_p, "apply_all",
-      params=[SymbolRef("A")],
-      defn=[
-        For(Assign(SymbolRef("i", ct.c_int), Constant(0)),
-            Lt(SymbolRef("i"), SymbolRef("len_A")),
-            PostInc(SymbolRef("i")),
-            [
-              Assign(ArrayRef(SymbolRef("A"),SymbolRef("i")),
-                     FunctionCall(SymbolRef("apply"), [ArrayRef(SymbolRef("A"),SymbolRef("i"))])),
-            ])]
-      ),
-    ])
-    project = Project([kernel, control])
-    self.c_apply_all = OpTranslator(project, "apply_all")
+    self.c_apply_all = OpTranslator(get_ast(self.apply), "apply_all")
 
   def __call__(self, A):
     """Apply the operator to the arguments via a generated function."""
@@ -113,7 +121,7 @@ def main():
   py_doubler(expected_f)
   np.testing.assert_array_equal(actual_f, expected_f)
 
-  # doubling longs
+  # doubling ints
   actual_i   = np.ones(14, dtype=np.int32)
   expected_i = np.ones(14, dtype=np.int32)
   c_doubler(actual_i)
