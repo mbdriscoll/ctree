@@ -30,11 +30,8 @@ import ctree.transformations as transform
 from ctree.jit import LazySpecializedFunction
 import ctree.types
 from ctree.frontend import get_ast
+from ctree.visitors import NodeTransformer
 
-class VisitIterators(NodeTransformer):
-    def visit_For(self, node):
-        targ = node.target.id
-        return self.visit(node.iter)
 
 class SpecializedTranslator(LazySpecializedFunction):
   def __init__(self, func):
@@ -58,6 +55,15 @@ class SpecializedTranslator(LazySpecializedFunction):
     print(ast.dump(tree, include_attributes=True))
 
     return tree
+
+
+class StencilTransformer(NodeTransformer):
+    def visit_For(self, node):
+        if type(node.iter) == ast.Call and type(node.iter.func) == ast.Attribute:
+            if node.iter.func.attr == 'interior_points':
+                raise Exception('not finished')
+
+
 
 # may want to make this inherit from something else...
 class StencilKernel(object):
