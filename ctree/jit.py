@@ -86,6 +86,7 @@ class _ConcreteSpecializedFunction(object):
   def __init__(self, c_ast, entry_point_name):
     self.module = JitModule().load(c_ast.get_root())
     entry_point = c_ast.find(FunctionDecl, name=entry_point_name)
+    print("entry_point: %s, %s" % (entry_point_name, entry_point))
     self.fn = self.module.get_callable(entry_point)
 
   def __call__(self, *args, **kwargs):

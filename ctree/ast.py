@@ -12,10 +12,10 @@ class CtreeNode(ast.AST):
   """Base class for all AST nodes in ctree."""
   _fields = []
 
-  def __init__(self, parent=None):
+  def __init__(self):
     """Initialize a new AST Node."""
     super().__init__()
-    self.parent = parent
+    self.parent = None
 
   def __setattr__(self, name, value):
     """Set attribute and preserve parent pointers."""

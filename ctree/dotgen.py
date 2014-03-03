@@ -37,7 +37,6 @@ class DotGenVisitor(NodeVisitor):
       s += 'n%s -> n%s [label="parent",style=dotted];\n' % (id(node), id(node.parent))
 
     # edges to children
-    s += 'n%s [label="%s"];\n' % (id(node), self.label(node))
     for fieldname, child in ast.iter_fields(node):
       if type(child) is list:
         for i, grandchild in enumerate(child):
