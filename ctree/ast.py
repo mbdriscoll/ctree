@@ -5,6 +5,7 @@ Defines the hierarchy of AST nodes.
 import logging
 log = logging.getLogger(__name__)
 
+import os
 import ast
 import ctypes as ct
 
@@ -163,6 +164,14 @@ class Project(CommonNode):
     """
     from ctree.jit import JitModule
     module = JitModule()
+
+    # now that we have a concrete compilation dir, resolve references to it
+    from ctree.transformations import ResolveGeneratedPathRefs
+    log.info("automatically resolving GeneratedPathRef nodes.")
+    resolver = ResolveGeneratedPathRefs(module.compilation_dir)
+    self.files = [resolver.visit(f) for f in self.files]
+
+    # transform all files into llvm modules and link them into the master module
     for f in self.files:
       submodule = f._compile(f.codegen(), module.compilation_dir)
       if submodule:
@@ -179,12 +188,29 @@ class File(CommonNode):
     """Construct an LLVM module with the translated contents of this file."""
     raise Exception("%s should override _compile()." % type(self))
 
+  def get_generated_path_ref(self):
+    """Returns an object that can resolve the full file path at compile time."""
+    return GeneratedPathRef(self)
+
+class GeneratedPathRef(CommonNode):
+  """Represents a path to a generated file."""
+  def __init__(self, target_file=None):
+    assert isinstance(target_file, File), \
+      "Cannot create a GeneratedPathRef to a %s, must be a File." % repr(target_file)
+    self.target = target_file
+
+
 class CommonCodeGen(CodeGenVisitor):
   """Manages conversion of all common nodes to txt."""
   def visit_File(self, node):
     return ";\n".join(map(str, node.body)) + ";\n"
 
+  def visit_GeneratedPathRef(self, node):
+    raise Exception("Unresolved GeneratedPathRefs to file %s." % (node.filenode.get_filename()))
+
 
 class CommonDotGen(DotGenVisitor):
   """Manages coversion of all common nodes to dot."""
-  pass
+  def label_GeneratedPathRef(self, node):
+    return "target: %s" % node.filenode.get_filename()
+

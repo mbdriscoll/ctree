@@ -1,3 +1,4 @@
+import os
 import ast
 import copy
 import ctypes as ct
@@ -159,3 +160,15 @@ class ConvertNumpyNdpointers(NodeTransformer):
       node.ctype = node.type
       node.type = self._convert(node.ctype)
     return node
+
+
+class ResolveGeneratedPathRefs(NodeTransformer):
+  """
+  Converts any instances of ctree.ast.GeneratedPathRef into strings containing the absolute path
+  of the target file.
+  """
+  def __init__(self, compilation_dir):
+    self.compilation_dir = compilation_dir
+
+  def visit_GeneratedPathRef(self, node):
+    return String(os.path.join(self.compilation_dir, node.target.get_filename()))

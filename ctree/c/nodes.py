@@ -31,15 +31,15 @@ class CFile(CNode, File):
     self._ext = "c"
     super().__init__()
 
-  def c_filename(self):
+  def get_filename(self):
     return "%s.%s" % (self.name, self._ext)
 
-  def bc_filename(self):
+  def get_bc_filename(self):
     return "%s.bc" % self.name
 
   def _compile(self, program_text, compilation_dir):
-    c_src_file = os.path.join(compilation_dir, self.c_filename())
-    ll_bc_file = os.path.join(compilation_dir, self.bc_filename())
+    c_src_file = os.path.join(compilation_dir, self.get_filename())
+    ll_bc_file = os.path.join(compilation_dir, self.get_bc_filename())
     log.info("File for generated C: %s" % c_src_file)
     log.info("File for generated LLVM: %s" % ll_bc_file)
     log.info("Generated C program: <<<\n%s\n>>>" % program_text)
