@@ -1,6 +1,7 @@
 import unittest
 
 from ctree.c.nodes import *
+from ctree.precedence import *
 
 class TestPrecedence(unittest.TestCase):
 
