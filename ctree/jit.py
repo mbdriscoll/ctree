@@ -107,12 +107,16 @@ class LazySpecializedFunction(object):
     log.info("specializer returned subconfig for arguments: %s" % (args_subconfig,))
     log.info("tuner returned subconfig: %s" % (tuner_subconfig,))
 
+    from ctree.dotgen import to_dot
+
     if program_config in self.c_functions:
       ctree.stats.log("specialized function cache hit")
       log.info("specialized function cache hit!")
     else:
       log.info("specialized function cache miss.")
       c_ast = self.transform( copy.deepcopy(self.original_tree), program_config )
+      assert isinstance(c_ast, Project), \
+        "Expected transform() to return a Project instance, instead got %s." % repr(c_ast)
       VerifyOnlyCtreeNodes().visit(c_ast)
       self.c_functions[program_config] = _ConcreteSpecializedFunction(c_ast, self.entry_point_name)
 
@@ -132,7 +136,7 @@ class LazySpecializedFunction(object):
     Convert the AST 'tree' into a C AST, optionally taking advantage of the
     actual runtime arguments.
     """
-    return tree
+    raise NotImplementedError()
 
   def set_tuning_space(self, space):
     """

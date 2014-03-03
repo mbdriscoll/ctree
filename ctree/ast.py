@@ -164,7 +164,7 @@ class Project(CommonNode):
     from ctree.jit import JitModule
     module = JitModule()
     for f in self.files:
-      submodule = f.codegen(module.compilation_dir)
+      submodule = f._compile(f.codegen(), module.compilation_dir)
       if submodule:
         module._link_in(submodule)
     log.info("Full LLVM program is: <<<\n%s\n>>>" % module.ll_module)

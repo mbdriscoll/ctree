@@ -47,8 +47,6 @@ class OpTranslator(LazySpecializedFunction):
     tree.find(FunctionDecl, name="apply").set_static().set_inline()
     tree.find(SymbolRef, name="len_A").replace(Constant(len_A))
 
-    tree = Project([tree])
-
     return tree
 
 
@@ -72,7 +70,7 @@ class ArrayOp(object):
             ]),
       ]
     )
-    project = CFile("generated", [kernel, control])
+    project = Project([CFile("generated", [kernel, control])])
     self.c_apply_all = OpTranslator(project, "apply_all")
 
   def __call__(self, A):
