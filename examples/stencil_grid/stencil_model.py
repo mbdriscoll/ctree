@@ -8,7 +8,6 @@ corresponding to a valid stencil kernel program.
 
 import types
 import ast
-from assert_utils import *
 
 from examples.stencil_grid.tree_grammar import *
 parse('''
@@ -64,7 +63,7 @@ math_functions = {'int':1, 'abs':1}
 # Verifies a few structural constraints (semantic properties) of the tree
 class StencilModelStructuralConstraintsVerifier(ast.NodeVisitor):
     def __init__(self, stencil_model):
-        assert_has_type(stencil_model, StencilModel)
+        # assert_has_type(stencil_model, StencilModel)
         self.model = stencil_model
         self.in_stencil_neighbor_iter = False
         super(StencilModelStructuralConstraintsVerifier, self).__init__()

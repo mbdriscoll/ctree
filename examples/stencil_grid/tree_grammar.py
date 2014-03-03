@@ -139,7 +139,7 @@ def t_check_error(t):
     t.lexer.skip(1)
 
 # Build the lexer
-import asp.ply.lex as lex
+import examples.stencil_grid.ply.lex as lex
 lex.lex()
 
 # Parsing rules
@@ -366,7 +366,7 @@ def generate_checker_class(checker, rules):
     return result
 
 def parse(tree_grammar, global_dict, checker=None):
-    import ply.yacc as yacc
+    import examples.stencil_grid.ply.yacc as yacc
     yacc.yacc()
     result = yacc.parse(tree_grammar)
 
@@ -400,6 +400,6 @@ class %s(%s):
     if checker != None:
         program = "import ast\n" + program + "\n" + generate_checker_class(checker, classes_with_rules) + "\n"
 
-    program = program + "\n"
+    program += "\n"
 
     exec(program, global_dict)

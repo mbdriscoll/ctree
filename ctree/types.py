@@ -98,6 +98,7 @@ try:
     np.dtype('float32'): c_float,
     np.dtype('int64'):   c_long,
     np.dtype('int32'):   c_int,
+    np.ndarray:          c_char_p,
     # TODO add the rest
   }
 except ImportError:

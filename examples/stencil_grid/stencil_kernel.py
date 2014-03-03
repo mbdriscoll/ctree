@@ -19,12 +19,39 @@ is cached for future calls.
 
 import numpy
 import inspect
-
-from examples.stencil_grid.stencil_python_front_end import *
-from examples.stencil_grid.stencil_unroll_neighbor_iter import *
-from examples.stencil_grid.stencil_optimize_cpp import *
-from examples.stencil_grid.stencil_convert import *
+import ast
+# from examples.stencil_grid.stencil_python_front_end import *
+# from examples.stencil_grid.stencil_unroll_neighbor_iter import *
+# from examples.stencil_grid.stencil_optimize_cpp import *
+# from examples.stencil_grid.stencil_convert import *
 import copy
+
+import ctree.transformations as transform
+from ctree.jit import LazySpecializedFunction
+import ctree.types
+from ctree.frontend import get_ast
+
+class SpecializedTranslator(LazySpecializedFunction):
+  def __init__(self, func):
+    super().__init__( get_ast(func), func.__name__ )
+
+  def transform(self, tree, args):
+    """Convert the Python AST to a C AST."""
+    arg0_type = type(args[0])
+    fib_arg_type = ctree.types.pytype_to_ctype(arg0_type)
+    fib_sig = (fib_arg_type, fib_arg_type)
+
+    transformations = [
+      transform.PyBasicConversions(),
+      transform.FixUpParentPointers(),
+      transform.SetParamTypes("fib", fib_sig),
+    ]
+    for tx in transformations:
+      tree = tx.visit(tree)
+
+    print(ast.dump(tree, include_attributes=True))
+
+    return tree
 
 # may want to make this inherit from something else...
 class StencilKernel(object):
@@ -40,9 +67,14 @@ class StencilKernel(object):
         self.kernel_src = inspect.getsource(self.kernel)
         # print(self.kernel_src)
         self.kernel_ast = ast.parse(self.remove_indentation(self.kernel_src))
-        # print(ast.dump(self.kernel_ast, include_attributes=True))
-        self.model = StencilPythonFrontEnd().parse(self.kernel_ast)
+        print(ast.dump(self.kernel_ast, include_attributes=True))
+
+        # self.model = StencilPythonFrontEnd().parse(self.kernel_ast)
         # print(ast.dump(self.model, include_attributes=True))
+
+        self.new_kernel = SpecializedTranslator(self.kernel)
+        print(self.new_kernel)
+
 
         self.pure_python = False
         self.pure_python_kernel = self.kernel
@@ -71,6 +103,9 @@ class StencilKernel(object):
     def shadow_kernel(self, *args):
         if self.pure_python:
             return self.pure_python_kernel(*args)
+
+        myargs = [y.data for y in args]
+        self.new_kernel(*myargs)
 
         #FIXME: instead of doing this short-circuit, we should use the Asp infrastructure to
         # do it, by passing in a lambda that does this check

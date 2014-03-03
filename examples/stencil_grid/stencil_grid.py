@@ -4,6 +4,7 @@
 import numpy
 import math
 
+
 class StencilGrid(object):
 
     def __init__(self, size):
@@ -89,5 +90,3 @@ class StencilGrid(object):
     def __repr__(self):
         return self.data.__repr__()
 
-def distance(x,y):
-    return math.sqrt(sum([(x[i]-y[i])**2 for i in range(0,len(x))]))

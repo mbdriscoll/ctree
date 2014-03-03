@@ -1,4 +1,6 @@
 from examples.stencil_grid.stencil_kernel import *
+from examples.stencil_grid.stencil_grid import StencilGrid
+
 import sys
 import numpy
 import math
@@ -22,11 +24,16 @@ def gaussian(stdev, length):
     result = StencilGrid([length])
     scale = 1.0/(stdev*math.sqrt(2.0*math.pi))
     divisor = -1.0 / (2.0 * stdev * stdev)
-    for x in xrange(length):
+    for x in range(length):
        result[x] = scale * math.exp(float(x) * float(x) * divisor)
     return result
 
-pixels = map(ord, list(image_in.read(width * height))) # Read in grayscale values
+
+def distance(x, y):
+    return math.sqrt(sum([(x[i]-y[i])**2 for i in range(0, len(x))]))
+
+# pixels = map(ord, list(image_in.read(width * height))) # Read in grayscale values
+pixels = image_in.read(width * height)    # Read in grayscale values
 intensity = float(sum(pixels))/len(pixels)
 
 kernel = Kernel()
@@ -43,7 +50,9 @@ for x in range(0,width):
     for y in range(0,height):
         in_grid.data[(x, y)] = pixels[y * width + x]
 
-kernel.kernel(in_grid, gaussian(stdev_d, radius*2), gaussian(stdev_s, 256), out_grid)
+gaussian1 = gaussian(stdev_d, radius*2)
+gaussian2 = gaussian(stdev_s, 256)
+kernel.kernel(in_grid, gaussian1, gaussian2, out_grid)
 
 for x in range(0,width):
     for y in range(0,height):

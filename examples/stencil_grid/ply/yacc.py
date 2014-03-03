@@ -103,7 +103,7 @@ except AttributeError:
 # Python 2.x/3.0 compatibility.
 def load_ply_lex():
     # Modified for asp
-    import asp.ply.lex as lex
+    import examples.stencil_grid.ply.lex as lex
     return lex
 
 # This object is a stand-in for a logging object created by the
