@@ -81,6 +81,8 @@ class CCodeGen(CodeGenVisitor):
     rettype = self._ctype_to_str(node.return_type)
     params = ", ".join(map(str, node.params))
     s = ""
+    if node.kernel:
+      s += "__kernel "
     if node.static:
       s += "static "
     if node.inline:
@@ -122,11 +124,12 @@ class CCodeGen(CodeGenVisitor):
       return str(node.value)
 
   def visit_SymbolRef(self, node):
+    s = ""
+    if node._global:
+      s += "__global "
     if node.type:
-      ty = self._ctype_to_str(node.type)
-      return "%s %s" % (ty, node.name)
-    else:
-      return str(node.name)
+      s += "%s " % self._ctype_to_str(node.type)
+    return "%s%s" % (s, node.name)
 
   def visit_Block(self, node):
      return self._genblock(node.body)
@@ -166,4 +169,4 @@ class CCodeGen(CodeGenVisitor):
 
   def visit_CFile(self, node):
     stmts = self._genblock(node.body, insert_curly_brackets=False, increase_indent=False)
-    return '// <file: %s.%s>%s' % (node.name, node._ext, stmts)
+    return '// <file: %s>%s' % (node.get_filename(), stmts)

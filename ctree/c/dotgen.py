@@ -17,8 +17,14 @@ class CDotGen(DotGenVisitor):
     return s
 
   def label_FunctionDecl(self, node):
-    return "name: %s\nreturn_type: %s" % \
-      (node.name, node.return_type)
+    s = "name: %s\nreturn_type: %s" % (node.name, node.return_type)
+    if node.static:
+      s += "\nstatic"
+    if node.inline:
+      s += "\ninline"
+    if node.kernel:
+      s += "\n__kernel"
+    return s
 
   def label_Constant(self, node):
     return "value: %s" % node.value

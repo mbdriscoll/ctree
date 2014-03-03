@@ -24,15 +24,9 @@ class CNode(CtreeNode):
 
 class CFile(CNode, File):
   """Represents a .c file."""
-  _fields = ['body']
   def __init__(self, name="generated", body=[]):
-    self.name = name
-    self.body = body
+    super().__init__(name, body)
     self._ext = "c"
-    super().__init__()
-
-  def get_filename(self):
-    return "%s.%s" % (self.name, self._ext)
 
   def get_bc_filename(self):
     return "%s.bc" % self.name
@@ -181,10 +175,15 @@ class SymbolRef(Literal):
     self.name = name
     self.type = type
     self.ctype = ctype
+    self._global = False
     super().__init__()
 
   def get_ctype(self):
     return self.ctype or self.type
+
+  def set_global(self, value=True):
+    self._global = value
+    return self
 
 
 class FunctionDecl(Statement):
@@ -197,6 +196,7 @@ class FunctionDecl(Statement):
     self.defn = defn
     self.inline = False
     self.static = False
+    self.kernel = False
     super().__init__()
 
   def get_type(self):
@@ -214,6 +214,18 @@ class FunctionDecl(Statement):
   def set_static(self, value=True):
     self.static = value
     return self
+
+  def set_kernel(self, value=True):
+    self.kernel = value
+    return self
+
+  def set_typesig(self, typesig):
+    assert len(typesig) == len(self.params)+1
+    self.return_type = typesig[0]
+    for sym, ty in zip(self.params, typesig[1:]):
+      sym.type = ty
+    return self
+
 
 class UnaryOp(Expression):
   """Cite me."""

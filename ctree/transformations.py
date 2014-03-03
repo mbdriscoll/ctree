@@ -46,17 +46,19 @@ class PyBasicConversions(NodeTransformer):
     return BinaryOp(lhs, op, rhs)
 
   def visit_Return(self, node):
-    if hasattr(node, 'value'):
+    if node.value:
       return Return(self.visit(node.value))
     else:
       return Return()
 
   def visit_If(self, node):
-    assert isinstance(node, ast.If)
-    cond = self.visit(node.test)
-    then = [self.visit(t) for t in node.body]
-    elze = [self.visit(t) for t in node.orelse] or None
-    return If(cond, then, elze)
+    if isinstance(node, ast.If):
+      cond = self.visit(node.test)
+      then = [self.visit(t) for t in node.body]
+      elze = [self.visit(t) for t in node.orelse] or None
+      return If(cond, then, elze)
+    else:
+      return self.generic_visit(node)
 
   def visit_IfExp(self, node):
     cond = self.visit(node.test)
@@ -120,30 +122,6 @@ class StripPythonDocstrings(NodeTransformer):
       node.body.pop(0)
     return self.generic_visit(node)
 
-class SetTypeSignature(NodeTransformer):
-  """
-  Sets the type signature of the target method/function.
-  For ctree FunctionDecl nodes, sets decl.return_type and arg.type fields.
-  For ast.FunctionDef nodes, sets def.returns and arg.annotation fields.
-  """
-  def __init__(self, target, typesig):
-    self.target = target
-    self.typesig = typesig
-    super().__init__()
-
-  def visit_FunctionDecl(self, node):
-    if node.name == self.target:
-      node.return_type = self.typesig[0]
-      for ty, param in zip(self.typesig[1:], node.params):
-        param.type = ty
-    return node
-
-  def visit_FunctionDef(self, node):
-    if node.name == self.target:
-      node.returns = self.typesig[0]
-      for ty, arg in zip(self.typesig[1:], node.args.args):
-        arg.annotation = ty
-    return node
 
 class ConvertNumpyNdpointers(NodeTransformer):
   """

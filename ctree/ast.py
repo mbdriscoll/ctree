@@ -180,6 +180,11 @@ class Project(CommonNode):
 
 class File(CommonNode):
   """Holds a list of statements."""
+  _fields = ['body']
+  def __init__(self, name="generated", body=[]):
+    self.name = name
+    self.body = body
+
   def codegen(self, *args):
     """Convert this substree into program text (a string)."""
     raise Exception("%s should override codegen()." % type(self))
@@ -191,6 +196,9 @@ class File(CommonNode):
   def get_generated_path_ref(self):
     """Returns an object that can resolve the full file path at compile time."""
     return GeneratedPathRef(self)
+
+  def get_filename(self):
+    return "%s.%s" % (self.name, self._ext)
 
 class GeneratedPathRef(CommonNode):
   """Represents a path to a generated file."""
