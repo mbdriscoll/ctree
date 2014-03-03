@@ -29,5 +29,5 @@ class VerifyOnlyCAstNodes(NodeVisitor):
   """
   def visit(self, node):
     if not isinstance(node, CAstNode):
-      raise AstValidationError("Found a non-CAstNode of type %s." % type(node).__name__)
+      raise AstValidationError("Expected a pure C ast, but found a non-CAstNode: %s." % node)
     self.generic_visit(node)

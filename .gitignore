@@ -40,3 +40,6 @@ nosetests.xml
 
 # DOT graph files
 *.dot
+
+# mac icon cache
+.DS_Store

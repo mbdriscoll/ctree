@@ -1,30 +1,29 @@
 from ctree.visitors import NodeVisitor
+from ctree.analyses import DeclFinder
 from ctree.nodes.c import *
+
+from ctypes import *
 
 class TypeFetcher(NodeVisitor):
   """
   Dynamically computes the type of the Expression.
   """
   def visit_String(self, node):
-    return Ptr(Char())
+    return c_char_p
 
   def visit_SymbolRef(self, node):
     if node.type != None:
       return node.type
     else:
-      decl = DeclFinder().find(node)
-      return decl.get_type()
+      #decl = DeclFinder().find(node)
+      #return decl.get_type()
+      return "??"
 
   def visit_Constant(self, node):
     n = node.value
-    if isinstance(n, str):
-      return Char()
-    elif isinstance(n, int):
-      # TODO: handle long, unsigned, etc.
-      return Int()
-    elif isinstance(n, float):
-      # TODO: handle double
-      return Float()
+    if   isinstance(n, str):   return c_char
+    elif isinstance(n, int):   return c_long
+    elif isinstance(n, float): return c_double
     else:
       raise Exception("Cannot determine type for Constant of type %s." % \
                       type(n).__class__)
@@ -38,7 +37,7 @@ class TypeFetcher(NodeVisitor):
       return self._usual_arithmetic_convert(lhs, rhs)
     elif isinstance(node.op, (Op.Lt, Op.Gt, Op.LtE, Op.GtE, Op.Eq, Op.NotEq,
                               Op.And, Op.Or)):
-      return Int()
+      return c_int
     elif isinstance(node.op, Op.Comma):
       return rhs
     elif ininstance(node.op, Op.ArrayRef):
@@ -54,15 +53,15 @@ class TypeFetcher(NodeVisitor):
     the built-in numeric types.
     See C89 6.2.5.1.
     """
-    if   t0 == LongDouble() or t1 == LongDouble(): return LongDouble()
-    elif t0 == Double()     or t1 == Double():     return Double()
-    elif t0 == Float()      or t1 == Float():      return Float()
+    if   t0 == c_longdouble or t1 == c_longdouble: return c_longdouble
+    elif t0 == c_double     or t1 == c_double:     return c_double
+    elif t0 == c_float      or t1 == c_float:      return c_float
     else:
       t0, t1 = TypeFetcher._integer_promote(t0), TypeFetcher._integer_promote(t1)
-      if   t0 == UnsignedLong() or t1 == UnsignedLong(): return UnsignedLong()
-      elif t0 == Long()         or t1 == Long()        : return Long()
-      elif t0 == UnsignedInt()  or t1 == UnsignedInt() : return UnsignedInt()
-      elif t0 == Int()          or t1 == Int()         : return Int()
+      if   t0 == c_ulong or t1 == c_ulong: return c_ulong
+      elif t0 == c_long  or t1 == c_long : return c_long
+      elif t0 == c_uint  or t1 == c_uint : return c_uint
+      elif t0 == c_int   or t1 == c_int  : return c_int
       else:
         raise Exception("Failed to apply usual arith conversion (c89 6.2.1.5) to types: %s, %s." % \
                         (type(t0).__name__, type(t1).__name__))
@@ -72,19 +71,47 @@ class TypeFetcher(NodeVisitor):
     """
     Promote small types to integers accd to c89 6.2.1.1.
     """
-    if isinstance(t, (Int, UnsignedInt, Long, UnsignedLong)):
+    if issubclass(t, (c_int, c_uint, c_long, c_ulong)):
       return t
-    elif isinstance(t, (Char, UnsignedChar, Short, UnsignedShort)):
-      return Int()
+    elif issubclass(t, (c_char, c_ubyte, c_short, c_ushort)):
+      return c_int
     else:
-      raise Exception("Cannot promote type %s to an integer-type." % type(t).__name__)
+      raise Exception("Cannot promote type %s to an integer-type." % t)
 
-def py_type_to_ctree_type(ty):
-  if ty == int:
-    return Int()
-  elif ty == float:
-    return Float()
-  elif ty == str:
-    return Ptr(Char())
-  else:
-    raise Exception("Cannot convert to Ctree type: %s." % ty)
+
+# ---------------------------------------------------------------------------
+# numpy-specific stuff
+
+# FIXME we need an extensible way to register types for optional packages
+# like numpy
+
+_PYTYPE_TO_CTYPE = {
+  int:   c_long,
+  float: c_double,
+  str:   c_char_p,
+}
+
+try:
+  import numpy as np
+  _NUMPY_DTYPE_TO_CTYPE = {
+    np.dtype('float64'): c_double,
+    np.dtype('float32'): c_float,
+    np.dtype('int64'):   c_long,
+    np.dtype('int32'):   c_int,
+    # TODO add the rest
+  }
+except ImportError:
+  _NUMPY_DTYPE_TO_CTYPE = {}
+
+def pytype_to_ctype(pytype):
+  try:
+    return _PYTYPE_TO_CTYPE[pytype]
+  except KeyError:
+    pass
+
+  try:
+    return _NUMPY_DTYPE_TO_CTYPE[pytype]
+  except KeyError:
+    pass
+
+  raise Exception("Cannot convertion python type '%s' to ctype." % pytype)

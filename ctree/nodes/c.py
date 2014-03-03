@@ -47,16 +47,40 @@ class CAstNode(ast.AST):
       root = root.parent
     return root
 
-  def find_all(self, pred):
+  def find_all(self, node_class, **kwargs):
     """
-    Returns all nodes satisfying the given predicate,
-    or None if no satisfactory nodes are found. The search
-    starts from the root node.
+    Returns a generator that yields all nodes of type
+    'node_class' type whose attributes match those specified
+    in kwargs. For example, all FunctionDecls with name 'fib'
+    can be accessed via:
+    >>> my_ast.find_all(FunctionDecl, name="fib")
     """
-    root = self.get_root()
-    return root.find_in_subtree(pred)
+    def pred(node):
+      if type(node) == node_class:
+        for attr, value in kwargs.items():
+          try:
+            if getattr(node, attr) != value:
+              break
+          except AttributeError:
+            break
+        else:
+          return True
+      return False
+    return self.find_if(pred)
 
-  def find_in_subtree(self, pred):
+  def find(self, node_class, **kwargs):
+    """
+    Returns one node of type 'node_class' whose attributes
+    match those specified in kwargs, or None if no nodes
+    can be found.
+    """
+    matching = self.find_all(node_class, **kwargs)
+    try:
+      return next(matching)
+    except StopIteration:
+      return None
+
+  def find_if(self, pred):
     """
     Returns all nodes satisfying the given predicate,
     or None if no satisfactory nodes are found. The search
@@ -65,6 +89,17 @@ class CAstNode(ast.AST):
     for node in ast.walk(self):
       if pred(node):
         yield node
+
+  def replace(self, new_node):
+    """
+    Replace the current node with 'new_node'.
+    """
+    parent = self.parent
+    assert self.parent, "Tried to replace a node without a parent."
+    for fieldname, child in ast.iter_fields(parent):
+      if child is self:
+        setattr(parent, fieldname, new_node)
+    return new_node
 
 class Statement(CAstNode):
   """Section B.2.3 6.6."""
@@ -89,7 +124,7 @@ class Return(Statement):
 class If(Statement):
   """Cite me."""
   _fields = ['cond', 'then', 'elze']
-  def __init__(self, cond, then, elze=None):
+  def __init__(self, cond=None, then=None, elze=None):
     self.cond = cond
     self.then = then
     self.elze = elze
@@ -99,7 +134,7 @@ class If(Statement):
 class While(Statement):
   """Cite me."""
   _fields = ['cond', 'body']
-  def __init__(self, cond, body=[]):
+  def __init__(self, cond=None, body=[]):
     self.cond = cond
     self.body = body
     super().__init__()
@@ -107,7 +142,7 @@ class While(Statement):
 
 class DoWhile(Statement):
   _fields = ['body', 'cond']
-  def __init__(self, body, cond):
+  def __init__(self, body=[], cond=None):
     self.body = body
     self.cond = cond
     super().__init__()
@@ -115,7 +150,7 @@ class DoWhile(Statement):
 
 class For(Statement):
   _fields = ['init', 'test', 'incr', 'body']
-  def __init__(self, init, test, incr, body):
+  def __init__(self, init=None, test=None, incr=None, body=None):
     self.init = init
     self.test = test
     self.incr = incr
@@ -126,7 +161,7 @@ class For(Statement):
 class FunctionCall(Expression):
   """Cite me."""
   _fields = ['func', 'args']
-  def __init__(self, func, args=[]):
+  def __init__(self, func=None, args=[]):
     self.func = func
     self.args = args
     super().__init__()
@@ -135,7 +170,7 @@ class FunctionCall(Expression):
 class ArrayRef(Expression):
   """Cite me."""
   _fields = ['base', 'offset']
-  def __init__(self, base, offset):
+  def __init__(self, base=None, offset=None):
     self.base = base
     self.offset = offset
     super().__init__()
@@ -146,7 +181,7 @@ class Literal(Expression):
 
 class Constant(Literal):
   """Section B.1.4 6.1.3."""
-  def __init__(self, value):
+  def __init__(self, value=None):
     self.value = value
     super().__init__()
 
@@ -154,7 +189,7 @@ class Constant(Literal):
 class Block(Statement):
   """Cite me."""
   _fields = ['body']
-  def __init__(self, body):
+  def __init__(self, body=[]):
     self.body = body
     super().__init__()
 
@@ -177,103 +212,66 @@ class File(CAstNode):
 
 class String(Literal):
   """Cite me."""
-  def __init__(self, value):
+  def __init__(self, value=None):
     self.value = value
     super().__init__()
 
 
 class SymbolRef(Literal):
   """Cite me."""
-  def __init__(self, name, type=None):
+  def __init__(self, name=None, type=None, ctype=None):
     """
     Create a new symbol with the given name. If a declaration
     type is specified, the symbol is considered a declaration
     and unparsed with the type.
+
+    The ctype field is used when the ctype used to do Python
+    type-checking differs from the type declared at the C level.
+    This arises in the case of Numpy arrays where ctypes checks
+    against a np.ctypeslib.ndpointer, but the C code can have
+    a basic "double*" type (or something equivalent).
     """
     self.name = name
     self.type = type
+    self.ctype = ctype
     super().__init__()
+
+  def get_ctype(self):
+    return self.ctype or self.type
 
 
 class FunctionDecl(Statement):
   """Cite me."""
-  _fields = ['return_type', 'params', 'defn']
-  def __init__(self, return_type, name, params=[], defn=None):
+  _fields = ['params', 'defn']
+  def __init__(self, return_type=None, name=None, params=[], defn=[]):
     self.return_type = return_type
     self.name = name
     self.params = params
     self.defn = defn
+    self.inline = False
+    self.static = False
     super().__init__()
 
   def get_type(self):
-    arg_types = [p.type for p in self.params]
-    return FuncType(self.return_type, arg_types)
+    arg_types = [p.get_ctype() for p in self.params]
+    return ctypes.CFUNCTYPE(self.return_type, *arg_types)
 
+  def get_callable(self):
+    from ctree.jit import LazyTreeBuilder
+    return LazyTreeBuilder(self)
 
-class Type(CAstNode):
-  """Cite me."""
-  def __eq__(self, other):
-    """Equal if type signature is same string."""
-    return str(self) == str(other)
+  def set_inline(self, value=True):
+    self.inline = value
+    return self
 
-  def as_ctype(self):
-    return self._ctype
-
-
-class Char(Type):          _ctype = ctypes.c_char
-class Short(Type):         _ctype = ctypes.c_short
-class Int(Type):           _ctype = ctypes.c_int
-class Long(Type):          _ctype = ctypes.c_long
-
-class UnsignedChar(Type):  _ctype = ctypes.c_ubyte
-class UnsignedShort(Type): _ctype = ctypes.c_ushort
-class UnsignedInt(Type):   _ctype = ctypes.c_uint
-class UnsignedLong(Type):  _ctype = ctypes.c_ulong
-
-class Float(Type):         _ctype = ctypes.c_float
-class Double(Type):        _ctype = ctypes.c_double
-class LongDouble(Type):    _ctype = ctypes.c_longdouble
-
-class Void(Type):          _ctype = ctypes.c_void_p
-class Unknown(Type):       _ctype = None
-
-
-class Ptr(Type):
-  """Cite me."""
-  _fields = ['base']
-  def __init__(self, base):
-    self.base = base
-    super().__init__()
-
-  def as_ctype(self):
-    return ctypes.POINTER(self.base.as_ctype())
-
-
-class FuncType(Type):
-  """Cite me."""
-  _fields = ['return_type', 'arg_types']
-  def __init__(self, return_type, arg_types=[]):
-    self.return_type = return_type
-    self.arg_types = arg_types
-    super().__init__()
-
-  def as_ctype(self):
-    rettype = self.return_type.as_ctype()
-    argtypes = [argtype.as_ctype() for argtype in self.arg_types]
-    return ctypes.CFUNCTYPE(rettype, *argtypes)
-
-class Param(Statement):
-  """Cite me."""
-  _fields = ['type', 'name']
-  def __init__(self, type, name=None):
-    self.type = type
-    self.name = name
-    super().__init__()
+  def set_static(self, value=True):
+    self.static = value
+    return self
 
 class UnaryOp(Expression):
   """Cite me."""
   _fields = ['arg']
-  def __init__(self, op, arg):
+  def __init__(self, op=None, arg=None):
     self.op = op
     self.arg = arg
     super().__init__()
@@ -282,7 +280,7 @@ class UnaryOp(Expression):
 class BinaryOp(Expression):
   """Cite me."""
   _fields = ['left', 'right']
-  def __init__(self, left, op, right):
+  def __init__(self, left=None, op=None, right=None):
     self.left = left
     self.op = op
     self.right = right
@@ -292,7 +290,7 @@ class BinaryOp(Expression):
 class AugAssign(Expression):
   """Cite me."""
   _fields = ['target', 'value']
-  def __init__(self, target, op, value):
+  def __init__(self, target=None, op=None, value=None):
     self.target = target
     self.op = op
     self.value = value
@@ -302,11 +300,20 @@ class AugAssign(Expression):
 class TernaryOp(Expression):
   """Cite me."""
   _fields = ['cond', 'then', 'elze']
-  def __init__(self, cond, then, elze):
+  def __init__(self, cond=None, then=None, elze=None):
     self.cond = cond
     self.then = then
     self.elze = elze
     super().__init__()
+
+
+class Cast(Expression):
+   """doc"""
+   _fields = ['value']
+   def __init__(self, ctype=None, value=None):
+     self.type = ctype
+     self.value = value
+     super().__init__()
 
 
 class Op:
@@ -347,7 +354,6 @@ class Op:
   class Dot(_Op):      _c_str = "."
   class Arrow(_Op):    _c_str = "->"
   class Assign(_Op):   _c_str = "="
-  class Cast(_Op):     _c_str = "??"
   class ArrayRef(_Op): _c_str = "??"
 
 
@@ -396,7 +402,6 @@ def Comma(a,b):  return BinaryOp(a, Op.Comma(), b)
 def Dot(a,b):    return BinaryOp(a, Op.Dot(), b)
 def Arrow(a,b):  return BinaryOp(a, Op.Arrow(), b)
 def Assign(a,b): return BinaryOp(a, Op.Assign(), b)
-def Cast(a,b):   return BinaryOp(a, Op.Cast(), b)
 def ArrayRef(a,b): return BinaryOp(a, Op.ArrayRef(), b)
 
 def AddAssign(a,b):    return AugAssign(a, Op.Add(), b)

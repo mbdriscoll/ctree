@@ -10,15 +10,15 @@ In python:
       return fib(n-1) + fib(n-2)
 """
 
-from ctree.nodes import *
+import ctypes as ct
+from ctree.nodes.c import *
 
-fib_ast = File([
-  FunctionDecl(Int(), SymbolRef("fib"), [Param(Int(), SymbolRef("n"))], [
-    If(Lt(SymbolRef("n"), Constant(2)), \
-      [Return(SymbolRef("n"))], \
-      [Return(Add(FunctionCall(SymbolRef("fib"), [Sub(SymbolRef("n"), Constant(1))]), \
-                  FunctionCall(SymbolRef("fib"), [Sub(SymbolRef("n"), Constant(2))])))])
-  ])
+fib_ast = \
+FunctionDecl(ct.c_int, "fib", [SymbolRef("n", ct.c_int)], [
+  If(Lt(SymbolRef("n"), Constant(2)), \
+    [Return(SymbolRef("n"))], \
+    [Return(Add(FunctionCall(SymbolRef("fib"), [Sub(SymbolRef("n"), Constant(1))]), \
+                FunctionCall(SymbolRef("fib"), [Sub(SymbolRef("n"), Constant(2))])))])
 ])
 
 def main():

@@ -1,5 +1,6 @@
 import ast
 
+import ctypes as ct
 from ctree.visitors import NodeVisitor
 
 class DotGenerator(NodeVisitor):
@@ -10,11 +11,45 @@ class DotGenerator(NodeVisitor):
   We can use pydot to do this, instead of using plain string concatenation.
   """
 
+  @staticmethod
+  def _qualified_name(obj):
+    return "%s.%s" % (obj.__module__, obj.__name__)
+
   def generate_from(self, node):
     return "digraph myprogram {\n%s}" % self.visit(node)
 
   def label_SymbolRef(self, node):
+    s = "name: %s" % node.name
+    if node.type:
+      s += "\ntype: %s" % node.type.__name__
+    if node.ctype:
+      s += "\nctype: %s" % node.ctype
+    return s
+
+  def label_arg(self, node):
+    s = "name: %s" % node.arg
+    if node.annotation and not isinstance(node.annotation, ast.AST):
+      s += "\nannotation: %s" % self._qualified_name(node.annotation)
+    return s
+
+  def label_FunctionDef(self, node):
     return "name: %s" % node.name
+
+  def label_FunctionDecl(self, node):
+    return "name: %s\nreturn_type: %s" % \
+      (node.name, node.return_type)
+
+  def label_Param(self, node):
+    s = "type: %s" % node.type
+    if node.name:
+      s += "\nname: %s" % node.name
+    return s
+
+  def label_Num(self, node):
+    return "n: %s" % node.n
+
+  def label_Name(self, node):
+    return "id: %s" % node.id
 
   def label_Constant(self, node):
     return "value: %s" % node.value

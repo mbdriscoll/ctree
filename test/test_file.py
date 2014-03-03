@@ -1,4 +1,5 @@
 import unittest
+import ctypes as ct
 
 from ctree.nodes.c import *
 
@@ -9,8 +10,8 @@ class TestFile(unittest.TestCase):
     self.assertEqual(actual, expected)
 
   def test_simple_00(self):
-    foo = SymbolRef("foo", type=Int())
-    bar = FunctionDecl(Float(), SymbolRef("bar"))
+    foo = SymbolRef("foo", type=ct.c_int)
+    bar = FunctionDecl(ct.c_float, SymbolRef("bar"))
     tree = File([foo, bar])
     self._check(tree, """\
 int foo;

@@ -1,3 +1,5 @@
+import ctypes as ct
+
 from ctree.visitors import NodeVisitor
 from ctree.nodes.c import *
 from ctree.precedence import *
@@ -45,25 +47,61 @@ class CodeGenerator(NodeVisitor):
         return True
     return False
 
+  _CTYPE_TO_STR = {
+    ct.c_bool:       "bool",
+    ct.c_char:       "char",
+    ct.c_wchar:      "wchar_t",
+    ct.c_byte:       "char",
+    ct.c_ubyte:      "unsigned char",
+    ct.c_short:      "short",
+    ct.c_ushort:     "unsigned short",
+    ct.c_int:        "int",
+    ct.c_uint:       "insigned int",
+
+    ## mbd: on my laptop, these types are ==:
+    ## ['ssize_t', 'longlong', 'long']
+    ct.c_long:       "long",
+    # ct.c_ssize_t:    "ssize_t",
+    # ct.c_longlong:   "long long",
+
+    ## ['size_t', 'ulong', 'ulonglong']
+    ct.c_size_t:     "size_t",
+    # ct.c_ulong:      "unsigned long",
+    # ct.c_ulonglong:  "unsigned long long",
+
+    ct.c_float:      "float",
+    ct.c_double:     "double",
+    ct.c_longdouble: "long double",
+    ct.c_char_p:     "char*",
+    ct.c_wchar_p:    "wchar_t*",
+    ct.c_void_p:     "void*",
+    None:            "void"
+  }
+
+  def _ctype_to_str(self, ctype):
+    if hasattr(ctype, 'contents'):
+      return "%s*" % self._ctype_to_str( ctype._type_ )
+    try:
+      return self._CTYPE_TO_STR[ctype]
+    except KeyError:
+      pass
+    raise Exception("Can't convert type %s to a string." % ctype)
 
   # -------------------------------------------------------------------------
   # visitor methods
 
   def visit_FunctionDecl(self, node):
-    rettype = self.visit(node.return_type)
+    rettype = self._ctype_to_str(node.return_type)
     params = ", ".join(map(self.visit, node.params))
+    s = ""
+    if node.static:
+      s += "static "
+    if node.inline:
+      s += "inline "
+    s += "%s %s(%s)" % (rettype, node.name, params)
     if node.defn:
-      defn = self._genblock(node.defn)
-      return "%s %s(%s) %s" % (rettype, node.name, params, defn)
-    else:
-      return "%s %s(%s)" % (rettype, node.name, params)
-
-  def visit_Param(self, node):
-    ty = self.visit(node.type)
-    if node.name != None:
-      return "%s %s" % (ty, self.visit(node.name))
-    else:
-      return "%s" % ty
+      s += " %s" % self._genblock(node.defn)
+    return s
 
   def visit_UnaryOp(self, node):
     arg = self.visit(node.arg)
@@ -76,9 +114,7 @@ class CodeGenerator(NodeVisitor):
   def visit_BinaryOp(self, node):
     lhs = self.visit(node.left)
     rhs = self.visit(node.right)
-    if isinstance(node.op, Op.Cast):
-      s = "(%s) %s" % (lhs, rhs)
-    elif isinstance(node.op, Op.ArrayRef):
+    if isinstance(node.op, Op.ArrayRef):
       s = "%s[%s]" % (lhs, rhs)
     else:
       s = "%s %s %s" % (lhs, node.op, rhs)
@@ -97,9 +133,9 @@ class CodeGenerator(NodeVisitor):
     return self._parentheses(node) % s
 
   def visit_Cast(self, node):
-    type = self.visit(node.type)
+    type_str = self._ctype_to_str(node.type)
     value = self.visit(node.value)
-    return "(%s) %s" % (type, value)
+    return "(%s) %s" % (type_str, value)
 
   def visit_Constant(self, node):
     if isinstance(node.value, str):
@@ -109,7 +145,8 @@ class CodeGenerator(NodeVisitor):
 
   def visit_SymbolRef(self, node):
     if node.type:
-      return "%s %s" % (node.get_type(), node.name)
+      ty = self._ctype_to_str(node.type)
+      return "%s %s" % (ty, node.name)
     else:
       return str(node.name)
 
@@ -135,8 +172,8 @@ class CodeGenerator(NodeVisitor):
     return "%s*" % self.visit(node.base)
 
   def visit_FuncType(self, node):
-    args = ",".join(map(self.visit, node.arg_types))
-    return "%s (*)(%s)" % (node.return_type, args)
+    args = ",".join(map(self._ctype_to_str, node.arg_types))
+    return "%s (*)(%s)" % (self._ctype_to_str(node.return_type), args)
 
   def visit_Return(self, node):
     if node.value:
