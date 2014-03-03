@@ -23,6 +23,7 @@ class CFile(CNode, File):
     self.name = name
     self.body = body
     self._ext = "c"
+    super().__init__()
 
 class Statement(CNode):
   """Section B.2.3 6.6."""
