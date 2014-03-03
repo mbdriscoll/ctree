@@ -153,6 +153,8 @@ class Project(CommonNode):
     self.files = files
     super().__init__()
 
+  def codegen(self):
+    return "\n".join([stmt.codegen() for stmt in self.files])
 
 class File(CommonNode):
   """Holds a list of statements."""

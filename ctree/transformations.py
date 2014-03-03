@@ -73,7 +73,7 @@ class PyBasicConversions(NodeTransformer):
 
   def visit_Module(self, node):
     body = [self.visit(s) for s in node.body]
-    return CFile("module", body)
+    return Project([CFile("module", body)])
 
   def visit_Call(self, node):
     args = [self.visit(a) for a in node.args]
