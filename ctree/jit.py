@@ -1,7 +1,6 @@
 import os
 import copy
 import shutil
-import logging
 import tempfile
 
 import ctree
@@ -13,6 +12,7 @@ from ctree.analyses import VerifyOnlyCtreeNodes
 
 import llvm.core as ll
 
+import logging
 log = logging.getLogger(__name__)
 
 class JitModule(object):
@@ -54,11 +54,14 @@ class _ConcreteSpecializedFunction(object):
   """
   A function backed by generated code.
   """
-  def __init__(self, c_ast, entry_point_name):
-    assert isinstance(c_ast, (File, Project)), \
-      "_ConcreteSpecializedFunction expected a File or Project where it got a %s." % type(c_ast)
-    self.module = c_ast.get_root().codegen()
-    entry_point = c_ast.find(FunctionDecl, name=entry_point_name)
+  def __init__(self, project, entry_point_name):
+    assert isinstance(project, Project), \
+      "Expected a Project but it got a %s." % type(project)
+    assert project.parent == None, \
+      "Expected null project.parent, but got: %s." % type(project.parent)
+    self.module = project.codegen()
+    log.info("Full LLVM program is: <<<\n%s\n>>>" % self.module.ll_module)
+    entry_point = project.find(FunctionDecl, name=entry_point_name)
     self.fn = self.module.get_callable(entry_point)
 
   def __call__(self, *args, **kwargs):

@@ -167,13 +167,17 @@ class Project(CommonNode):
       submodule = f._compile(f.codegen(), module.compilation_dir)
       if submodule:
         module._link_in(submodule)
-    log.info("Full LLVM program is: <<<\n%s\n>>>" % module.ll_module)
     return module
 
 class File(CommonNode):
   """Holds a list of statements."""
   def codegen(self, *args):
+    """Convert this substree into program text (a string)."""
     raise Exception("%s should override codegen()." % type(self))
+
+  def _compile(self, program_text, compilation_dir):
+    """Construct an LLVM module with the translated contents of this file."""
+    raise Expcetion("%s should override _compile()." % type(self))
 
 class CommonCodeGen(CodeGenVisitor):
   """Manages conversion of all common nodes to txt."""
