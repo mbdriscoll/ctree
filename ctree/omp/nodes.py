@@ -54,6 +54,11 @@ class OmpParallelFor(OmpNode):
   def __init__(self, clauses=[]):
     self.clauses = clauses
 
+class OmpIvDep(OmpNode):
+  _field = ['clauses']
+  def __init__(self, clauses=[]):
+    self.clauses = clauses
+
 
 class OmpClause(OmpNode):
   """Base class for OpenMP clauses."""

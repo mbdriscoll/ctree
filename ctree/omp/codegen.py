@@ -21,6 +21,12 @@ class OmpCodeGen(CodeGenVisitor):
       s += " " + ", ".join(map(str, node.clauses))
     return s
 
+  def visit_OmpIvDep(self, node):
+    s = "#pragma IVDEP"
+    if node.clauses:
+      s += " " + ", ".join(map(str, node.clauses))
+    return s
+
   def visit_OmpIfClause(self, node):
     return "if(%s)" % node.exp
 

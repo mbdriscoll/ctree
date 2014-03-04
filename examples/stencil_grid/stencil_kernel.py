@@ -31,47 +31,95 @@ from ctree.jit import LazySpecializedFunction
 import ctree.types
 from ctree.frontend import get_ast
 from ctree.visitors import NodeTransformer
+from ctree.c.nodes import *
+from ctree.omp.nodes import *
 
 
 class SpecializedTranslator(LazySpecializedFunction):
-    def __init__(self, func):
-        super().__init__(get_ast(func), func.__name__)
+  def __init__(self, func, ghost_depth):
+    self.ghost_depth = ghost_depth
+    super().__init__( get_ast(func), func.__name__ )
 
-    def transform(self, tree, args):
-        """Convert the Python AST to a C AST."""
-        A = args[0]
-        array_type = numpy.ctypeslib.ndpointer(dtype=A.dtype, ndim=A.ndim, shape=A.shape, flags=A.flags)
-        # fib_arg_type = ctree.types.pytype_to_ctype(arg0_type)
-        fib_sig = (None, array_type)
+  def args_to_subconfig(self, args):
+    conf = ()
+    for arg in args[0]:
+        conf += ((len(arg), arg.dtype, arg.ndim, arg.shape),)
+    return conf
 
-        transformations = [
-            transform.PyBasicConversions(),
-            transform.FixUpParentPointers(),
-            transform.SetParamTypes("fib", fib_sig),
-        ]
-        for tx in transformations:
-            tree = tx.visit(tree)
+  def transform(self, tree, program_config):
+    """Convert the Python AST to a C AST."""
+    kernel_sig = [None]
+    for arg in program_config[0]:
+        kernel_sig.append(numpy.ctypeslib.ndpointer(arg[1], arg[2], arg[3]))
 
-        print(ast.dump(tree, include_attributes=True))
+    tree = StencilTransformer(program_config[0][0], program_config[0][-1], self.ghost_depth).visit(tree)
+    print(ast.dump(tree))
+    tree = transform.PyBasicConversions().visit(tree)
+    tree.find(FunctionDecl, name="kernel").params.pop(0)
+    tree.find(FunctionDecl, name="kernel").set_typesig(kernel_sig)
+    tree = transform.ConvertNumpyNdpointers().visit(tree)
 
-        return tree
+    return tree
 
+class Grid(object):
+    def __init__(self, grid):
+        self.shape = grid[3]
 
 class StencilTransformer(NodeTransformer):
-    def visit_For(self, node):
-        if type(node.iter) == ast.Call and type(node.iter.func) == ast.Attribute:
-            if node.iter.func.attr == 'interior_points':
-                raise Exception('not finished')
 
-    def visit_Attribute(self, node):
-        if node.attr == 'interior_points':
-            pass
-        elif node.attr == 'exterior_points':
-            pass
-        elif node.attr == 'neighbor':
-            pass
-        else:
-            return node
+
+    def __init__(self, in_grid, out_grid, ghost_depth):
+        # TODO: Give these wrapper classes?
+        self.in_grid = Grid(in_grid)
+        self.out_grid = Grid(out_grid)
+        self.ghost_depth = ghost_depth
+        super(StencilTransformer, self).__init__()
+
+    def visit_For(self, node):
+        if type(node.iter) is ast.Call and \
+           type(node.iter.func) is ast.Attribute:
+            if node.iter.func.attr is 'interior_points':
+                dim = len(self.out_grid.shape)
+                curr_node = None
+                ret_node = None
+                for d in range(dim):  
+                    initial = Constant(self.ghost_depth)
+                    end = Constant(self.out_grid.shape[d] - self.ghost_depth - 1)
+                    # TODO: GEN FRESH VAR
+                    target = SymbolRef(node.target.id)
+                    if d == 0:
+                        curr_node = For(Assign(SymbolRef(target.name, ct.c_int), initial),
+                                       Lt(target, end),
+                                       PostInc(target),
+                                       []
+                                    )
+                        ret_node = curr_node
+                    elif d == dim - 2:
+                        next_node = [OmpParallelFor(), For(Assign(SymbolRef(target.name, ct.c_int), initial),
+                                       Lt(target, end),
+                                       PostInc(target),
+                                       []
+                                    )]
+                        curr_node.body = next_node
+                        curr_node = next_node[1]
+                    elif d == dim - 1:
+                        next_node = [OmpIvDep(), For(Assign(SymbolRef(target.name, ct.c_int), initial),
+                                       Lt(target, end),
+                                       PostInc(target),
+                                       []
+                                    )]
+                        curr_node.body = next_node
+                        curr_node = next_node[1]
+                    else:
+                        curr_node.body = [For(Assign(SymbolRef(target.name, ct.c_int), initial),
+                                       Lt(target, end),
+                                       PostInc(target),
+                                       []
+                                    )]
+                        curr_node = curr_node.body[0]
+                curr_node.body = node.body
+                return ret_node
+        return node
 
 
 
@@ -89,13 +137,13 @@ class StencilKernel(object):
         self.kernel_src = inspect.getsource(self.kernel)
         # print(self.kernel_src)
         self.kernel_ast = ast.parse(self.remove_indentation(self.kernel_src))
-        print(ast.dump(self.kernel_ast, include_attributes=True))
+        # print(ast.dump(self.kernel_ast, include_attributes=True))
 
         # self.model = StencilPythonFrontEnd().parse(self.kernel_ast)
         # print(ast.dump(self.model, include_attributes=True))
 
-        self.new_kernel = SpecializedTranslator(self.kernel)
-        print(self.new_kernel)
+        self.model = self.kernel
+        # print(self.new_kernel)
 
 
         self.pure_python = False
@@ -127,7 +175,8 @@ class StencilKernel(object):
             return self.pure_python_kernel(*args)
 
         myargs = [y.data for y in args]
-        self.new_kernel(*myargs)
+        self.model = SpecializedTranslator(self.model, args[-1].ghost_depth)
+        self.model(myargs)
 
         #FIXME: instead of doing this short-circuit, we should use the Asp infrastructure to
         # do it, by passing in a lambda that does this check
