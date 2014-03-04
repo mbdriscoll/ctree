@@ -34,3 +34,9 @@ class CDotGen(DotGenVisitor):
 
   def label_CFile(self, node):
     return "name: %s" % node.name
+
+  def label_NdPointer(self, node):
+    s  = "dtype: %s\n" % node.ptr.dtype
+    s += "ndim, shape:  %s, %s\n" % (node.ptr.ndim, node.ptr.shape)
+    s += "flags: %s" % node.ptr.flags
+    return s

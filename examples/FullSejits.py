@@ -10,7 +10,7 @@ import numpy as np
 from ctree.transformations import *
 from ctree.frontend import get_ast
 from ctree.jit import LazySpecializedFunction
-from ctree.types import get_type
+from ctree.types import get_ctree_type
 
 def fib(n):
   if n < 2:
@@ -24,7 +24,7 @@ class BasicTranslator(LazySpecializedFunction):
     super().__init__( get_ast(func), func.__name__ )
 
   def args_to_subconfig(self, args):
-    return get_type(args[0])
+    return get_ctree_type(args[0])
 
   def transform(self, tree, program_config):
     """Convert the Python AST to a C AST."""

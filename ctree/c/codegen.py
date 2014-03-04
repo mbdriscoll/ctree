@@ -2,10 +2,11 @@
 Code generator for C constructs.
 """
 
-import ctypes as ct
 from ctree.ast import CtreeNode
+from ctree.types import get_ctree_type
 from ctree.codegen import CodeGenVisitor
 from ctree.c.nodes import *
+from ctree.c.types import *
 from ctree.precedence import *
 
 
@@ -33,46 +34,6 @@ class CCodeGen(CodeGenVisitor):
          (prec == parent_prec and (assoc_left is not is_not_last_child)):
         return True
     return False
-
-  _CTYPE_TO_STR = {
-    ct.c_bool:       "bool",
-    ct.c_char:       "char",
-    ct.c_wchar:      "wchar_t",
-    ct.c_byte:       "char",
-    ct.c_ubyte:      "unsigned char",
-    ct.c_short:      "short",
-    ct.c_ushort:     "unsigned short",
-    ct.c_int:        "int",
-    ct.c_uint:       "insigned int",
-
-    ## mbd: on my laptop, these types are ==:
-    ## ['ssize_t', 'longlong', 'long']
-    ct.c_long:       "long",
-    # ct.c_ssize_t:    "ssize_t",
-    # ct.c_longlong:   "long long",
-
-    ## ['size_t', 'ulong', 'ulonglong']
-    ct.c_size_t:     "size_t",
-    # ct.c_ulong:      "unsigned long",
-    # ct.c_ulonglong:  "unsigned long long",
-
-    ct.c_float:      "float",
-    ct.c_double:     "double",
-    ct.c_longdouble: "long double",
-    ct.c_char_p:     "char*",
-    ct.c_wchar_p:    "wchar_t*",
-    ct.c_void_p:     "void*",
-    None:            "void"
-  }
-
-  def _ctype_to_str(self, ctype):
-    if hasattr(ctype, 'contents'):
-      return "%s*" % self._ctype_to_str( ctype._type_ )
-    try:
-      return self._CTYPE_TO_STR[ctype]
-    except KeyError:
-      pass
-    raise Exception("Can't convert type %s to a string." % ctype)
 
   # -------------------------------------------------------------------------
   # visitor methods
@@ -113,8 +74,7 @@ class CCodeGen(CodeGenVisitor):
     return self._parentheses(node) % s
 
   def visit_Cast(self, node):
-    type_str = self._ctype_to_str(node.type)
-    return "(%s) %s" % (type_str, node.value)
+    return "(%s) %s" % (node.type, node.value)
 
   def visit_Constant(self, node):
     if isinstance(node.value, str):
@@ -127,7 +87,7 @@ class CCodeGen(CodeGenVisitor):
     if node._global:
       s += "__global "
     if node.type:
-      s += "%s " % node.type
+      s += "%s " % self.visit(node.type)
     return "%s%s" % (s, node.name)
 
   def visit_Block(self, node):
@@ -172,12 +132,21 @@ class CCodeGen(CodeGenVisitor):
 
   def visit_Void(self, node):   return "void"
   def visit_Char(self, node):   return "char"
+  def visit_UChar(self, node):  return "unsigned char"
+  def visit_Short(self, node):  return "short"
+  def visit_UShort(self, node): return "unsigned short"
   def visit_Int(self, node):    return "int"
+  def visit_UInt(self, node):   return "unsigned int"
   def visit_Long(self, node):   return "long"
+  def visit_ULong(self, node):  return "unsigned long"
   def visit_Float(self, node):  return "float"
   def visit_Double(self, node): return "double"
+  def visit_LongDouble(self, node): return "long double"
 
   def visit_Ptr(self, node):
-    base = node.base_type.codgen()
+    base = node.base_type.codegen()
     return "%s*" % base
 
+  def visit_NdPointer(self, node):
+    inner_type = get_ctree_type(node.ptr._dtype_)
+    return "%s" % Ptr(inner_type).codegen()

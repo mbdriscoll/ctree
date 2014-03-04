@@ -65,8 +65,8 @@ class Statement(CNode):
 class Expression(CNode):
   """Cite me."""
   def get_type(self):
-    from ctree.types import TypeFetcher
-    return TypeFetcher().visit(self)
+    from ctree.c.types import CTypeFetcher
+    return CTypeFetcher().visit(self)
 
 
 class Return(Statement):

@@ -2,15 +2,15 @@ import unittest
 
 from ctree.ast import *
 from ctree.c.nodes import *
+from ctree.types import get_ctree_type
 
 from ctree.jit import LazySpecializedFunction
-from ctree.types import get_ctype
 
 from fixtures import *
 
 class TestTranslator(LazySpecializedFunction):
   def args_to_subconfig(self, args):
-    return tuple([get_ctype(a) for a in args])
+    return tuple([get_ctree_type(a) for a in args])
 
   def transform(self, tree, program_config):
     arg_types = program_config[0]

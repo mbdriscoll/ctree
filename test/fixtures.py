@@ -2,8 +2,8 @@
 A collection of pre-built ASTs for use in testing.
 """
 
-import ctypes as ct
 from ctree.c.nodes import *
+from ctree.c.types import *
 
 # ---------------------------------------------------------------------------
 # integer identity
@@ -12,7 +12,7 @@ def identity(x):
   return x
 
 identity_ast = \
-FunctionDecl(ct.c_int, "identity", [SymbolRef(SymbolRef("x"), ct.c_int)], [
+FunctionDecl(Int(), "identity", [SymbolRef(SymbolRef("x"), Int())], [
   Return(SymbolRef("x"))
 ])
 
@@ -27,7 +27,7 @@ def gcd(a, b):
     return gcd(b, a % b)
 
 gcd_ast = \
-FunctionDecl(ct.c_int, "gcd", [SymbolRef("a", ct.c_int), SymbolRef("b", ct.c_int)], [
+FunctionDecl(Int(), "gcd", [SymbolRef("a", Int()), SymbolRef("b", Int())], [
   If(Eq(SymbolRef('b'),Constant(0)), \
     [Return(SymbolRef('a'))], \
     [Return(FunctionCall(SymbolRef('gcd'), [SymbolRef('b'), Mod(SymbolRef('a'), \
@@ -45,7 +45,7 @@ def fib(n):
     return fib(n-1) + fib(n-2)
 
 fib_ast = \
-FunctionDecl(ct.c_int, "fib", [SymbolRef("n", ct.c_int)], [
+FunctionDecl(Int(), "fib", [SymbolRef("n", Int())], [
   If(Lt(SymbolRef("n"), Constant(2)), \
     [Return(SymbolRef("n"))], \
     [Return(Add(FunctionCall(SymbolRef("fib"), [Sub(SymbolRef("n"), Constant(1))]), \
@@ -60,7 +60,7 @@ def get_two():
   return 2
 
 get_two_ast = \
-FunctionDecl(ct.c_long, "get_two", [], [
+FunctionDecl(Long(), "get_two", [], [
   Return(Constant(2))
 ])
 
@@ -75,8 +75,8 @@ def choose(p, a, b):
     return b
 
 choose_ast = \
-FunctionDecl(ct.c_long, "choose",
-  [SymbolRef("p", ct.c_double), SymbolRef("a", ct.c_long), SymbolRef("b", ct.c_long)], [
+FunctionDecl(Long(), "choose",
+  [SymbolRef("p", Double()), SymbolRef("a", Long()), SymbolRef("b", Long())], [
   If(Lt(SymbolRef("p"), Constant(0.5)), [
     Return(SymbolRef("a")),
   ], [

@@ -6,14 +6,14 @@ import logging
 logging.basicConfig(level=20)
 
 import numpy as np
-import ctypes as ct
 
 from ctree.frontend import get_ast
 from ctree.c.nodes import *
+from ctree.c.types import *
 from ctree.dotgen import to_dot
 from ctree.transformations import *
 from ctree.jit import LazySpecializedFunction
-from ctree.types import pytype_to_ctype, get_ctype
+from ctree.types import get_ctree_type
 
 # ---------------------------------------------------------------------------
 # Specializer code
@@ -34,19 +34,17 @@ class OpTranslator(LazySpecializedFunction):
     given in program_config.
     """
     len_A, A_dtype, A_ndim, A_shape = program_config[0]
-    inner_type = pytype_to_ctype(A_dtype)
-
-    array_type = np.ctypeslib.ndpointer(A_dtype, A_ndim, A_shape)
-    apply_all_typesig = [None, array_type]
+    inner_type = get_ctree_type(A_dtype)
+    array_type = NdPointer(A_dtype, A_ndim, A_shape)
     apply_one_typesig = [inner_type, inner_type]
 
     tree = CFile("generated", [
       py_ast.body[0],
-      FunctionDecl(ct.c_void_p, "apply_all",
-        params=[SymbolRef("A")],
+      FunctionDecl(Void(), "apply_all",
+        params=[SymbolRef("A", array_type)],
         defn=[
-          For(Assign(SymbolRef("i", ct.c_int), Constant(0)),
-              Lt(SymbolRef("i"), SymbolRef("len_A")),
+          For(Assign(SymbolRef("i", Int()), Constant(0)),
+              Lt(SymbolRef("i"), Constant(len_A)),
               PostInc(SymbolRef("i")),
               [
                 Assign(ArrayRef(SymbolRef("A"),SymbolRef("i")),
@@ -59,16 +57,9 @@ class OpTranslator(LazySpecializedFunction):
 
     tree = PyBasicConversions().visit(tree)
 
-    tree.find(SymbolRef, name="len_A").replace(Constant(len_A))
-
     apply_one = tree.find(FunctionDecl, name="apply")
     apply_one.set_static().set_inline()
     apply_one.set_typesig(apply_one_typesig)
-
-    apply_all = tree.find(FunctionDecl, name="apply_all")
-    apply_all.set_typesig(apply_all_typesig)
-
-    tree = ConvertNumpyNdpointers().visit(tree)
 
     return Project([tree])
 
