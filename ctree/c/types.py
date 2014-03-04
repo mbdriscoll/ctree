@@ -51,6 +51,9 @@ class NdPointer(CType):
     from numpy.ctypeslib import ndpointer
     self.ptr = ndpointer(dtype, ndim, shape, flags)
 
+  def get_base_type(self):
+    return get_ctree_type(self.ptr._dtype_)
+
   def as_ctype(self):
     return self.ptr
 

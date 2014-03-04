@@ -5,18 +5,16 @@ Parses the python AST below, transforms it to C, JITs it, and runs it.
 import logging
 logging.basicConfig(level=20)
 
-import os
 import numpy as np
-import ctypes as ct
 
-from ctree.frontend import get_ast
 from ctree.c.nodes import *
+from ctree.c.types import *
 from ctree.cpp.nodes import *
 from ctree.ocl.nodes import *
-from ctree.dotgen import to_dot
 from ctree.transformations import *
 from ctree.jit import LazySpecializedFunction
-from ctree.types import pytype_to_ctype, get_ctype
+from ctree.types import get_ctree_type
+from ctree.dotgen import to_dot
 
 # ---------------------------------------------------------------------------
 # Specializer code
@@ -37,16 +35,17 @@ class OpTranslator(LazySpecializedFunction):
     given in program_config.
     """
     len_A, A_dtype, A_ndim, A_shape = program_config[0]
-    inner_type = pytype_to_ctype(A_dtype)
+    A_type = NdPointer(A_dtype, A_ndim, A_shape)
 
     apply_one = PyBasicConversions().visit(py_ast.body[0])
-    apply_one_typesig = [inner_type, inner_type]
+    apply_one_typesig = [A_type.get_base_type(),
+                         A_type.get_base_type()]
     apply_one.set_typesig(apply_one_typesig)
 
-    apply_all = FunctionDecl(None, "apply_all",
-      params=[SymbolRef("A", ct.POINTER(inner_type)), SymbolRef("n", ct.c_int)],
+    apply_all = FunctionDecl(Void(), "apply_all",
+      params=[SymbolRef("A", A_type), SymbolRef("n", Int())],
       defn=[
-        Assign(SymbolRef("i", ct.c_int), FunctionCall(SymbolRef("get_global_id"), [Constant(0)])),
+        Assign(SymbolRef("i", Int()), FunctionCall(SymbolRef("get_global_id"), [Constant(0)])),
         If(Lt(SymbolRef("i"), SymbolRef("n")), [
           Assign(ArrayRef(SymbolRef("A"), SymbolRef("i")),
                  FunctionCall(SymbolRef("apply"), [ArrayRef(SymbolRef("A"), SymbolRef("i"))]))
@@ -59,21 +58,14 @@ class OpTranslator(LazySpecializedFunction):
 
     control = CFile("control", [
       CppInclude("OpenCL/opencl.h"),
-      Assign(SymbolRef("kernel_path", ct.c_char_p), kernel_path_ref),
-      FunctionDecl(None, "apply_all",
-        params=[SymbolRef("A")],
+      Assign(SymbolRef("kernel_path", Ptr(Char())), kernel_path_ref),
+      FunctionDecl(Void(), "apply_all",
+        params=[SymbolRef("A", A_type)],
         defn=[ Return() ]
       ),
     ])
 
     tree = Project([kernel, control])
-
-    transformations = [
-      ConvertNumpyNdpointers(),
-      StripPythonDocstrings(),
-    ]
-    for xf in transformations:
-      tree = xf.visit(tree)
 
     return tree
 
@@ -85,6 +77,7 @@ class ArrayOp(object):
   """
   def __init__(self):
     """Instantiate translator."""
+    from ctree.frontend import get_ast
     self.c_apply_all = OpTranslator(get_ast(self.apply), "apply_all")
 
   def __call__(self, A):
