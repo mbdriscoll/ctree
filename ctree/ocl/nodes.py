@@ -18,7 +18,7 @@ class OclNode(CtreeNode):
 class OclFile(OclNode, File):
   """Represents a .cl file."""
   def __init__(self, name="generated", body=[]):
-    super().__init__(name, body)
+    super(OclFile, self).__init__(name, body)
     self._ext = "cl"
 
   def _compile(self, program_text, compilation_dir):

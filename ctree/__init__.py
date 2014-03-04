@@ -2,7 +2,8 @@
 # explicit version check
 
 import sys
-assert sys.version_info[0] >= 3, "ctree requires Python 3.x"
+# assert sys.version_info[0] >= 3, "ctree requires Python 3.x"
+assert sys.version_info[0] >= 2, "ctree requires Python 2.7.x"
 
 
 # ---------------------------------------------------------------------------
@@ -15,14 +16,14 @@ log = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 # configuration file parsing
 
-import configparser
+import ConfigParser
 from os import path, getcwd
 
-config = configparser.ConfigParser()
+config = ConfigParser.ConfigParser()
 default_cfg_file_path = path.join(path.abspath( path.dirname(__file__) ), "defaults.cfg")
 log.info("reading default configuration from: %s" % default_cfg_file_path)
 
-config.read_file(open(default_cfg_file_path), source="defaults.cfg")
+config.readfp(open(default_cfg_file_path), filename="defaults.cfg")
 
 cfg_paths = [
   path.expanduser('~/.ctree.cfg'),
@@ -35,7 +36,7 @@ log.info("found config files: %s" % found)
 
 import io
 with io.StringIO() as configfile:
-  config.write(configfile)
+  config.w(configfile)
   config_txt = configfile.getvalue()
 log.info("using configuration:\n%s" % config_txt)
 

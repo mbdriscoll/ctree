@@ -6,7 +6,6 @@ import logging
 logging.basicConfig(level=20)
 
 import numpy as np
-from __future__ import print_function
 
 from ctree.transformations import *
 from ctree.frontend import get_ast
@@ -54,7 +53,7 @@ def main():
   assert fib(14) == c_fib(14)
   assert fib(13.7) == c_fib(13.7)
 
-  print("Success.")
+  print "Success."
 
 
 if __name__ == '__main__':

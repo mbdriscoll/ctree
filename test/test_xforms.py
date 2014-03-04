@@ -1,7 +1,6 @@
 import ast
 import unittest
 
-from __future__ import print_function
 from fixtures import *
 from ctree.transformations import *
 from ctree.c.nodes import *
@@ -84,7 +83,7 @@ class TestCtxScrubber(unittest.TestCase):
 
 class TestStripDocstrings(unittest.TestCase):
 
-  def foo():
+  def foo(self):
     """my docstring"""
     pass
   class Bar():
@@ -94,7 +93,7 @@ class TestStripDocstrings(unittest.TestCase):
   def _check(self, tree):
     for node in ast.walk(tree):
       if isinstance(node, ast.Str):
-        print(node.s)
+        print node.s
       self.assertNotIsInstance(node, ast.Str)
 
   def test_func_docstring(self):

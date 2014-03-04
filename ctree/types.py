@@ -36,6 +36,6 @@ def get_ctree_type(obj):
   from ctree.c.types import CTypeResolver, NumpyTypeResolver
   for resolver in [CTypeResolver(), NumpyTypeResolver()]:
     ty = resolver.resolve(obj)
-    if ty != None:
+    if ty is not None:
       return ty
   raise Exception("Unable to resolve type for %s." % repr(obj))

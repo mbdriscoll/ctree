@@ -28,9 +28,9 @@ def gcd(a, b):
 
 gcd_ast = \
 FunctionDecl(Int(), "gcd", [SymbolRef("a", Int()), SymbolRef("b", Int())], [
-  If(Eq(SymbolRef('b'),Constant(0)), \
-    [Return(SymbolRef('a'))], \
-    [Return(FunctionCall(SymbolRef('gcd'), [SymbolRef('b'), Mod(SymbolRef('a'), \
+  If(Eq(SymbolRef('b'),Constant(0)),
+    [Return(SymbolRef('a'))],
+    [Return(FunctionCall(SymbolRef('gcd'), [SymbolRef('b'), Mod(SymbolRef('a'),
                                                                 SymbolRef('b'))]))])
 ])
 
@@ -46,9 +46,9 @@ def fib(n):
 
 fib_ast = \
 FunctionDecl(Int(), "fib", [SymbolRef("n", Int())], [
-  If(Lt(SymbolRef("n"), Constant(2)), \
-    [Return(SymbolRef("n"))], \
-    [Return(Add(FunctionCall(SymbolRef("fib"), [Sub(SymbolRef("n"), Constant(1))]), \
+  If(Lt(SymbolRef("n"), Constant(2)),
+    [Return(SymbolRef("n"))],
+    [Return(Add(FunctionCall(SymbolRef("fib"), [Sub(SymbolRef("n"), Constant(1))]),
                 FunctionCall(SymbolRef("fib"), [Sub(SymbolRef("n"), Constant(2))])))])
 ])
 

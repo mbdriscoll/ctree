@@ -24,7 +24,7 @@ class CNode(CtreeNode):
 class CFile(CNode, File):
   """Represents a .c file."""
   def __init__(self, name="generated", body=[]):
-    super().__init__(name, body)
+    super(CFile, self).__init__(name, body)
     self._ext = "c"
 
   def get_bc_filename(self):
@@ -74,7 +74,7 @@ class Return(Statement):
   _fields = ['value']
   def __init__(self, value=None):
     self.value = value
-    super().__init__()
+    super(Return, self).__init__()
 
 
 class If(Statement):
@@ -84,7 +84,7 @@ class If(Statement):
     self.cond = cond
     self.then = then
     self.elze = elze
-    super().__init__()
+    super(If, self).__init__()
 
 
 class While(Statement):
@@ -93,7 +93,7 @@ class While(Statement):
   def __init__(self, cond=None, body=[]):
     self.cond = cond
     self.body = body
-    super().__init__()
+    super(While, self).__init__()
 
 
 class DoWhile(Statement):
@@ -101,7 +101,7 @@ class DoWhile(Statement):
   def __init__(self, body=[], cond=None):
     self.body = body
     self.cond = cond
-    super().__init__()
+    super(DoWhile, self).__init__()
 
 
 class For(Statement):
@@ -111,7 +111,7 @@ class For(Statement):
     self.test = test
     self.incr = incr
     self.body = body
-    super().__init__()
+    super(For, self).__init__()
 
 
 class FunctionCall(Expression):
@@ -120,7 +120,7 @@ class FunctionCall(Expression):
   def __init__(self, func=None, args=[]):
     self.func = func
     self.args = args
-    super().__init__()
+    super(FunctionCall, self).__init__()
 
 
 class ArrayRef(Expression):
@@ -129,7 +129,7 @@ class ArrayRef(Expression):
   def __init__(self, base=None, offset=None):
     self.base = base
     self.offset = offset
-    super().__init__()
+    super(ArrayRef, self).__init__()
 
 class Literal(Expression):
   """Cite me."""
@@ -139,7 +139,7 @@ class Constant(Literal):
   """Section B.1.4 6.1.3."""
   def __init__(self, value=None):
     self.value = value
-    super().__init__()
+    super(Constant, self).__init__()
 
 
 class Block(Statement):
@@ -147,14 +147,14 @@ class Block(Statement):
   _fields = ['body']
   def __init__(self, body=[]):
     self.body = body
-    super().__init__()
+    super(Block, self).__init__()
 
 
 class String(Literal):
   """Cite me."""
   def __init__(self, *values):
     self.values = values
-    super().__init__()
+    super(String, self).__init__()
 
 
 class SymbolRef(Literal):
@@ -175,7 +175,7 @@ class SymbolRef(Literal):
     self.type = type
     self.ctype = ctype
     self._global = False
-    super().__init__()
+    super(SymbolRef, self).__init__()
 
   def get_ctype(self):
     return self.ctype or self.type
@@ -196,7 +196,7 @@ class FunctionDecl(Statement):
     self.inline = False
     self.static = False
     self.kernel = False
-    super().__init__()
+    super(FunctionDecl, self).__init__()
 
   def get_type(self):
     from ctree.c.types import FuncType
@@ -233,7 +233,7 @@ class UnaryOp(Expression):
   def __init__(self, op=None, arg=None):
     self.op = op
     self.arg = arg
-    super().__init__()
+    super(UnaryOp, self).__init__()
 
 
 class BinaryOp(Expression):
@@ -243,7 +243,7 @@ class BinaryOp(Expression):
     self.left = left
     self.op = op
     self.right = right
-    super().__init__()
+    super(BinaryOp, self).__init__()
 
 
 class AugAssign(Expression):
@@ -253,7 +253,7 @@ class AugAssign(Expression):
     self.target = target
     self.op = op
     self.value = value
-    super().__init__()
+    super(AugAssign, self).__init__()
 
 
 class TernaryOp(Expression):
@@ -263,7 +263,7 @@ class TernaryOp(Expression):
     self.cond = cond
     self.then = then
     self.elze = elze
-    super().__init__()
+    super(TernaryOp, self).__init__()
 
 
 class Cast(Expression):
@@ -272,7 +272,7 @@ class Cast(Expression):
    def __init__(self, ctype=None, value=None):
      self.type = ctype
      self.value = value
-     super().__init__()
+     super(Cast, self).__init__()
 
 
 class Op:
@@ -330,13 +330,13 @@ def Deref(a):   return UnaryOp(Op.Deref(), a)
 def SizeOf(a):  return UnaryOp(Op.SizeOf(), a)
 
 def Add(a,b=None):
-  if b != None:
+  if b is not None:
     return BinaryOp(a, Op.Add(), b)
   else:
     return UnaryOp(Op.AddUnary(), a)
 
 def Sub(a,b=None):
-  if b != None:
+  if b is not None:
     return BinaryOp(a, Op.Sub(), b)
   else:
     return UnaryOp(Op.SubUnary(), a)

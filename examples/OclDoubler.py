@@ -8,7 +8,6 @@ logging.basicConfig(level=20)
 import os
 import numpy as np
 import ctypes as ct
-from __future__ import print_function
 
 from ctree.frontend import get_ast
 from ctree.c.nodes import *
@@ -115,7 +114,7 @@ def main():
   py_doubler(expected_d)
   np.testing.assert_array_equal(actual_d, expected_d)
 
-  print("Success.")
+  print "Success."
 
 
 if __name__ == '__main__':

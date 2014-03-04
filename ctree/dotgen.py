@@ -31,7 +31,7 @@ class DotGenVisitor(NodeVisitor):
     s = 'n%s [label="%s"];\n' % (id(node), self.label(node))
 
     # edge to parent
-    if hasattr(node, 'parent') and node.parent != None:
+    if hasattr(node, 'parent') and node.parent is not None:
       s += 'n%s -> n%s [label="parent",style=dotted];\n' % (id(node), id(node.parent))
 
     # edges to children

@@ -17,7 +17,7 @@ class CtreeNode(ast.AST):
 
   def __init__(self):
     """Initialize a new AST Node."""
-    super().__init__()
+    super(CtreeNode, self).__init__()
     self.parent = None
 
   def __setattr__(self, name, value):
@@ -29,7 +29,7 @@ class CtreeNode(ast.AST):
         for grandchild in value:
           if isinstance(grandchild, CtreeNode):
             grandchild.parent = self
-    super().__setattr__(name, value)
+    super(CtreeNode, self).__setattr__(name, value)
 
   def __str__(self):
     return self.codegen()
@@ -51,7 +51,7 @@ class CtreeNode(ast.AST):
     parent without a parent, aka the root.
     """
     root = self
-    while root.parent != None:
+    while root.parent is not None:
       root = root.parent
     return root
 
@@ -154,7 +154,7 @@ class Project(CommonNode):
   _fields = ['files']
   def __init__(self, files=[]):
     self.files = files
-    super().__init__()
+    super(Project, self).__init__()
 
   def codegen(self):
     """

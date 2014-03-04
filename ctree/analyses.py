@@ -13,7 +13,7 @@ class DeclFinder(NodeVisitor):
 
     self.decl = None
 
-    assert self.decl != None, \
+    assert self.decl is not None, \
       "Couldn't find declaration for symbol %s." % node
     return self.decl
 

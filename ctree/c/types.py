@@ -1,5 +1,4 @@
 import ctypes
-from __future__ import print_function
 
 from ctree.types import CtreeType, CtreeTypeResolver, TypeFetcher, get_ctree_type
 
@@ -63,7 +62,7 @@ class CTypeResolver(CtreeTypeResolver):
     elif isinstance(obj, float): return Double()
     elif isinstance(obj, str):
       return Char() if len(obj) == 1 else Ptr(Char())
-    print ("resolve %s" % repr(obj))
+    print "resolve %s" % repr(obj)
 
 
 class NumpyTypeResolver(CtreeTypeResolver):
@@ -84,7 +83,7 @@ class CTypeFetcher(TypeFetcher):
     return Ptr(Char())
 
   def visit_SymbolRef(self, node):
-    if node.type != None:
+    if node.type is not None:
       return node.type
     else:
       #decl = DeclFinder().find(node)

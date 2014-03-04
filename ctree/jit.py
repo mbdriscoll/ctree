@@ -56,7 +56,7 @@ class _ConcreteSpecializedFunction(object):
   def __init__(self, project, entry_point_name):
     assert isinstance(project, Project), \
       "Expected a Project but it got a %s." % type(project)
-    assert project.parent == None, \
+    assert project.parent is None, \
       "Expected null project.parent, but got: %s." % type(project.parent)
     self.module = project.codegen()
     log.info("Full LLVM program is: <<<\n%s\n>>>" % self.module.ll_module)
