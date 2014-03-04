@@ -50,26 +50,25 @@ class OpTranslator(LazySpecializedFunction):
               PostInc(SymbolRef("i")),
               [
                 Assign(ArrayRef(SymbolRef("A"),SymbolRef("i")),
-                       FunctionCall(SymbolRef("apply"), [ArrayRef(SymbolRef("A"),SymbolRef("i"))])),
+                       FunctionCall(SymbolRef("apply"), [ArrayRef(SymbolRef("A"),
+                                                                  SymbolRef("i"))])),
               ]),
         ]
       ),
     ])
 
-    transformations = [
-      SetTypeSignature("apply_all", apply_all_typesig),
-      SetTypeSignature("apply",     apply_one_typesig),
-      ConvertNumpyNdpointers(),
-      StripPythonDocstrings(),
-      PyBasicConversions(),
-      FixUpParentPointers(),
-    ]
+    tree = PyBasicConversions().visit(tree)
 
-    for xf in transformations:
-      tree = xf.visit(tree)
-
-    tree.find(FunctionDecl, name="apply").set_static().set_inline()
     tree.find(SymbolRef, name="len_A").replace(Constant(len_A))
+
+    apply_one = tree.find(FunctionDecl, name="apply")
+    apply_one.set_static().set_inline()
+    apply_one.set_typesig(apply_one_typesig)
+
+    apply_all = tree.find(FunctionDecl, name="apply_all")
+    apply_all.set_typesig(apply_all_typesig)
+
+    tree = ConvertNumpyNdpointers().visit(tree)
 
     return Project([tree])
 

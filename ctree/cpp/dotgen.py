@@ -8,4 +8,8 @@ class CppDotGen(DotGenVisitor):
   """
   Visitor to generator DOT.
   """
-  pass
+  def label_CppInclude(self, node):
+    if node.angled_brackets:
+      return "target: <%s>" % node.target
+    else:
+      return 'target: "%s"' % node.target

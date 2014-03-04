@@ -8,4 +8,8 @@ class CppCodeGen(CodeGenVisitor):
   """
   Visitor to generate C preprocessor directives.
   """
-  pass
+  def visit_CppInclude(self, node):
+    if node.angled_brackets:
+      return "#include <%s>" % node.target
+    else:
+      return '#include "%s"' % node.target

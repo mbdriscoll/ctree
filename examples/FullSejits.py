@@ -28,16 +28,11 @@ class BasicTranslator(LazySpecializedFunction):
 
   def transform(self, tree, program_config):
     """Convert the Python AST to a C AST."""
+    tree = PyBasicConversions().visit(tree)
+
     fib_arg_type = program_config[0]
     fib_sig = (fib_arg_type, fib_arg_type)
-
-    transformations = [
-      PyBasicConversions(),
-      FixUpParentPointers(),
-      SetTypeSignature("fib", fib_sig),
-    ]
-    for tx in transformations:
-      tree = tx.visit(tree)
+    tree.find(FunctionDecl, name="fib").set_typesig(fib_sig)
 
     return tree
 

@@ -11,6 +11,7 @@ import ctypes as ct
 
 from ctree.frontend import get_ast
 from ctree.c.nodes import *
+from ctree.cpp.nodes import *
 from ctree.ocl.nodes import *
 from ctree.dotgen import to_dot
 from ctree.transformations import *
@@ -57,6 +58,7 @@ class OpTranslator(LazySpecializedFunction):
     kernel_path_ref = kernel.get_generated_path_ref()
 
     control = CFile("control", [
+      CppInclude("OpenCL/opencl.h"),
       Assign(SymbolRef("kernel_path", ct.c_char_p), kernel_path_ref),
       FunctionDecl(None, "apply_all",
         params=[SymbolRef("A")],

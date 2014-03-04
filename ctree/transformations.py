@@ -46,7 +46,7 @@ class PyBasicConversions(NodeTransformer):
     return BinaryOp(lhs, op, rhs)
 
   def visit_Return(self, node):
-    if node.value:
+    if hasattr(node, 'value'):
       return Return(self.visit(node.value))
     else:
       return Return()
@@ -84,6 +84,8 @@ class PyBasicConversions(NodeTransformer):
     return FunctionCall(fn, args)
 
   def visit_FunctionDef(self, node):
+    if ast.get_docstring(node):
+      node.body.pop(0)
     params = [self.visit(p) for p in node.args.args]
     defn = [self.visit(s) for s in node.body]
     return FunctionDecl(node.returns, node.name, params, defn)
@@ -106,21 +108,6 @@ class FixUpParentPointers(NodeTransformer):
         setattr(child, 'parent', node)
         self.visit(child)
     return node
-
-
-class StripPythonDocstrings(NodeTransformer):
-  """
-  Remove docstrings like this one from classes and method defs.
-  """
-  def visit_FunctionDef(self, node):
-    if ast.get_docstring(node):
-      node.body.pop(0)
-    return self.generic_visit(node)
-
-  def visit_ClassDef(self, node):
-    if ast.get_docstring(node):
-      node.body.pop(0)
-    return self.generic_visit(node)
 
 
 class ConvertNumpyNdpointers(NodeTransformer):

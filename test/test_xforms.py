@@ -13,10 +13,6 @@ class TestSetTypeSig(unittest.TestCase):
       self.assertEqual(tree.return_type, ct.c_long)
       for param, expected_type in zip(tree.params, func_type[1:]):
         self.assertEqual(param.type, expected_type)
-    elif isinstance(tree, ast.FunctionDef):
-      self.assertEqual(tree.returns, ct.c_long)
-      for param, expected_type in zip(tree.args.args, func_type[1:]):
-        self.assertEqual(param.annotation, expected_type)
     elif isinstance(tree, ast.Module):
       self._check(func_type, tree.body[0])
     else:
@@ -24,43 +20,23 @@ class TestSetTypeSig(unittest.TestCase):
 
   def test_no_args(self):
     func_type = [ct.c_long]
-    func_decl = SetTypeSignature("get_two", func_type).visit(get_two_ast)
-    self._check(func_type, func_decl)
+    get_two_ast.set_typesig(func_type)
+    self._check(func_type, get_two_ast)
 
   def test_one_arg(self):
     func_type = [ct.c_long, ct.c_long]
-    func_decl = SetTypeSignature("fib", func_type).visit(fib_ast)
-    self._check(func_type, func_decl)
+    fib_ast.set_typesig(func_type)
+    self._check(func_type, fib_ast)
 
   def test_two_args(self):
     func_type = [ct.c_long, ct.c_long, ct.c_long]
-    func_decl = SetTypeSignature("gcd", func_type).visit(gcd_ast)
-    self._check(func_type, func_decl)
+    gcd_ast.set_typesig(func_type)
+    self._check(func_type, gcd_ast)
 
   def test_mixed_args(self):
     func_type = [ct.c_long, ct.c_double, ct.c_long, ct.c_long]
-    func_decl = SetTypeSignature("choose", func_type).visit(choose_ast)
-    self._check(func_type, func_decl)
-
-  def test_no_args(self):
-    func_type = [ct.c_long]
-    func_decl = SetTypeSignature("get_two", func_type).visit( get_ast(get_two) )
-    self._check(func_type, func_decl)
-
-  def test_one_arg(self):
-    func_type = [ct.c_long, ct.c_long]
-    func_decl = SetTypeSignature("fib", func_type).visit( get_ast(fib) )
-    self._check(func_type, func_decl)
-
-  def test_two_args(self):
-    func_type = [ct.c_long, ct.c_long, ct.c_long]
-    func_decl = SetTypeSignature("gcd", func_type).visit( get_ast(gcd) )
-    self._check(func_type, func_decl)
-
-  def test_mixed_args(self):
-    func_type = [ct.c_long, ct.c_double, ct.c_long, ct.c_long]
-    func_decl = SetTypeSignature("choose", func_type).visit( get_ast(choose) )
-    self._check(func_type, func_decl)
+    choose_ast.set_typesig(func_type)
+    self._check(func_type, choose_ast)
 
 
 class TestFixUpParentPointers(unittest.TestCase):
@@ -120,15 +96,15 @@ class TestStripDocstrings(unittest.TestCase):
       self.assertNotIsInstance(node, ast.Str)
 
   def test_func_docstring(self):
-    tree = StripPythonDocstrings().visit( get_ast(self.foo) )
+    tree = PyBasicConversions().visit( get_ast(self.foo) )
     self._check(tree)
 
   def test_class_docstring(self):
-    tree = StripPythonDocstrings().visit( get_ast(self.Bar) )
+    tree = PyBasicConversions().visit( get_ast(self.Bar) )
     self._check(tree)
 
   def test_subtree_docstrings(self):
-    tree = StripPythonDocstrings().visit( ast.Module([
+    tree = PyBasicConversions().visit( ast.Module([
       get_ast(self.foo),
       get_ast(self.Bar),
     ]) )
