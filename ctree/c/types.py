@@ -1,4 +1,5 @@
 import ctypes
+from __future__ import print_function
 
 from ctree.types import CtreeType, CtreeTypeResolver, TypeFetcher, get_ctree_type
 
@@ -106,7 +107,7 @@ class CTypeFetcher(TypeFetcher):
       return Int()
     elif isinstance(node.op, Op.Comma):
       return rhs
-    elif ininstance(node.op, Op.ArrayRef):
+    elif isinstance(node.op, Op.ArrayRef):
       return lhs.base
     else:
       raise Exception("Cannot determine return type of (%s %s %s)." % \

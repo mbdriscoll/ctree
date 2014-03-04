@@ -1,6 +1,7 @@
 import ast
 import unittest
 
+from __future__ import print_function
 from fixtures import *
 from ctree.transformations import *
 from ctree.c.nodes import *

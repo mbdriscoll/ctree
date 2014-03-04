@@ -10,6 +10,7 @@ In python:
       return fib(n-1) + fib(n-2)
 """
 
+from __future__ import print_function
 from ctree.c.nodes import *
 from ctree.c.types import *
 

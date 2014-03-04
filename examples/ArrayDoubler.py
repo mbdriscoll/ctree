@@ -7,6 +7,8 @@ logging.basicConfig(level=20)
 
 import numpy as np
 
+from __future__ import print_function
+
 from ctree.frontend import get_ast
 from ctree.c.nodes import *
 from ctree.c.types import *
@@ -87,7 +89,7 @@ class Doubler(ArrayOp):
     return n*2
 
 def py_doubler(A):
-  for i in range(len(A)):
+  for i in xrange(len(A)):
     A[i] *= 2
 
 def main():

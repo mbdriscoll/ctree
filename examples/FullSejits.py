@@ -6,6 +6,7 @@ import logging
 logging.basicConfig(level=20)
 
 import numpy as np
+from __future__ import print_function
 
 from ctree.transformations import *
 from ctree.frontend import get_ast
@@ -21,7 +22,7 @@ def fib(n):
 
 class BasicTranslator(LazySpecializedFunction):
   def __init__(self, func):
-    super().__init__( get_ast(func), func.__name__ )
+    super(BasicTranslator, self).__init__( get_ast(func), func.__name__ )
 
   def args_to_subconfig(self, args):
     return get_ctree_type(args[0])
