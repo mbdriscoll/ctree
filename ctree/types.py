@@ -12,6 +12,12 @@ class CtreeType(CtreeNode):
   def dotgen(self):
     raise Exception("%s should override dotgen()" % type(self))
 
+  def __eq__(self, other):
+    return str(self) == str(other)
+
+  def __hash__(self):
+    return hash(str(self))
+
 
 
 """
