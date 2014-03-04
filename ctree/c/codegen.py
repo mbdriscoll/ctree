@@ -78,7 +78,6 @@ class CCodeGen(CodeGenVisitor):
   # visitor methods
 
   def visit_FunctionDecl(self, node):
-    rettype = self._ctype_to_str(node.return_type)
     params = ", ".join(map(str, node.params))
     s = ""
     if node.kernel:
@@ -87,7 +86,7 @@ class CCodeGen(CodeGenVisitor):
       s += "static "
     if node.inline:
       s += "inline "
-    s += "%s %s(%s)" % (rettype, node.name, params)
+    s += "%s %s(%s)" % (node.return_type, node.name, params)
     if node.defn:
       s += " %s" % self._genblock(node.defn)
     return s
@@ -128,7 +127,7 @@ class CCodeGen(CodeGenVisitor):
     if node._global:
       s += "__global "
     if node.type:
-      s += "%s " % self._ctype_to_str(node.type)
+      s += "%s " % node.type
     return "%s%s" % (s, node.name)
 
   def visit_Block(self, node):
@@ -170,3 +169,15 @@ class CCodeGen(CodeGenVisitor):
   def visit_CFile(self, node):
     stmts = self._genblock(node.body, insert_curly_brackets=False, increase_indent=False)
     return '// <file: %s>%s' % (node.get_filename(), stmts)
+
+  def visit_Void(self, node):   return "void"
+  def visit_Char(self, node):   return "char"
+  def visit_Int(self, node):    return "int"
+  def visit_Long(self, node):   return "long"
+  def visit_Float(self, node):  return "float"
+  def visit_Double(self, node): return "double"
+
+  def visit_Ptr(self, node):
+    base = node.base_type.codgen()
+    return "%s*" % base
+

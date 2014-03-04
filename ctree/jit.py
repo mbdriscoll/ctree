@@ -46,7 +46,7 @@ class JitModule(object):
     c_func_ptr = self.exec_engine.get_pointer_to_function(ll_function)
 
     # cast c_func_ptr to python callable using ctypes
-    cfunctype = tree.get_type()
+    cfunctype = tree.get_type().as_ctype()
     return cfunctype(c_func_ptr)
 
 

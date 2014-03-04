@@ -1,13 +1,24 @@
-from ctree.visitors import NodeVisitor
-from ctree.analyses import DeclFinder
-from ctree.c.nodes import *
+import abc
 
-from ctypes import *
+from ctree.ast import CtreeNode
 
+class CtreeType(CtreeNode):
+  def codegen(self):
+    raise Exception("%s should override codegen()" % type(self))
+
+  def as_ctypes(self):
+    raise Exception("%s should override as_ctypes()" % type(self))
+
+  def dotgen(self):
+    raise Exception("%s should override dotgen()" % type(self))
+
+
+
+"""
 class TypeFetcher(NodeVisitor):
-  """
+  ""
   Dynamically computes the type of the Expression.
-  """
+  ""
   def visit_String(self, node):
     return c_char_p
 
@@ -48,11 +59,11 @@ class TypeFetcher(NodeVisitor):
 
   @staticmethod
   def _usual_arithmetic_convert(t0, t1):
-    """
+    ""
     Computes the return type of an arithmetic operator applied to arguments of
     the built-in numeric types.
     See C89 6.2.5.1.
-    """
+    ""
     if   t0 == c_longdouble or t1 == c_longdouble: return c_longdouble
     elif t0 == c_double     or t1 == c_double:     return c_double
     elif t0 == c_float      or t1 == c_float:      return c_float
@@ -68,9 +79,9 @@ class TypeFetcher(NodeVisitor):
 
   @staticmethod
   def _integer_promote(t):
-    """
+    ""
     Promote small types to integers accd to c89 6.2.1.1.
-    """
+    ""
     if issubclass(t, (c_int, c_uint, c_long, c_ulong)):
       return t
     elif issubclass(t, (c_char, c_ubyte, c_short, c_ushort)):
@@ -117,8 +128,7 @@ def pytype_to_ctype(pytype):
   raise Exception("Cannot determine ctype for Python object: %s (type %s)." % \
     (pytype, type(pytype)))
 
-
-def get_ctype(obj):
+def get_type(obj):
   # check for numpy types
   try:
     import numpy
@@ -128,3 +138,19 @@ def get_ctype(obj):
     pass
 
   return pytype_to_ctype( type(obj) )
+"""
+
+
+class CtreeTypeResolver(metaclass=abc.ABCMeta):
+  @staticmethod
+  @abc.abstractmethod
+  def resolve(obj):
+    pass
+
+def get_type(obj):
+  from ctree.c.types import CTypeResolver
+  for resolver in [CTypeResolver()]:
+    ty = resolver.resolve(obj)
+    if ty != None:
+      return ty
+  raise Exception("Unable to resolve type for %s." % type(obj))

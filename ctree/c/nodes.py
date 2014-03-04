@@ -8,7 +8,6 @@ import subprocess
 import logging
 log = logging.getLogger(__name__)
 
-import ctypes as ct
 from ctree.ast import CtreeNode, File
 
 class CNode(CtreeNode):
@@ -200,8 +199,9 @@ class FunctionDecl(Statement):
     super().__init__()
 
   def get_type(self):
+    from ctree.c.types import FuncType
     arg_types = [p.get_ctype() for p in self.params]
-    return ct.CFUNCTYPE(self.return_type, *arg_types)
+    return FuncType(self.return_type, arg_types)
 
   def get_callable(self):
     from ctree.jit import LazyTreeBuilder

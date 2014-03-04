@@ -12,12 +12,14 @@ import ctypes as ct
 
 from ctree.ast import *
 from ctree.c.nodes import *
+from ctree.c.types import *
 
 from ctree.dotgen import to_dot
 
 def main():
   stmt0 = Assign(SymbolRef('foo'), Constant(123.4))
-  stmt1 = FunctionDecl(ct.c_float, SymbolRef("bar"), [SymbolRef("spam", ct.c_int), SymbolRef("eggs", ct.c_long)], [String("baz")])
+  stmt1 = FunctionDecl(Float(), SymbolRef("bar"), [
+            SymbolRef("spam", Int()), SymbolRef("eggs", Long())], [String("baz")])
   tree = CFile("myfile", [stmt0, stmt1])
   print (to_dot(tree))
 
