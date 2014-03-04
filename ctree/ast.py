@@ -7,7 +7,6 @@ log = logging.getLogger(__name__)
 
 import os
 import ast
-import ctypes as ct
 
 from ctree.codegen import CodeGenVisitor
 from ctree.dotgen import DotGenVisitor

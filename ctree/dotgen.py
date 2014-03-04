@@ -1,7 +1,5 @@
 import ast
 
-import ctypes as ct
-
 from ctree.visitors import NodeVisitor
 
 class DotGenVisitor(NodeVisitor):

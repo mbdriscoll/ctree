@@ -1,5 +1,4 @@
 import unittest
-import ctypes as ct
 
 from ctree.c.nodes import *
 from ctree.c.types import *

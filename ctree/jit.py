@@ -4,7 +4,6 @@ import shutil
 import tempfile
 
 import ctree
-import ctypes
 from ctree.ast import *
 from ctree.c.nodes import *
 from ctree.frontend import get_ast

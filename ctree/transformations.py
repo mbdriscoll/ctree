@@ -1,7 +1,6 @@
 import os
 import ast
 import copy
-import ctypes as ct
 
 from ctree.ast import *
 from ctree.c.nodes import *
@@ -107,23 +106,6 @@ class FixUpParentPointers(NodeTransformer):
       elif isinstance(child, ast.AST):
         setattr(child, 'parent', node)
         self.visit(child)
-    return node
-
-
-class ConvertNumpyNdpointers(NodeTransformer):
-  """
-  Converts np.ctypeslib.ndpointer instance to the
-  corresponding primitive types.
-
-  For example: np.array(dtype='float64') -> double*
-  """
-  def _convert(self, orig_type):
-    return ct.POINTER(pytype_to_ctype(orig_type._dtype_))
-
-  def visit_SymbolRef(self, node):
-    if node.type and hasattr(node.type, '_dtype_'):
-      node.ctype = node.type
-      node.type = self._convert(node.ctype)
     return node
 
 

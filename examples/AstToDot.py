@@ -8,8 +8,6 @@ Usage:
 The resulting file can be viewed with a visualizer like Graphiz.
 """
 
-import ctypes as ct
-
 from ctree.ast import *
 from ctree.c.nodes import *
 from ctree.c.types import *
