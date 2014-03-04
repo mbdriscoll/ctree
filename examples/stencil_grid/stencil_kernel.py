@@ -34,27 +34,27 @@ from ctree.visitors import NodeTransformer
 
 
 class SpecializedTranslator(LazySpecializedFunction):
-  def __init__(self, func):
-    super().__init__( get_ast(func), func.__name__ )
+    def __init__(self, func):
+        super().__init__(get_ast(func), func.__name__)
 
-  def transform(self, tree, args):
-    """Convert the Python AST to a C AST."""
-    A = args[0]
-    array_type = numpy.ctypeslib.ndpointer(dtype=A.dtype, ndim=A.ndim, shape=A.shape, flags=A.flags)
-    # fib_arg_type = ctree.types.pytype_to_ctype(arg0_type)
-    fib_sig = (None, array_type)
+    def transform(self, tree, args):
+        """Convert the Python AST to a C AST."""
+        A = args[0]
+        array_type = numpy.ctypeslib.ndpointer(dtype=A.dtype, ndim=A.ndim, shape=A.shape, flags=A.flags)
+        # fib_arg_type = ctree.types.pytype_to_ctype(arg0_type)
+        fib_sig = (None, array_type)
 
-    transformations = [
-      transform.PyBasicConversions(),
-      transform.FixUpParentPointers(),
-      transform.SetParamTypes("fib", fib_sig),
-    ]
-    for tx in transformations:
-      tree = tx.visit(tree)
+        transformations = [
+            transform.PyBasicConversions(),
+            transform.FixUpParentPointers(),
+            transform.SetParamTypes("fib", fib_sig),
+        ]
+        for tx in transformations:
+            tree = tx.visit(tree)
 
-    print(ast.dump(tree, include_attributes=True))
+        print(ast.dump(tree, include_attributes=True))
 
-    return tree
+        return tree
 
 
 class StencilTransformer(NodeTransformer):
@@ -62,6 +62,16 @@ class StencilTransformer(NodeTransformer):
         if type(node.iter) == ast.Call and type(node.iter.func) == ast.Attribute:
             if node.iter.func.attr == 'interior_points':
                 raise Exception('not finished')
+
+    def visit_Attribute(self, node):
+        if node.attr == 'interior_points':
+            pass
+        elif node.attr == 'exterior_points':
+            pass
+        elif node.attr == 'neighbor':
+            pass
+        else:
+            return node
 
 
 
