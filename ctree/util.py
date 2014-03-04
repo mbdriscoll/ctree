@@ -6,13 +6,13 @@ import math
 import time
 
 class Timer(object):
-  '''
+  """
   Context manager for timing sections of code.
-  '''
+  """
   class _stopwatch(object):
-    '''
+    """
     Times a particular key.
-    '''
+    """
     def __init__(self):
       self.x = 0.0
       self.x2 = 0.0

@@ -34,11 +34,12 @@ log.info("checking for config files at: %s" % cfg_paths)
 found = config.read(cfg_paths)
 log.info("found config files: %s" % found)
 
-import io
-with io.StringIO() as configfile:
-  config.w(configfile)
-  config_txt = configfile.getvalue()
+import StringIO
+configfile = StringIO.StringIO()
+config.write(configfile)
+config_txt = configfile.getvalue()
 log.info("using configuration:\n%s" % config_txt)
+configfile.close()
 
 
 # ---------------------------------------------------------------------------

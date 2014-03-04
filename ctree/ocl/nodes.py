@@ -18,6 +18,7 @@ class OclNode(CtreeNode):
 class OclFile(OclNode, File):
   """Represents a .cl file."""
   def __init__(self, name="generated", body=[]):
+    #TODO: Inspect complains about 2 args to __init__
     super(OclFile, self).__init__(name, body)
     self._ext = "cl"
 
