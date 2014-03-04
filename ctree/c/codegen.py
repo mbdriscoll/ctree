@@ -87,7 +87,7 @@ class CCodeGen(CodeGenVisitor):
     if node._global:
       s += "__global "
     if node.type:
-      s += "%s " % self.visit(node.type)
+      s += "%s " % node.type
     return "%s%s" % (s, node.name)
 
   def visit_Block(self, node):

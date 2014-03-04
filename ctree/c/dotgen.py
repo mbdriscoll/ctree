@@ -10,8 +10,8 @@ class CDotGen(DotGenVisitor):
   """
   def label_SymbolRef(self, node):
     s = r"name: %s" % node.name
-    #if node.type:
-    #  s += r"\ntype: %s" % node.type
+    if node.type:
+      s += r"\ntype: %s" % node.type
     if node.ctype:
       s += r"\nctype: %s" % node.ctype
     return s
