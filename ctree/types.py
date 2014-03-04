@@ -1,6 +1,6 @@
 from ctree.visitors import NodeVisitor
 from ctree.analyses import DeclFinder
-from ctree.nodes.c import *
+from ctree.c.nodes import *
 
 from ctypes import *
 
@@ -115,4 +115,17 @@ def pytype_to_ctype(pytype):
   except KeyError:
     pass
 
-  raise Exception("Cannot convertion python type '%s' to ctype." % pytype)
+  raise Exception("Cannot determine ctype for Python object: %s (type %s)." % \
+    (pytype, type(pytype)))
+
+
+def get_ctype(obj):
+  # check for numpy types
+  try:
+    import numpy
+    if type(obj) == numpy.ndarray:
+      return type(numpy.ctypeslib.as_ctypes(obj))
+  except ImportError:
+    pass
+
+  return pytype_to_ctype( type(obj) )

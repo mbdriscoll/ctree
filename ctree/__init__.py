@@ -33,5 +33,33 @@ log.info("checking for config files at: %s" % cfg_paths)
 found = config.read(cfg_paths)
 log.info("found config files: %s" % found)
 
-# FIXME print out configuration
-log.info("using configuration: (FIXME) %s" % config)
+import io
+with io.StringIO() as configfile:
+  config.write(configfile)
+  config_txt = configfile.getvalue()
+log.info("using configuration:\n%s" % config_txt)
+
+
+# ---------------------------------------------------------------------------
+# stats
+
+import atexit
+import collections
+
+class Counter(object):
+  """Tracks events, reports counts upon garbage collections."""
+  def __init__(self):
+    self._counter = collections.Counter()
+
+  def log(self, event_str):
+    self._counter[event_str] += 1
+
+  def report(self):
+    kvs = ""
+    for kv in self._counter.items():
+      kvs += "  %s: %s\n" % kv
+    log.info("execution statistics: <<<\n%s>>>" % kvs)
+
+
+stats = Counter()
+atexit.register(stats.report)

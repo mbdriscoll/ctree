@@ -1,9 +1,10 @@
 import ast
 
 import ctypes as ct
+
 from ctree.visitors import NodeVisitor
 
-class DotGenerator(NodeVisitor):
+class DotGenVisitor(NodeVisitor):
   """
   Generates a representation of the AST in the DOT graph language.
   See http://en.wikipedia.org/wiki/DOT_(graph_description_language)
@@ -14,48 +15,6 @@ class DotGenerator(NodeVisitor):
   @staticmethod
   def _qualified_name(obj):
     return "%s.%s" % (obj.__module__, obj.__name__)
-
-  def generate_from(self, node):
-    return "digraph myprogram {\n%s}" % self.visit(node)
-
-  def label_SymbolRef(self, node):
-    s = "name: %s" % node.name
-    if node.type:
-      s += "\ntype: %s" % node.type.__name__
-    if node.ctype:
-      s += "\nctype: %s" % node.ctype
-    return s
-
-  def label_arg(self, node):
-    s = "name: %s" % node.arg
-    if node.annotation and not isinstance(node.annotation, ast.AST):
-      s += "\nannotation: %s" % self._qualified_name(node.annotation)
-    return s
-
-  def label_FunctionDef(self, node):
-    return "name: %s" % node.name
-
-  def label_FunctionDecl(self, node):
-    return "name: %s\nreturn_type: %s" % \
-      (node.name, node.return_type)
-
-  def label_Param(self, node):
-    s = "type: %s" % node.type
-    if node.name:
-      s += "\nname: %s" % node.name
-    return s
-
-  def label_Num(self, node):
-    return "n: %s" % node.n
-
-  def label_Name(self, node):
-    return "id: %s" % node.id
-
-  def label_Constant(self, node):
-    return "value: %s" % node.value
-
-  def label_String(self, node):
-    return "value: %s" % node.value
 
   def label(self, node):
     """
@@ -78,19 +37,34 @@ class DotGenerator(NodeVisitor):
       s += 'n%s -> n%s [label="parent",style=dotted];\n' % (id(node), id(node.parent))
 
     # edges to children
-    s += 'n%s [label="%s"];\n' % (id(node), self.label(node))
     for fieldname, child in ast.iter_fields(node):
       if type(child) is list:
         for i, grandchild in enumerate(child):
           s += 'n%d -> n%d [label="%s[%d]"];\n' % \
                (id(node), id(grandchild), fieldname, i)
-          s += self.visit(grandchild)
+          s += _to_dot(grandchild)
       elif isinstance(child, ast.AST):
         s += 'n%d -> n%d [label="%s"];\n' % (id(node), id(child), fieldname)
-        s += self.visit(child)
+        s += _to_dot(child)
     return s
 
-def to_dot(node):
+def _to_dot(node):
+  """
+  Convert node to DOT, even if it's a Python AST node.
+  """
+  from ctree.ast import CtreeNode
+  from ctree.py.dotgen import PyDotGen
   assert isinstance(node, ast.AST), \
-    "to_dot expected an instance of ast.AST, got %s." % type(node).__name__
-  return DotGenerator().generate_from(node)
+    "Cannot convert %s to DOT." % type(node)
+  if isinstance(node, CtreeNode):
+    return node._to_dot()
+  else:
+    return PyDotGen().visit(node)
+
+def to_dot(node):
+  """
+  Returns a DOT representation of 'node' suitable for viewing with a DOT viewer like Graphviz.
+  """
+  assert isinstance(node, ast.AST), \
+    "Cannot convert %s to DOT." % type(node)
+  return "digraph myprogram {\n%s}" % _to_dot(node)

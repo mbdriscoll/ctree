@@ -1,4 +1,4 @@
-from ctree.nodes.c import *
+from ctree.c.nodes import *
 
 """
 Utilities for determining precedence in C, with the goal of minimizing the
@@ -80,11 +80,19 @@ _EXPR_TO_PRECEDENCE = {
 
 def get_precedence(node):
   try:
-    pred = _EXPR_TO_PRECEDENCE[type(node).__name__]
+    if isinstance(node, (UnaryOp, BinaryOp)):
+      op = type(node.op)
+    elif isinstance(node, TernaryOp):
+      op = TernaryOp
+    else:
+      raise Exception("Cannot determine operator for node %d.\n", node)
+
+    pred = _EXPR_TO_PRECEDENCE[op.__name__]
+    # flip precedence so higher numbers mean higher precedence
+    return 20 - pred
   except KeyError:
-    raise Exception("Unable to determine precedence for %s." % type(node).__name__)
-  # flip precedence so higher numbers mean higher precedence
-  return 20 - pred
+    pass
+  raise Exception("Unable to determine precedence for %s." % type(node).__name__)
 
 _PRECEDENCE_ASSOCIATES_LTR = {
   2: True,
@@ -107,8 +115,8 @@ _PRECEDENCE_ASSOCIATES_LTR = {
 def is_left_associative(node):
   try:
     pred = get_precedence(node)
-    ltr = _PRECEDENCE_ASSOCIATES_LTR[20 - pred]
-  except KeyError:
-    raise Exception("Cannot determine if operator %s (precedence %d) is left- or right-associative." \
-      % (type(node).__name__, pred))
-  return ltr
+    return _PRECEDENCE_ASSOCIATES_LTR[20 - pred]
+  except (Exception, KeyError):
+    pass
+  raise Exception("Cannot determine if operator %s is left- or right-associative." \
+    % (type(node).__name__))

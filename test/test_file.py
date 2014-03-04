@@ -1,7 +1,8 @@
 import unittest
 import ctypes as ct
 
-from ctree.nodes.c import *
+from ctree.ast import *
+from ctree.c.nodes import *
 
 class TestFile(unittest.TestCase):
 
@@ -12,8 +13,9 @@ class TestFile(unittest.TestCase):
   def test_simple_00(self):
     foo = SymbolRef("foo", type=ct.c_int)
     bar = FunctionDecl(ct.c_float, SymbolRef("bar"))
-    tree = File([foo, bar])
+    tree = CFile("myfile", [foo, bar])
     self._check(tree, """\
+// <file: myfile.c>
 int foo;
 float bar();
 """)

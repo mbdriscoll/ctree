@@ -1,7 +1,7 @@
 import unittest
 import ctypes as ct
 
-from ctree.nodes.c import *
+from ctree.c.nodes import *
 
 class TestVarDecls(unittest.TestCase):
 
@@ -16,8 +16,3 @@ class TestVarDecls(unittest.TestCase):
   def test_simple_01(self):
     foo = Assign(SymbolRef('foo', type=ct.c_double), Constant(1.2))
     self._check(foo, "double foo = 1.2")
-
-  @unittest.skip("need to unparse name inside type")
-  def test_simple_02(self):
-    foo = SymbolRef('foo', type=FuncType(ct.c_void_p, [ct.c_double]))
-    self._check(foo, "void (*foo)(double)")

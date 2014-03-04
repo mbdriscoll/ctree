@@ -1,6 +1,7 @@
 import unittest
 
-from ctree.nodes.c import *
+from ctree.c.nodes import *
+from ctree.precedence import *
 
 class TestPrecedence(unittest.TestCase):
 
@@ -106,22 +107,28 @@ class TestAssociativityPrecedence(unittest.TestCase):
     tree = AddAssign(a, AddAssign(b, c))
     self._check(tree, "a += b += c")
 
-  @unittest.skip("Pending paren handling for ternary ops")
   def test_ternary_cond(self):
     a, b, c = self.args
     cond = TernaryOp(a, b, c)
     tree = TernaryOp(cond, c, b)
     self._check(tree, "(a ? b : c) ? c : b")
 
-  @unittest.skip("Pending paren handling for ternary ops")
   def test_ternary_then(self):
     a, b, c = self.args
     then = TernaryOp(a, b, c)
     tree = TernaryOp(c, then, a)
-    self._check(tree, "c ? (a ? b : c) : b")
+    self._check(tree, "c ? (a ? b : c) : a")
 
   def test_ternary_else(self):
     a, b, c = self.args
     elze = TernaryOp(a, b, c)
     tree = TernaryOp(c, b, elze)
     self._check(tree, "c ? b : a ? b : c")
+
+  def test_bad_precedence_arg(self):
+    with self.assertRaises(Exception):
+      get_precedence( Constant(2.3) )
+
+  def test_bad_associativity_arg(self):
+    with self.assertRaises(Exception):
+      is_left_associative( Constant(2.3) )

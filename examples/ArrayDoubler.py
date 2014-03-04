@@ -2,53 +2,75 @@
 Parses the python AST below, transforms it to C, JITs it, and runs it.
 """
 
+import logging
+logging.basicConfig(level=20)
+
 import numpy as np
 import ctypes as ct
 
 from ctree.frontend import get_ast
-from ctree.nodes import *
+from ctree.c.nodes import *
 from ctree.dotgen import to_dot
 from ctree.transformations import *
-from ctree.analyses import VerifyOnlyCAstNodes
 from ctree.jit import LazySpecializedFunction
-from ctree.types import pytype_to_ctype
-
-import logging
-logging.basicConfig(level=20)
+from ctree.types import pytype_to_ctype, get_ctype
 
 # ---------------------------------------------------------------------------
 # Specializer code
 
 class OpTranslator(LazySpecializedFunction):
-  def transform(self, tree, args):
-    """Convert the Python AST to a C AST."""
-    A, = args
-    array_type = np.ctypeslib.ndpointer(dtype=A.dtype, ndim=A.ndim, shape=A.shape, flags=A.flags)
-    inner_type = pytype_to_ctype(A.dtype)
+  def args_to_subconfig(self, args):
+    """
+    Analyze arguments and return a 'subconfig', a hashable object
+    that classifies them. Arguments with identical subconfigs
+    might be processed by the same generated code.
+    """
+    A = args[0]
+    return (len(A), A.dtype, A.ndim, A.shape)
 
+  def transform(self, py_ast, program_config):
+    """
+    Convert the Python AST to a C AST according to the directions
+    given in program_config.
+    """
+    len_A, A_dtype, A_ndim, A_shape = program_config[0]
+    inner_type = pytype_to_ctype(A_dtype)
+
+    array_type = np.ctypeslib.ndpointer(A_dtype, A_ndim, A_shape)
     apply_all_typesig = [None, array_type]
     apply_one_typesig = [inner_type, inner_type]
 
-    transformations = [
-      SetParamTypes("apply_all", apply_all_typesig),
-      SetParamTypes("apply",     apply_one_typesig),
-      ConvertNumpyNdpointers(),
-      StripPythonDocstrings(),
-      PyBasicConversions(),
-      FixUpParentPointers(),
-    ]
+    tree = CFile("generated", [
+      py_ast.body[0],
+      FunctionDecl(ct.c_void_p, "apply_all",
+        params=[SymbolRef("A")],
+        defn=[
+          For(Assign(SymbolRef("i", ct.c_int), Constant(0)),
+              Lt(SymbolRef("i"), SymbolRef("len_A")),
+              PostInc(SymbolRef("i")),
+              [
+                Assign(ArrayRef(SymbolRef("A"),SymbolRef("i")),
+                       FunctionCall(SymbolRef("apply"), [ArrayRef(SymbolRef("A"),
+                                                                  SymbolRef("i"))])),
+              ]),
+        ]
+      ),
+    ])
 
-    for nth, tx in enumerate(transformations):
-      tree = tx.visit(tree)
+    tree = PyBasicConversions().visit(tree)
 
-    tree.find(FunctionDecl, name="apply").set_static().set_inline()
+    tree.find(SymbolRef, name="len_A").replace(Constant(len_A))
 
-    with open("graph.dot", 'w') as ofile:
-      ofile.write( to_dot(tree) )
+    apply_one = tree.find(FunctionDecl, name="apply")
+    apply_one.set_static().set_inline()
+    apply_one.set_typesig(apply_one_typesig)
 
-    tree.find(SymbolRef, name="len_A").replace(Constant(len(A)))
+    apply_all = tree.find(FunctionDecl, name="apply_all")
+    apply_all.set_typesig(apply_all_typesig)
 
-    return tree
+    tree = ConvertNumpyNdpointers().visit(tree)
+
+    return Project([tree])
 
 
 class ArrayOp(object):
@@ -58,21 +80,7 @@ class ArrayOp(object):
   """
   def __init__(self):
     """Instantiate translator."""
-    kernel = get_ast(self.apply).body[0]
-    control = FunctionDecl(ct.c_void_p, "apply_all",
-      params=[SymbolRef("A")],
-      defn=[
-        For(Assign(SymbolRef("i", ct.c_int), Constant(0)),
-            Lt(SymbolRef("i"), SymbolRef("len_A")),
-            PostInc(SymbolRef("i")),
-            [
-              Assign(ArrayRef(SymbolRef("A"),SymbolRef("i")),
-                     FunctionCall(SymbolRef("apply"), [ArrayRef(SymbolRef("A"),SymbolRef("i"))])),
-            ]),
-      ]
-    )
-    project = File([kernel, control])
-    self.c_apply_all = OpTranslator(project, "apply_all")
+    self.c_apply_all = OpTranslator(get_ast(self.apply), "apply_all")
 
   def __call__(self, A):
     """Apply the operator to the arguments via a generated function."""
@@ -108,7 +116,7 @@ def main():
   py_doubler(expected_f)
   np.testing.assert_array_equal(actual_f, expected_f)
 
-  # doubling longs
+  # doubling ints
   actual_i   = np.ones(14, dtype=np.int32)
   expected_i = np.ones(14, dtype=np.int32)
   c_doubler(actual_i)

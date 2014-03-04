@@ -1,6 +1,6 @@
 import unittest
 
-from ctree.nodes.c import *
+from ctree.c.nodes import *
 
 class TestFunctionCalls(unittest.TestCase):
 

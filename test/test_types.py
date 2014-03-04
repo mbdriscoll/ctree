@@ -1,7 +1,8 @@
 import unittest
 import ctypes
 
-from ctree.nodes.c import *
+from ctree.c.nodes import *
+from ctree.types import *
 
 class TestTypeProperties(unittest.TestCase):
   def test_float_equality(self):
@@ -60,3 +61,44 @@ class TestTypeFetcher(unittest.TestCase):
     a, b = Constant('b'), Constant(2.3)
     node = Add(a, b)
     self._check(node.get_type(), ctypes.c_double)
+
+  def test_binop_compare(self):
+    a, b = Constant('b'), Constant(2.3)
+    node = Lt(a, b)
+    self._check(node.get_type(), ctypes.c_int)
+
+  def test_binop_compare(self):
+    a, b = Constant('b'), Constant(2.3)
+    node = Comma(a, b)
+    self._check(node.get_type(), ctypes.c_double)
+
+  def test_bad_constant(self):
+    class nothing: pass
+    a = Constant(nothing())
+    with self.assertRaises(Exception):
+      self._check(a.get_type(), ctypes.c_int)
+
+
+class TestCtypeConverter(unittest.TestCase):
+  class Nothing:
+    pass
+
+  def test_py_int_to_c_long(self):
+    self.assertEqual(pytype_to_ctype(int), ctypes.c_long)
+
+  def test_float_to_c_double(self):
+    self.assertEqual(pytype_to_ctype(float), ctypes.c_double)
+
+  def test_int_to_c(self):
+    self.assertEqual(get_ctype(2), ctypes.c_long)
+
+  def test_float_to_c(self):
+    self.assertEqual(get_ctype(2.3), ctypes.c_double)
+
+  def test_bad_type_coversion(self):
+    with self.assertRaises(Exception):
+      pyttype_to_ctype(self.Nothing)
+
+  def test_bad_obj_coversion(self):
+    with self.assertRaises(Exception):
+      get_ctype(self.Nothing())

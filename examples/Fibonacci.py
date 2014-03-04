@@ -11,7 +11,7 @@ In python:
 """
 
 import ctypes as ct
-from ctree.nodes.c import *
+from ctree.c.nodes import *
 
 fib_ast = \
 FunctionDecl(ct.c_int, "fib", [SymbolRef("n", ct.c_int)], [

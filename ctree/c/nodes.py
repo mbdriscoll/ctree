@@ -1,112 +1,69 @@
 """
-Defines the hierarchy of AST nodes.
-
+AST nodes for C constructs.
 """
 
-import ast
+import os
+import subprocess
+
 import logging
-import ctypes
+log = logging.getLogger(__name__)
+
+import ctypes as ct
+from ctree.ast import CtreeNode, File
+
+class CNode(CtreeNode):
+  """Base class for all C nodes in ctree."""
+  def codegen(self, indent=0):
+    from ctree.c.codegen import CCodeGen
+    return CCodeGen(indent).visit(self)
+
+  def _to_dot(self):
+    from ctree.c.dotgen import CDotGen
+    return CDotGen().visit(self)
 
 
-class CAstNode(ast.AST):
-  """Base class for all AST nodes in ctree."""
-  _fields = []
+class CFile(CNode, File):
+  """Represents a .c file."""
+  def __init__(self, name="generated", body=[]):
+    super().__init__(name, body)
+    self._ext = "c"
 
-  def __init__(self, parent=None):
-    """Initialize a new AST Node."""
-    super().__init__()
-    self.parent = parent
+  def get_bc_filename(self):
+    return "%s.bc" % self.name
 
-  def __setattr__(self, name, value):
-    """Set attribute and preserve parent pointers."""
-    if name != "parent":
-      if isinstance(value, CAstNode):
-        value.parent = self
-      elif isinstance(value, list):
-        for grandchild in value:
-          if isinstance(grandchild, CAstNode):
-            grandchild.parent = self
-    super().__setattr__(name, value)
+  def _compile(self, program_text, compilation_dir):
+    c_src_file = os.path.join(compilation_dir, self.get_filename())
+    ll_bc_file = os.path.join(compilation_dir, self.get_bc_filename())
+    log.info("File for generated C: %s" % c_src_file)
+    log.info("File for generated LLVM: %s" % ll_bc_file)
+    log.info("Generated C program: <<<\n%s\n>>>" % program_text)
 
-  def __str__(self):
-    from ctree.codegen import CodeGenerator
-    return CodeGenerator().visit(self)
+    # write program text to C file
+    with open(c_src_file, 'w') as c_file:
+      c_file.write(program_text)
 
-  def to_dot(self):
-    """Retrieve the AST in DOT format for vizualization."""
-    from ctree.dotgen import DotGenerator
-    return DotGenerator().generate_from(self)
+    # call clang to generate LLVM bitcode file
+    import ctree
+    CC = ctree.config['jit']['CC']
+    CFLAGS = ctree.config['jit']['CFLAGS']
+    compile_cmd = "%s -emit-llvm %s -o %s -c %s" % (CC, CFLAGS, ll_bc_file, c_src_file)
+    log.info("Compilation command: %s" % compile_cmd)
+    subprocess.check_call(compile_cmd, shell=True)
 
-  def get_root(self):
-    """
-    Traverse the parent pointer list to find the eldest
-    parent without a parent, aka the root.
-    """
-    root = self
-    while root.parent != None:
-      root = root.parent
-    return root
+    # load llvm bitcode
+    import llvm.core
+    with open(ll_bc_file, 'rb') as bc:
+      ll_module = llvm.core.Module.from_bitcode(bc)
+    log.info("Generated LLVM Program: <<<\n%s\n>>>" % ll_module)
 
-  def find_all(self, node_class, **kwargs):
-    """
-    Returns a generator that yields all nodes of type
-    'node_class' type whose attributes match those specified
-    in kwargs. For example, all FunctionDecls with name 'fib'
-    can be accessed via:
-    >>> my_ast.find_all(FunctionDecl, name="fib")
-    """
-    def pred(node):
-      if type(node) == node_class:
-        for attr, value in kwargs.items():
-          try:
-            if getattr(node, attr) != value:
-              break
-          except AttributeError:
-            break
-        else:
-          return True
-      return False
-    return self.find_if(pred)
+    return ll_module
 
-  def find(self, node_class, **kwargs):
-    """
-    Returns one node of type 'node_class' whose attributes
-    match those specified in kwargs, or None if no nodes
-    can be found.
-    """
-    matching = self.find_all(node_class, **kwargs)
-    try:
-      return next(matching)
-    except StopIteration:
-      return None
-
-  def find_if(self, pred):
-    """
-    Returns all nodes satisfying the given predicate,
-    or None if no satisfactory nodes are found. The search
-    starts from the current node.
-    """
-    for node in ast.walk(self):
-      if pred(node):
-        yield node
-
-  def replace(self, new_node):
-    """
-    Replace the current node with 'new_node'.
-    """
-    parent = self.parent
-    assert self.parent, "Tried to replace a node without a parent."
-    for fieldname, child in ast.iter_fields(parent):
-      if child is self:
-        setattr(parent, fieldname, new_node)
-    return new_node
-
-class Statement(CAstNode):
+class Statement(CNode):
   """Section B.2.3 6.6."""
   pass
 
 
-class Expression(CAstNode):
+class Expression(CNode):
   """Cite me."""
   def get_type(self):
     from ctree.types import TypeFetcher
@@ -194,26 +151,10 @@ class Block(Statement):
     super().__init__()
 
 
-class Project(CAstNode):
-  """Holds a list files."""
-  _fields = ['files']
-  def __init__(self, files=[]):
-    self.files = files
-    super().__init__()
-
-
-class File(CAstNode):
-  """Holds a list of statements."""
-  _fields = ['body']
-  def __init__(self, body=[]):
-    self.body = body
-    super().__init__()
-
-
 class String(Literal):
   """Cite me."""
-  def __init__(self, value=None):
-    self.value = value
+  def __init__(self, *values):
+    self.values = values
     super().__init__()
 
 
@@ -234,10 +175,15 @@ class SymbolRef(Literal):
     self.name = name
     self.type = type
     self.ctype = ctype
+    self._global = False
     super().__init__()
 
   def get_ctype(self):
     return self.ctype or self.type
+
+  def set_global(self, value=True):
+    self._global = value
+    return self
 
 
 class FunctionDecl(Statement):
@@ -250,11 +196,12 @@ class FunctionDecl(Statement):
     self.defn = defn
     self.inline = False
     self.static = False
+    self.kernel = False
     super().__init__()
 
   def get_type(self):
     arg_types = [p.get_ctype() for p in self.params]
-    return ctypes.CFUNCTYPE(self.return_type, *arg_types)
+    return ct.CFUNCTYPE(self.return_type, *arg_types)
 
   def get_callable(self):
     from ctree.jit import LazyTreeBuilder
@@ -267,6 +214,18 @@ class FunctionDecl(Statement):
   def set_static(self, value=True):
     self.static = value
     return self
+
+  def set_kernel(self, value=True):
+    self.kernel = value
+    return self
+
+  def set_typesig(self, typesig):
+    assert len(typesig) == len(self.params)+1
+    self.return_type = typesig[0]
+    for sym, ty in zip(self.params, typesig[1:]):
+      sym.type = ty
+    return self
+
 
 class UnaryOp(Expression):
   """Cite me."""

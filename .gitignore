@@ -43,3 +43,9 @@ nosetests.xml
 
 # mac icon cache
 .DS_Store
+
+# coverage html report
+htmlcov
+
+# virtualenv subdirs
+venv

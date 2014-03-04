@@ -1,14 +1,12 @@
+import os
 import ast
 import copy
 import ctypes as ct
 
-from ctree.nodes.c import *
+from ctree.ast import *
+from ctree.c.nodes import *
 from ctree.types import *
 from ctree.visitors import NodeTransformer
-
-def _eval_ast(tree):
-  """Evaluate the given subtree as a python expression."""
-  return eval(compile(ast.Expression(tree), __name__, 'eval'))
 
 class PyCtxScrubber(NodeTransformer):
   """
@@ -48,15 +46,25 @@ class PyBasicConversions(NodeTransformer):
     return BinaryOp(lhs, op, rhs)
 
   def visit_Return(self, node):
-    val = self.visit(node.value)
-    return Return(val)
+    if hasattr(node, 'value'):
+      return Return(self.visit(node.value))
+    else:
+      return Return()
 
   def visit_If(self, node):
-    assert isinstance(node, ast.If)
+    if isinstance(node, ast.If):
+      cond = self.visit(node.test)
+      then = [self.visit(t) for t in node.body]
+      elze = [self.visit(t) for t in node.orelse] or None
+      return If(cond, then, elze)
+    else:
+      return self.generic_visit(node)
+
+  def visit_IfExp(self, node):
     cond = self.visit(node.test)
-    then = [self.visit(t) for t in node.body]
-    elze = [self.visit(t) for t in node.orelse] or None
-    return If(cond, then, elze)
+    then = self.visit(node.body)
+    elze = self.visit(node.orelse)
+    return TernaryOp(cond, then, elze)
 
   def visit_Compare(self, node):
     assert len(node.ops) == 1, \
@@ -68,7 +76,7 @@ class PyBasicConversions(NodeTransformer):
 
   def visit_Module(self, node):
     body = [self.visit(s) for s in node.body]
-    return File(body)
+    return Project([CFile("module", body)])
 
   def visit_Call(self, node):
     args = [self.visit(a) for a in node.args]
@@ -76,27 +84,14 @@ class PyBasicConversions(NodeTransformer):
     return FunctionCall(fn, args)
 
   def visit_FunctionDef(self, node):
+    if ast.get_docstring(node):
+      node.body.pop(0)
     params = [self.visit(p) for p in node.args.args]
     defn = [self.visit(s) for s in node.body]
     return FunctionDecl(node.returns, node.name, params, defn)
 
   def visit_arg(self, node):
     return SymbolRef(node.arg, node.annotation)
-
-
-class PyTypeRecognizer(NodeTransformer):
-  """
-  Convert types in function annotations to ctree types.
-  """
-  def visit_arg(self, node):
-    if node.annotation:
-      node.annotation = py_type_to_ctree_type( _eval_ast(node.annotation) )
-    return self.generic_visit(node)
-
-  def visit_FunctionDef(self, node):
-    if node.returns:
-      node.returns = py_type_to_ctree_type( _eval_ast(node.returns) )
-    return self.generic_visit(node)
 
 
 class FixUpParentPointers(NodeTransformer):
@@ -114,47 +109,6 @@ class FixUpParentPointers(NodeTransformer):
         self.visit(child)
     return node
 
-class StripPythonDocstrings(NodeTransformer):
-  """
-  Remove docstrings like this one from classes and method defs.
-  """
-  def visit_FunctionDef(self, node):
-    if ast.get_docstring(node):
-      node.body.pop(0)
-    return self.generic_visit(node)
-
-  def visit_ClassDef(self, node):
-    if ast.get_docstring(node):
-      node.body.pop(0)
-    return self.generic_visit(node)
-
-class SetParamTypes(NodeTransformer):
-  """
-  Sets the parameter types according to the given type signature.
-  For ctree FunctionDecl nodes, sets Param.type field.
-  For ast.FunctionDef nodes, sets arg.annotation field.
-
-  The target must have the same number of parameters as there
-  are entries in the type signature.
-  """
-  def __init__(self, target, typesig):
-    self.target = target
-    self.typesig = typesig
-    super().__init__()
-
-  def visit_FunctionDecl(self, node):
-    if node.name == self.target:
-      node.return_type = self.typesig[0]
-      for ty, param in zip(self.typesig[1:], node.params):
-        param.type = ty
-    return node
-
-  def visit_FunctionDef(self, node):
-    if node.name == self.target:
-      node.returns = self.typesig[0]
-      for ty, arg in zip(self.typesig[1:], node.args.args):
-        arg.annotation = ty
-    return node
 
 class ConvertNumpyNdpointers(NodeTransformer):
   """
@@ -171,3 +125,15 @@ class ConvertNumpyNdpointers(NodeTransformer):
       node.ctype = node.type
       node.type = self._convert(node.ctype)
     return node
+
+
+class ResolveGeneratedPathRefs(NodeTransformer):
+  """
+  Converts any instances of ctree.ast.GeneratedPathRef into strings containing the absolute path
+  of the target file.
+  """
+  def __init__(self, compilation_dir):
+    self.compilation_dir = compilation_dir
+
+  def visit_GeneratedPathRef(self, node):
+    return String(os.path.join(self.compilation_dir, node.target.get_filename()))

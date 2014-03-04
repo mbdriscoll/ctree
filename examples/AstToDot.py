@@ -9,13 +9,17 @@ The resulting file can be viewed with a visualizer like Graphiz.
 """
 
 import ctypes as ct
-from ctree.nodes.c import *
+
+from ctree.ast import *
+from ctree.c.nodes import *
+
+from ctree.dotgen import to_dot
 
 def main():
   stmt0 = Assign(SymbolRef('foo'), Constant(123.4))
   stmt1 = FunctionDecl(ct.c_float, SymbolRef("bar"), [SymbolRef("spam", ct.c_int), SymbolRef("eggs", ct.c_long)], [String("baz")])
-  tree = File([stmt0, stmt1])
-  print (tree.to_dot())
+  tree = CFile("myfile", [stmt0, stmt1])
+  print (to_dot(tree))
 
 if __name__ == '__main__':
   main()

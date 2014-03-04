@@ -10,6 +10,7 @@ import numpy as np
 from ctree.transformations import *
 from ctree.frontend import get_ast
 from ctree.jit import LazySpecializedFunction
+from ctree.types import get_ctype
 
 def fib(n):
   if n < 2:
@@ -22,18 +23,16 @@ class BasicTranslator(LazySpecializedFunction):
   def __init__(self, func):
     super().__init__( get_ast(func), func.__name__ )
 
-  def transform(self, tree, args):
-    """Convert the Python AST to a C AST."""
-    fib_arg_type = pytype_to_ctype( type(args[0]) )
-    fib_sig = (fib_arg_type, fib_arg_type)
+  def args_to_subconfig(self, args):
+    return get_ctype(args[0])
 
-    transformations = [
-      PyBasicConversions(),
-      FixUpParentPointers(),
-      SetParamTypes("fib", fib_sig),
-    ]
-    for tx in transformations:
-      tree = tx.visit(tree)
+  def transform(self, tree, program_config):
+    """Convert the Python AST to a C AST."""
+    tree = PyBasicConversions().visit(tree)
+
+    fib_arg_type = program_config[0]
+    fib_sig = (fib_arg_type, fib_arg_type)
+    tree.find(FunctionDecl, name="fib").set_typesig(fib_sig)
 
     return tree
 

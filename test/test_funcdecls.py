@@ -1,7 +1,7 @@
 import unittest
 import ctypes as ct
 
-from ctree.nodes.c import *
+from ctree.c.nodes import *
 
 class TestFuncDecls(unittest.TestCase):
 
