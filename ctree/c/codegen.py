@@ -14,6 +14,7 @@ class CCodeGen(CodeGenVisitor):
     """
     Manages generation of C code.
     """
+
     def _requires_parentheses(self, node):
         """
         Return True if the current precedence is less than the
@@ -22,12 +23,12 @@ class CCodeGen(CodeGenVisitor):
         enclose with parentheses.
         """
         parent = getattr(node, 'parent', None)
-        if isinstance(node, (UnaryOp, BinaryOp, TernaryOp)) and\
+        if isinstance(node, (UnaryOp, BinaryOp, TernaryOp)) and \
                 isinstance(parent, (UnaryOp, BinaryOp, TernaryOp)):
             prec = get_precedence(node)
             parent_prec = get_precedence(parent)
-            is_not_last_child = isinstance(parent, UnaryOp) or\
-                                (isinstance(parent, BinaryOp) and node is parent.left) or\
+            is_not_last_child = isinstance(parent, UnaryOp) or \
+                                (isinstance(parent, BinaryOp) and node is parent.left) or \
                                 (isinstance(parent, TernaryOp) and node is not parent.elze)
             assoc_left = is_left_associative(parent)
             if (prec < parent_prec) or \

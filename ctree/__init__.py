@@ -20,11 +20,11 @@ log = logging.getLogger(__name__)
 # configuration file parsing
 
 try:
-  # python 3
-  import configparser
+    # python 3
+    import configparser
 except ImportError:
-  # python 2
-  import ConfigParser as configparser
+    # python 2
+    import ConfigParser as configparser
 
 from os import path, getcwd
 
@@ -44,9 +44,9 @@ found = config.read(cfg_paths)
 log.info("found config files: %s" % found)
 
 if sys.version_info.major == 2:
-  from io import BytesIO as Memfile
+    from io import BytesIO as Memfile
 else:
-  from io import StringIO as Memfile
+    from io import StringIO as Memfile
 
 configfile = Memfile()
 config.write(configfile)

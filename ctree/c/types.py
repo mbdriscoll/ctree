@@ -77,9 +77,9 @@ class Ptr(CType):
     def __init__(self, base_type=Void()):
         self.base_type = base_type
 
-
     def as_ctype(self):
         return ctypes.POINTER(self.base_type.as_ctype())
+
 
 class FuncType(CType):
     _fields = ['return_type', 'arg_types']
@@ -101,14 +101,14 @@ class NdPointer(CType):
         self.ptr = ndpointer(dtype, ndim, shape, flags)
 
     def get_base_type(self):
-      return get_ctree_type(self.ptr._dtype_)
+        return get_ctree_type(self.ptr._dtype_)
 
     def as_ctype(self):
         return self.ptr
 
 
 class FILE(CType):
-  pass
+    pass
 
 
 class CTypeResolver(CtreeTypeResolver):

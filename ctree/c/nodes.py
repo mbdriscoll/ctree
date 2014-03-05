@@ -175,6 +175,7 @@ class String(Literal):
 class SymbolRef(Literal):
     """Cite me."""
     _next_id = 0
+
     def __init__(self, name=None, type=None, _global=False):
         """
         Create a new symbol with the given name. If a declaration
@@ -212,6 +213,7 @@ class SymbolRef(Literal):
 class FunctionDecl(Statement):
     """Cite me."""
     _fields = ['params', 'defn']
+
     def __init__(self, return_type=None, name=None, params=None, defn=None):
         self.return_type = return_type
         self.name = name
@@ -224,11 +226,13 @@ class FunctionDecl(Statement):
 
     def get_type(self):
         from ctree.c.types import FuncType
+
         arg_types = [p.get_type() for p in self.params]
         return FuncType(self.return_type, arg_types)
 
     def get_callable(self):
         from ctree.jit import LazyTreeBuilder
+
         return LazyTreeBuilder(self)
 
     def set_inline(self, value=True):
@@ -244,7 +248,7 @@ class FunctionDecl(Statement):
         return self
 
     def set_typesig(self, typesig):
-        assert len(typesig) == len(self.params)+1
+        assert len(typesig) == len(self.params) + 1
         self.return_type = typesig[0]
         for sym, ty in zip(self.params, typesig[1:]):
             sym.type = ty
