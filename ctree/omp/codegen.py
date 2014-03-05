@@ -6,26 +6,27 @@ from ctree.codegen import CodeGenVisitor
 
 
 class OmpCodeGen(CodeGenVisitor):
-  """
-  Visitor to generate omp code.
-  """
-  def visit_OmpParallel(self, node):
-    s = "#pragma omp parallel"
-    if node.clauses:
-      s += " " + ", ".join(map(str, node.clauses))
-    return s
+    """
+    Visitor to generate omp code.
+    """
 
-  def visit_OmpParallelFor(self, node):
-    s = "#pragma omp parallel for"
-    if node.clauses:
-      s += " " + ", ".join(map(str, node.clauses))
-    return s
+    def visit_OmpParallel(self, node):
+        s = "#pragma omp parallel"
+        if node.clauses:
+            s += " " + ", ".join(map(str, node.clauses))
+        return s
 
-  def visit_OmpIfClause(self, node):
-    return "if(%s)" % node.exp
+    def visit_OmpParallelFor(self, node):
+        s = "#pragma omp parallel for"
+        if node.clauses:
+            s += " " + ", ".join(map(str, node.clauses))
+        return s
 
-  def visit_OmpNumThreadsClause(self, node):
-    return "num_threads(%s)" % node.val
+    def visit_OmpIfClause(self, node):
+        return "if(%s)" % node.exp
 
-  def visit_OmpNoWaitClause(self, node):
-    return "nowait"
+    def visit_OmpNumThreadsClause(self, node):
+        return "num_threads(%s)" % node.val
+
+    def visit_OmpNoWaitClause(self, node):
+        return "nowait"
