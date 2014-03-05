@@ -144,6 +144,7 @@ class StencilTransformer(NodeTransformer):
                 return ret_node
             if node.iter.func.attr is 'neighbors':
                 neighbors = self.neighbor_definition[node.iter.args[1].n]
+                neighbors_of_grid = node.iter.args[0]
                 body = []
                 output_index = self.gen_fresh_var()
                 body.append(SymbolRef(output_index, ct.c_int))
