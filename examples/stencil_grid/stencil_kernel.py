@@ -29,7 +29,7 @@ from copy import deepcopy
 
 import ctree.transformations as transform
 from ctree.jit import LazySpecializedFunction
-import ctree.types
+from ctree.c.types import *
 from ctree.frontend import get_ast
 from ctree.visitors import NodeTransformer
 from ctree.c.nodes import *
@@ -51,9 +51,9 @@ class SpecializedTranslator(LazySpecializedFunction):
 
   def transform(self, tree, program_config):
     """Convert the Python AST to a C AST."""
-    kernel_sig = [None]
+    kernel_sig = [Void()]
     for arg in program_config[0]:
-        kernel_sig.append(numpy.ctypeslib.ndpointer(arg[1], arg[2], arg[3]))
+        kernel_sig.append(NdPointer(arg[1], arg[2], arg[3]))
 
     tree = StencilTransformer(self.input_grids, self.output_grid).visit(tree)
     tree = transform.PyBasicConversions().visit(tree)
@@ -61,7 +61,6 @@ class SpecializedTranslator(LazySpecializedFunction):
     params.pop(0)
     self.gen_array_macro_definition(tree, params)
     tree.find(FunctionDecl, name="kernel").set_typesig(kernel_sig)
-    tree = transform.ConvertNumpyNdpointers().visit(tree)
     # print(ast.dump(tree))
     return tree
 
@@ -115,14 +114,14 @@ class StencilTransformer(NodeTransformer):
                     target = SymbolRef(self.gen_fresh_var())
                     self.var_list.append(target.name)
                     if d == 0:
-                        curr_node = For(Assign(SymbolRef(target.name, ct.c_int), initial),
+                        curr_node = For(Assign(SymbolRef(target.name, Int()), initial),
                                        LtE(target, end),
                                        PostInc(target),
                                        []
                                     )
                         ret_node = curr_node
                     elif d == dim - 2:
-                        next_node = [OmpParallelFor(), For(Assign(SymbolRef(target.name, ct.c_int), initial),
+                        next_node = [OmpParallelFor(), For(Assign(SymbolRef(target.name, Int()), initial),
                                        LtE(target, end),
                                        PostInc(target),
                                        []
@@ -130,7 +129,7 @@ class StencilTransformer(NodeTransformer):
                         curr_node.body = next_node
                         curr_node = next_node[1]
                     elif d == dim - 1:
-                        next_node = [OmpIvDep(), For(Assign(SymbolRef(target.name, ct.c_int), initial),
+                        next_node = [OmpIvDep(), For(Assign(SymbolRef(target.name, Int()), initial),
                                        LtE(target, end),
                                        PostInc(target),
                                        []
@@ -138,7 +137,7 @@ class StencilTransformer(NodeTransformer):
                         curr_node.body = next_node
                         curr_node = next_node[1]
                     else:
-                        curr_node.body = [For(Assign(SymbolRef(target.name, ct.c_int), initial),
+                        curr_node.body = [For(Assign(SymbolRef(target.name, Int()), initial),
                                        LtE(target, end),
                                        PostInc(target),
                                        []
@@ -155,7 +154,7 @@ class StencilTransformer(NodeTransformer):
                 neighbors_of_grid = node.iter.args[0].id
                 body = []
                 self.output_index = self.gen_fresh_var()
-                body.append(SymbolRef(self.output_index, ct.c_int))
+                body.append(SymbolRef(self.output_index, Int()))
                 body.append(Assign(SymbolRef(self.output_index), self.gen_array_macro(self.output_grid_name, [SymbolRef(x) for x in self.var_list])))
                 statement = self.visit(node.body[0])
                 for x in grid.neighbors(zero_point, neighbors_id):
