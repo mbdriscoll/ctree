@@ -12,8 +12,6 @@ class CDotGen(DotGenVisitor):
     s = r"name: %s" % node.name
     if node.type:
       s += r"\ntype: %s" % node.type
-    if node.ctype:
-      s += r"\nctype: %s" % node.ctype
     return s
 
   def label_FunctionDecl(self, node):
