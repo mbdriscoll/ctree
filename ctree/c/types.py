@@ -127,6 +127,7 @@ class NumpyTypeResolver(CtreeTypeResolver):
     def resolve(ty):
         import numpy as np
 
+        # pylint: disable=no-member
         if ty == np.int32:
             return Int()
         elif ty == np.int64:
@@ -135,6 +136,7 @@ class NumpyTypeResolver(CtreeTypeResolver):
             return Float()
         elif ty == np.float64:
             return Double()
+        # pylint: enable=no-member
 
 
 class CTypeFetcher(TypeFetcher):

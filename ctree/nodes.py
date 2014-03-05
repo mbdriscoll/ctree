@@ -63,7 +63,7 @@ class CtreeNode(ast.AST):
         'node_class' type whose attributes match those specified
         in kwargs. For example, all FunctionDecls with name 'fib'
         can be accessed via:
-        >>> my_ast.find_all(FunctionDecl, name="fib")
+            my_ast.find_all(FunctionDecl, name="fib")
         """
 
         def pred(node):

@@ -40,7 +40,6 @@ class TestAstInsertion(unittest.TestCase):
         c;
     }""")
 
-
     def test_insert_before_mid(self):
         self.mid.insert_before(SymbolRef("d"))
         self._check(self.block, """\

@@ -10,7 +10,7 @@ import logging
 log = logging.getLogger(__name__)
 
 from ctree.nodes import CtreeNode, File
-
+from ctree.util import singleton
 
 class CNode(CtreeNode):
     """Base class for all C nodes in ctree."""
@@ -302,6 +302,7 @@ class Cast(Expression):
         super(Cast, self).__init__()
 
 
+@singleton
 class Op:
     class _Op(object):
         def __str__(self):

@@ -73,7 +73,8 @@ class TestTypeFetcher(unittest.TestCase):
         self._check(node.get_type(), Double())
 
     def test_bad_constant(self):
-        class nothing: pass
+        class nothing:
+            pass
 
         a = Constant(nothing())
         with self.assertRaises(Exception):
