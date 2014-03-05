@@ -10,6 +10,9 @@ import numpy as np
 from ctree.frontend import get_ast
 from ctree.c.nodes import *
 from ctree.c.types import *
+from ctree.ocl.nodes import *
+from ctree.ocl.types import *
+from ctree.ocl.macros import *
 from ctree.dotgen import to_dot
 from ctree.transformations import *
 from ctree.jit import LazySpecializedFunction

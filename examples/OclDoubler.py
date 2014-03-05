@@ -11,6 +11,8 @@ from ctree.c.nodes import *
 from ctree.c.types import *
 from ctree.cpp.nodes import *
 from ctree.ocl.nodes import *
+from ctree.ocl.types import *
+from ctree.ocl.macros import *
 from ctree.transformations import *
 from ctree.jit import LazySpecializedFunction
 from ctree.types import get_ctree_type
@@ -42,7 +44,7 @@ class OpTranslator(LazySpecializedFunction):
                          A_type.get_base_type()]
     apply_one.set_typesig(apply_one_typesig)
 
-    apply_all = FunctionDecl(Void(), "apply_all",
+    apply_kernel = FunctionDecl(Void(), "apply_kernel",
       params=[SymbolRef("A", A_type), SymbolRef("n", Int())],
       defn=[
         Assign(SymbolRef("i", Int()), FunctionCall(SymbolRef("get_global_id"), [Constant(0)])),
@@ -51,17 +53,24 @@ class OpTranslator(LazySpecializedFunction):
                  FunctionCall(SymbolRef("apply"), [ArrayRef(SymbolRef("A"), SymbolRef("i"))]))
         ])
       ])
-    apply_all.set_kernel()
+    apply_kernel.set_kernel()
 
-    kernel = OclFile("kernel", [apply_one, apply_all])
+    kernel = OclFile("kernel", [apply_one, apply_kernel])
     kernel_path_ref = kernel.get_generated_path_ref()
 
+    device_id = SymbolRef("device_id", cl_device_id())
+
     control = CFile("control", [
+      CppInclude("stdio.h"),
       CppInclude("OpenCL/opencl.h"),
       Assign(SymbolRef("kernel_path", Ptr(Char())), kernel_path_ref),
       FunctionDecl(Void(), "apply_all",
         params=[SymbolRef("A", A_type)],
-        defn=[ Return() ]
+        defn=[
+          device_id.copy(declare=True),
+          safe_clGetDeviceIDs(device_id=Ref(device_id.copy())),
+          Return(),
+        ]
       ),
     ])
 

@@ -159,31 +159,39 @@ class String(Literal):
 
 class SymbolRef(Literal):
   """Cite me."""
-  def __init__(self, name=None, type=None, ctype=None):
+  _next_id = 0
+  def __init__(self, name=None, type=None, _global=False):
     """
     Create a new symbol with the given name. If a declaration
     type is specified, the symbol is considered a declaration
     and unparsed with the type.
-
-    The ctype field is used when the ctype used to do Python
-    type-checking differs from the type declared at the C level.
-    This arises in the case of Numpy arrays where ctypes checks
-    against a np.ctypeslib.ndpointer, but the C code can have
-    a basic "double*" type (or something equivalent).
     """
     self.name = name
     self.type = type
-    self.ctype = ctype
     self._global = False
     super().__init__()
-
-  def get_ctype(self):
-    return self.ctype or self.type
 
   def set_global(self, value=True):
     self._global = value
     return self
 
+  @classmethod
+  def unique(cls, name="name", type=None):
+    """
+    Factory for making unique symbols.
+    """
+    sym = SymbolRef("%s_%d" % (name, cls._next_id), type)
+    cls._next_id += 1
+    return sym
+
+  def copy(self, declare=False):
+    if declare:
+      return SymbolRef(self.name, self.type, self._global)
+    else:
+      return SymbolRef(self.name)
+
+  def get_ctype(self):
+    return self.type.as_ctype()
 
 class FunctionDecl(Statement):
   """Cite me."""
@@ -200,7 +208,7 @@ class FunctionDecl(Statement):
 
   def get_type(self):
     from ctree.c.types import FuncType
-    arg_types = [p.get_ctype() for p in self.params]
+    arg_types = [p.get_type() for p in self.params]
     return FuncType(self.return_type, arg_types)
 
   def get_callable(self):
@@ -269,8 +277,8 @@ class TernaryOp(Expression):
 class Cast(Expression):
    """doc"""
    _fields = ['value']
-   def __init__(self, ctype=None, value=None):
-     self.type = ctype
+   def __init__(self, type=None, value=None):
+     self.type = type
      self.value = value
      super().__init__()
 

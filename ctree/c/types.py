@@ -34,6 +34,9 @@ class Ptr(CType):
   def __init__(self, base_type=Void()):
     self.base_type = base_type
 
+  def as_ctype(self):
+    return ctypes.POINTER(self.base_type.as_ctype())
+
 class FuncType(CType):
   _fields = ['return_type', 'arg_types']
   def __init__(self, return_type=Void(), arg_types=[]):
@@ -61,11 +64,12 @@ class NdPointer(CType):
 class CTypeResolver(CtreeTypeResolver):
   @staticmethod
   def resolve(obj):
-    if   isinstance(obj, int):   return Long()
-    elif isinstance(obj, float): return Double()
+    if isinstance(obj, int):
+      return Long()
+    elif isinstance(obj, float):
+      return Double()
     elif isinstance(obj, str):
       return Char() if len(obj) == 1 else Ptr(Char())
-    print ("resolve %s" % repr(obj))
 
 
 class NumpyTypeResolver(CtreeTypeResolver):
