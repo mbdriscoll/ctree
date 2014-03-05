@@ -36,8 +36,11 @@ from ctree.omp.nodes import *
 
 
 class SpecializedTranslator(LazySpecializedFunction):
-  def __init__(self, func, ghost_depth):
-    self.ghost_depth = ghost_depth
+  def __init__(self, func, input_grids, output_grid):
+    self.ghost_depth = output_grid.ghost_depth
+    self.neighbor_definition = input_grids[0].neighbor_definition
+    self.input_grids = input_grids
+    self.output_grid = output_grid
     super().__init__( get_ast(func), func.__name__ )
 
   def args_to_subconfig(self, args):
@@ -52,14 +55,27 @@ class SpecializedTranslator(LazySpecializedFunction):
     for arg in program_config[0]:
         kernel_sig.append(numpy.ctypeslib.ndpointer(arg[1], arg[2], arg[3]))
 
-    tree = StencilTransformer(program_config[0][0], program_config[0][-1], self.ghost_depth).visit(tree)
-    print(ast.dump(tree))
+    tree = StencilTransformer(program_config[0][0], program_config[0][-1], self.ghost_depth, self.neighbor_definition).visit(tree)
+    # print(ast.dump(tree))
     tree = transform.PyBasicConversions().visit(tree)
-    tree.find(FunctionDecl, name="kernel").params.pop(0)
+    params = tree.find(FunctionDecl, name="kernel").params
+    params.pop(0) # Remove self param
+    self.gen_array_macro_definition(tree, params)
     tree.find(FunctionDecl, name="kernel").set_typesig(kernel_sig)
     tree = transform.ConvertNumpyNdpointers().visit(tree)
 
     return tree
+
+  def gen_array_macro_definition(self, tree, arg_names):
+    first_for = tree.find(For)
+    for index, arg in enumerate(self.input_grids + (self.output_grid, )):
+        defname = "_%s_array_macro" % arg_names[index]
+        params = "(" + ','.join(["_d"+str(x) for x in range(arg.dim)]) + ")"
+        calc = "(_d%d" % (arg.dim - 1)
+        for x in range(arg.dim - 1):
+            calc += "+(_d%s * %s)" % (str(x), str(arg.data.strides[x]/arg.data.itemsize))
+        calc += ")"
+        first_for.insert_before(Define(defname+params, calc))
 
 class Grid(object):
     def __init__(self, grid):
@@ -68,12 +84,20 @@ class Grid(object):
 class StencilTransformer(NodeTransformer):
 
 
-    def __init__(self, in_grid, out_grid, ghost_depth):
+    def __init__(self, in_grid, out_grid, ghost_depth, neighbor_definition):
         # TODO: Give these wrapper classes?
         self.in_grid = Grid(in_grid)
         self.out_grid = Grid(out_grid)
         self.ghost_depth = ghost_depth
+        self.next_fresh_var = 0
+        self.var_list = []
+        self.neighbor_definition = neighbor_definition
         super(StencilTransformer, self).__init__()
+
+    def gen_fresh_var(self):
+        self.next_fresh_var += 1
+        self.var_list.append(self.next_fresh_var)
+        return "x%d" % self.next_fresh_var
 
     def visit_For(self, node):
         if type(node.iter) is ast.Call and \
@@ -85,8 +109,7 @@ class StencilTransformer(NodeTransformer):
                 for d in range(dim):  
                     initial = Constant(self.ghost_depth)
                     end = Constant(self.out_grid.shape[d] - self.ghost_depth - 1)
-                    # TODO: GEN FRESH VAR
-                    target = SymbolRef(node.target.id)
+                    target = SymbolRef(self.gen_fresh_var())
                     if d == 0:
                         curr_node = For(Assign(SymbolRef(target.name, ct.c_int), initial),
                                        Lt(target, end),
@@ -117,10 +140,22 @@ class StencilTransformer(NodeTransformer):
                                        []
                                     )]
                         curr_node = curr_node.body[0]
-                curr_node.body = node.body
+                curr_node.body = list(map(self.visit, node.body))
                 return ret_node
+            if node.iter.func.attr is 'neighbors':
+                neighbors = self.neighbor_definition[node.iter.args[1].n]
+                body = []
+                output_index = self.gen_fresh_var()
+                body.append(SymbolRef(output_index, ct.c_int))
+                statement = self.visit(node.body[0])
+                print(ast.dump(statement))
         return node
 
+    # Handle array references
+    def visit_Subscript(self, node):
+        array = node.value.id
+        ref = self.visit(node.slice)
+        return ArrayRef(SymbolRef(array), ref)
 
 
 # may want to make this inherit from something else...
@@ -175,7 +210,7 @@ class StencilKernel(object):
             return self.pure_python_kernel(*args)
 
         myargs = [y.data for y in args]
-        self.model = SpecializedTranslator(self.model, args[-1].ghost_depth)
+        self.model = SpecializedTranslator(self.model, args[0:-1], args[-1])
         self.model(myargs)
 
         #FIXME: instead of doing this short-circuit, we should use the Asp infrastructure to

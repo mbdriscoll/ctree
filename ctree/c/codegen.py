@@ -131,6 +131,9 @@ class CCodeGen(CodeGenVisitor):
       s += "%s " % self._ctype_to_str(node.type)
     return "%s%s" % (s, node.name)
 
+  def visit_Define(self, node):
+    return "#define %s %s" % (self.defname, self.calc)
+
   def visit_Block(self, node):
      return self._genblock(node.body)
 
