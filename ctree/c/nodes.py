@@ -29,7 +29,9 @@ class CNode(CtreeNode):
 class CFile(CNode, File):
     """Represents a .c file."""
 
-    def __init__(self, name="generated", body=[]):
+    def __init__(self, name="generated", body=None):
+        if not body:
+            body = []
         super(CFile, self).__init__(name, body)
         self._ext = "c"
 
@@ -104,17 +106,17 @@ class While(Statement):
     """Cite me."""
     _fields = ['cond', 'body']
 
-    def __init__(self, cond=None, body=[]):
+    def __init__(self, cond=None, body=None):
         self.cond = cond
-        self.body = body
+        self.body = body if body else []
         super(While, self).__init__()
 
 
 class DoWhile(Statement):
     _fields = ['body', 'cond']
 
-    def __init__(self, body=[], cond=None):
-        self.body = body
+    def __init__(self, body=None, cond=None):
+        self.body = body if body else []
         self.cond = cond
         super(DoWhile, self).__init__()
 
@@ -134,9 +136,9 @@ class FunctionCall(Expression):
     """Cite me."""
     _fields = ['func', 'args']
 
-    def __init__(self, func=None, args=[]):
+    def __init__(self, func=None, args=None):
         self.func = func
-        self.args = args
+        self.args = args if args else []
         super(FunctionCall, self).__init__()
 
 
@@ -157,8 +159,8 @@ class Block(Statement):
     """Cite me."""
     _fields = ['body']
 
-    def __init__(self, body=[]):
-        self.body = body
+    def __init__(self, body=None):
+        self.body = body if body else []
         super(Block, self).__init__()
 
 
@@ -173,14 +175,15 @@ class String(Literal):
 class SymbolRef(Literal):
     """Cite me."""
     _next_id = 0
-    def __init__(self, name=None, type=None, _global=False):
+
+    def __init__(self, name=None, sym_type=None, _global=False):
         """
         Create a new symbol with the given name. If a declaration
         type is specified, the symbol is considered a declaration
         and unparsed with the type.
         """
         self.name = name
-        self.type = type
+        self.type = sym_type
         self._global = False
         super(SymbolRef, self).__init__()
 
@@ -189,11 +192,11 @@ class SymbolRef(Literal):
         return self
 
     @classmethod
-    def unique(cls, name="name", type=None):
+    def unique(cls, name="name", sym_type=None):
         """
         Factory for making unique symbols.
         """
-        sym = SymbolRef("%s_%d" % (name, cls._next_id), type)
+        sym = SymbolRef("%s_%d" % (name, cls._next_id), sym_type)
         cls._next_id += 1
         return sym
 
@@ -206,14 +209,16 @@ class SymbolRef(Literal):
     def get_ctype(self):
         return self.type.as_ctype()
 
+
 class FunctionDecl(Statement):
     """Cite me."""
     _fields = ['params', 'defn']
-    def __init__(self, return_type=None, name=None, params=[], defn=[]):
+
+    def __init__(self, return_type=None, name=None, params=None, defn=None):
         self.return_type = return_type
         self.name = name
-        self.params = params
-        self.defn = defn
+        self.params = params if params else []
+        self.defn = defn if defn else []
         self.inline = False
         self.static = False
         self.kernel = False
@@ -291,8 +296,8 @@ class Cast(Expression):
     """doc"""
     _fields = ['value']
 
-    def __init__(self, type=None, value=None):
-        self.type = type
+    def __init__(self, sym_type=None, value=None):
+        self.type = sym_type
         self.value = value
         super(Cast, self).__init__()
 
