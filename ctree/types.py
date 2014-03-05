@@ -26,7 +26,8 @@ class TypeFetcher(NodeVisitor):
   """
   pass
 
-class CtreeTypeResolver(metaclass=abc.ABCMeta):
+class CtreeTypeResolver:
+  __metaclass__ = abc.ABCMeta
   @staticmethod
   @abc.abstractmethod
   def resolve(obj):

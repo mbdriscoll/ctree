@@ -167,6 +167,8 @@ class TestBasicConversions(unittest.TestCase):
     c_ast = Lt(Constant(1), Constant(2))
     self._check(py_ast, c_ast)
 
+  import sys
+  @unittest.skipIf(sys.version[1] > 2, "arg not defined for python2")
   def test_arg(self):
     py_ast = ast.arg("foo", None)
     c_ast = SymbolRef("foo")

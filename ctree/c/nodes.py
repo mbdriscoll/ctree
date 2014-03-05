@@ -43,8 +43,8 @@ class CFile(CNode, File):
 
     # call clang to generate LLVM bitcode file
     import ctree
-    CC = ctree.config['jit']['CC']
-    CFLAGS = ctree.config['jit']['CFLAGS']
+    CC = ctree.config.get('jit','CC')
+    CFLAGS = ctree.config.get('jit','CFLAGS')
     compile_cmd = "%s -emit-llvm %s -o %s -c %s" % (CC, CFLAGS, ll_bc_file, c_src_file)
     log.info("Compilation command: %s" % compile_cmd)
     subprocess.check_call(compile_cmd, shell=True)

@@ -87,7 +87,7 @@ class PyBasicConversions(NodeTransformer):
       node.body.pop(0)
     params = [self.visit(p) for p in node.args.args]
     defn = [self.visit(s) for s in node.body]
-    return FunctionDecl(node.returns, node.name, params, defn)
+    return FunctionDecl(None, node.name, params, defn)
 
   def visit_arg(self, node):
     return SymbolRef(node.arg, node.annotation)
