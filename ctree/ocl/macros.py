@@ -119,7 +119,7 @@ def read_program_into_string(kernel_source, kernel_path):
     return tree
 
 
-"""
+sample_code = '''
 128     FILE *kernelFile = fopen("/Users/mbdriscoll/tmp/learn_ocl/square.cl", "rb");
 129     if (kernelFile == NULL) {
 130         printf("Error: Coudn't open kernel file.\n");
@@ -138,4 +138,4 @@ def read_program_into_string(kernel_source, kernel_path):
 150         printf("Error: read fewer bytes of kernel text than expected.\n");
 151         return EXIT_FAILURE;
 153     fclose(kernelFile);
-"""
+'''

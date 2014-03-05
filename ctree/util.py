@@ -79,7 +79,7 @@ class DotManager(object):
         import io
         from IPython.display import Image
 
-        import ctree.dotgen.to_dot
+        from  ctree.dotgen import to_dot
 
         dot_text = to_dot(ast_node)
 

@@ -74,8 +74,8 @@ class Ptr(CType):
     """
     _fields = ['base_type']
 
-    def __init__(self, base_type=Void()):
-        self.base_type = base_type
+    def __init__(self, base_type=None):
+        self.base_type = base_type if base_type else Void()
 
     def as_ctype(self):
         return ctypes.POINTER(self.base_type.as_ctype())
