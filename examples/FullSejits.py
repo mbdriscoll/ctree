@@ -55,7 +55,7 @@ def main():
     assert fib(14) == c_fib(14)
     assert fib(13.7) == c_fib(13.7)
 
-    print "Success."
+    print ("Success.")
 
 
 if __name__ == '__main__':

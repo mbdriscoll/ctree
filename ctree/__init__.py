@@ -1,3 +1,5 @@
+from __future__ import print_function
+
 # ---------------------------------------------------------------------------
 # explicit version check
 
@@ -17,10 +19,16 @@ log = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 # configuration file parsing
 
-import ConfigParser
+try:
+  # python 3
+  import configparser
+except ImportError:
+  # python 2
+  import ConfigParser as configparser
+
 from os import path, getcwd
 
-config = ConfigParser.ConfigParser()
+config = configparser.ConfigParser()
 default_cfg_file_path = path.join(path.abspath(path.dirname(__file__)), "defaults.cfg")
 log.info("reading default configuration from: %s" % default_cfg_file_path)
 
@@ -35,9 +43,12 @@ log.info("checking for config files at: %s" % cfg_paths)
 found = config.read(cfg_paths)
 log.info("found config files: %s" % found)
 
-import StringIO
+if sys.version_info.major == 2:
+  from io import BytesIO as Memfile
+else:
+  from io import StringIO as Memfile
 
-configfile = StringIO.StringIO()
+configfile = Memfile()
 config.write(configfile)
 config_txt = configfile.getvalue()
 log.info("using configuration:\n%s" % config_txt)

@@ -1,4 +1,5 @@
 import ast
+import sys
 import unittest
 
 from fixtures import *
@@ -93,7 +94,7 @@ class TestStripDocstrings(unittest.TestCase):
     def _check(self, tree):
         for node in ast.walk(tree):
             if isinstance(node, ast.Str):
-                print node.s
+                print(node.s)
             self.assertNotIsInstance(node, ast.Str)
 
     def test_func_docstring(self):
@@ -167,9 +168,7 @@ class TestBasicConversions(unittest.TestCase):
         c_ast = Lt(Constant(1), Constant(2))
         self._check(py_ast, c_ast)
 
-    import sys
-
-    @unittest.skipIf(sys.version[1] > 2, "arg not defined for python2")
+    @unittest.skipIf(sys.version_info.major == 2, "arg not defined for python2")
     def test_arg(self):
         py_ast = ast.arg("foo", None)
         c_ast = SymbolRef("foo")

@@ -91,8 +91,7 @@ class Doubler(ArrayOp):
 
 
 def py_doubler(A):
-    for i in xrange(len(A)):
-        A[i] *= 2
+    A *= 2
 
 
 def main():
@@ -126,7 +125,7 @@ def main():
     py_doubler(expected_i)
     np.testing.assert_array_equal(actual_i, expected_i)
 
-    print "Success."
+    print("Success.")
 
 
 if __name__ == '__main__':

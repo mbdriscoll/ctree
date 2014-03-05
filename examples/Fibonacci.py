@@ -23,7 +23,7 @@ fib_ast = \
 
 
 def main():
-    print "Generated code is:\n%s" % fib_ast
+    print ("Generated code is:\n%s" % fib_ast)
 
 
 if __name__ == '__main__':

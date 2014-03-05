@@ -110,7 +110,7 @@ class CTypeResolver(CtreeTypeResolver):
             return Double()
         elif isinstance(obj, str):
             return Char() if len(obj) == 1 else Ptr(Char())
-        print "resolve %s" % repr(obj)
+        print ("resolve %s" % repr(obj))
 
 
 class NumpyTypeResolver(CtreeTypeResolver):

@@ -121,7 +121,7 @@ def main():
     py_doubler(expected_d)
     np.testing.assert_array_equal(actual_d, expected_d)
 
-    print "Success."
+    print("Success.")
 
 
 if __name__ == '__main__':
