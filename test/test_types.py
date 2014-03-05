@@ -61,12 +61,12 @@ class TestTypeFetcher(unittest.TestCase):
     node = Add(a, b)
     self._check(node.get_type(), Double())
 
-  def test_binop_compare(self):
+  def test_binop_compare_lessthan(self):
     a, b = Constant('b'), Constant(2.3)
     node = Lt(a, b)
     self._check(node.get_type(), Int())
 
-  def test_binop_compare(self):
+  def test_binop_compare_comma(self):
     a, b = Constant('b'), Constant(2.3)
     node = Comma(a, b)
     self._check(node.get_type(), Double())

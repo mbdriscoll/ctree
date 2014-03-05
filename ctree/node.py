@@ -156,7 +156,7 @@ class Project(CommonNode):
     self.files = files
     super(Project, self).__init__()
 
-  def codegen(self):
+  def codegen(self, indent=0):
     """
     Code generates each file in the project and links their
     bytecode together to get the master bytecode file.

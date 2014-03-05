@@ -4,7 +4,7 @@ from ctree.node import CtreeNode
 from ctree.visitors import NodeVisitor
 
 class CtreeType(CtreeNode):
-  def codegen(self):
+  def codegen(self, indent=0):
     raise Exception("%s should override codegen()" % type(self))
 
   def as_ctypes(self):
