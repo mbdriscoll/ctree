@@ -35,16 +35,16 @@ class OmpParallel(OmpNode):
     """
     _fields = ['clauses']
 
-    def __init__(self, clauses=[]):
-        self.clauses = clauses
+    def __init__(self, clauses=None):
+        self.clauses = clauses if clauses else []
 
 
 class OmpParallelFor(OmpNode):
     """ #pragma omp parallel for ... """
     _fields = ['clauses']
 
-    def __init__(self, clauses=[]):
-        self.clauses = clauses
+    def __init__(self, clauses=None):
+        self.clauses = clauses if clauses else []
 
 
 class OmpClause(OmpNode):

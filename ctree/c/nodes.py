@@ -29,8 +29,10 @@ class CNode(CtreeNode):
 class CFile(CNode, File):
     """Represents a .c file."""
 
-    def __init__(self, name="generated", body=[]):
+    def __init__(self, name="generated", body=None):
         super(CFile, self).__init__(name, body)
+        if not body:
+            body = []
         self._ext = "c"
 
     def get_bc_filename(self):
@@ -104,17 +106,17 @@ class While(Statement):
     """Cite me."""
     _fields = ['cond', 'body']
 
-    def __init__(self, cond=None, body=[]):
+    def __init__(self, cond=None, body=None):
         self.cond = cond
-        self.body = body
+        self.body = body if body else []
         super(While, self).__init__()
 
 
 class DoWhile(Statement):
     _fields = ['body', 'cond']
 
-    def __init__(self, body=[], cond=None):
-        self.body = body
+    def __init__(self, body=None, cond=None):
+        self.body = body if body else []
         self.cond = cond
         super(DoWhile, self).__init__()
 
@@ -134,9 +136,9 @@ class FunctionCall(Expression):
     """Cite me."""
     _fields = ['func', 'args']
 
-    def __init__(self, func=None, args=[]):
+    def __init__(self, func=None, args=None):
         self.func = func
-        self.args = args
+        self.args = args if args else []
         super(FunctionCall, self).__init__()
 
 
@@ -157,8 +159,8 @@ class Block(Statement):
     """Cite me."""
     _fields = ['body']
 
-    def __init__(self, body=[]):
-        self.body = body
+    def __init__(self, body=None):
+        self.body = body if body else []
         super(Block, self).__init__()
 
 
@@ -206,14 +208,15 @@ class SymbolRef(Literal):
     def get_ctype(self):
         return self.type.as_ctype()
 
+
 class FunctionDecl(Statement):
     """Cite me."""
     _fields = ['params', 'defn']
-    def __init__(self, return_type=None, name=None, params=[], defn=[]):
+    def __init__(self, return_type=None, name=None, params=None, defn=None):
         self.return_type = return_type
         self.name = name
-        self.params = params
-        self.defn = defn
+        self.params = params if params else []
+        self.defn = defn if defn else []
         self.inline = False
         self.static = False
         self.kernel = False

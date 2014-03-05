@@ -93,12 +93,14 @@ class DotManager(object):
         return Image(dot_output, embed=True)
 
     @staticmethod
-    def run_dot(code, options=[], format='png'):
+    def run_dot(code, options=None, format='png'):
         # mostly copied from sphinx.ext.graphviz.render_dot
         import os
         from subprocess import Popen, PIPE
         from sphinx.util.osutil import EPIPE, EINVAL
 
+        if not options:
+            options = []
         dot_args = ['dot'] + options + ['-T', format]
         if os.name == 'nt':
             # Avoid opening shell window.

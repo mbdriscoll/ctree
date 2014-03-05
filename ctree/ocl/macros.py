@@ -28,7 +28,7 @@ def CL_SUCCESS():
 
 def safe_clGetDeviceIDs(platform=NULL(), device_type=CL_DEVICE_TYPE_DEFAULT(),
                         num_entries=1, device_id=NULL(),
-                        num_devices=NULL(), on_failure=[]):
+                        num_devices=NULL(), on_failure=None):
   # int to track exit status
   err = SymbolRef.unique("err", Int())
 
@@ -46,7 +46,7 @@ def safe_clGetDeviceIDs(platform=NULL(), device_type=CL_DEVICE_TYPE_DEFAULT(),
   ])
 
 def safe_clCreateContext(context, properties=NULL(), num_devices=1,
-      devices=NULL(), pfn_notify=NULL(), user_data=NULL(), on_failure=[]):
+      devices=NULL(), pfn_notify=NULL(), user_data=NULL(), on_failure=None):
 
   # int to track exit status
   err = SymbolRef.unique("err", Int())
@@ -71,7 +71,7 @@ def safe_clCreateContext(context, properties=NULL(), num_devices=1,
   return tree
 
 
-def safe_clCreateCommandQueue(commands, context, device_id, properties=Constant(0), on_failure=[]):
+def safe_clCreateCommandQueue(commands, context, device_id, properties=Constant(0), on_failure=None):
   # int to track exit status
   err = SymbolRef.unique("err", Int())
 

@@ -159,8 +159,8 @@ class Project(CommonNode):
     """Holds a list files."""
     _fields = ['files']
 
-    def __init__(self, files=[]):
-        self.files = files
+    def __init__(self, files=None):
+        self.files = files if files else []
         super(Project, self).__init__()
 
     def codegen(self, indent=0):
@@ -191,9 +191,9 @@ class File(CommonNode):
     """Holds a list of statements."""
     _fields = ['body']
 
-    def __init__(self, name="generated", body=[]):
+    def __init__(self, name="generated", body=None):
         self.name = name
-        self.body = body
+        self.body = body if body else []
 
     def codegen(self, *args):
         """Convert this substree into program text (a string)."""

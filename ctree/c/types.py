@@ -84,9 +84,9 @@ class Ptr(CType):
 class FuncType(CType):
     _fields = ['return_type', 'arg_types']
 
-    def __init__(self, return_type=Void(), arg_types=[]):
+    def __init__(self, return_type=Void(), arg_types=None):
         self.return_type = return_type
-        self.arg_types = arg_types
+        self.arg_types = arg_types if arg_types else []
 
     def as_ctype(self):
         return_ctype = self.return_type.as_ctype()

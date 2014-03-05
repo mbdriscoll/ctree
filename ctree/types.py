@@ -28,7 +28,7 @@ class TypeFetcher(NodeVisitor):
     pass
 
 
-class CtreeTypeResolver:
+class CtreeTypeResolver(object):
     __metaclass__ = abc.ABCMeta
 
     @staticmethod
