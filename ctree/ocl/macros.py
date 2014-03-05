@@ -105,7 +105,7 @@ def read_program_into_string(kernel_source, kernel_path):
     FunctionCall(SymbolRef("fseek"), [kernel_file.copy(), Constant(0), SymbolRef("SEEK_END")]),
     Assign(kernel_size.copy(declare=True), FunctionCall(SymbolRef("ftell"), [kernel_file.copy()])),
     FunctionCall(SymbolRef("rewind"), [kernel_file.copy()]),
-    Assign(kernel_source.copy(), FunctionCall(SymbolRef("malloc"), [Mul(kernel_size.copy(), SizeOf(Char()))])),
+    Assign(kernel_source.copy(), FunctionCall(SymbolRef("malloc"), [kernel_size.copy()])),
 
   ])
   return tree

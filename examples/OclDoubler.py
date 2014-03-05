@@ -76,6 +76,8 @@ class OpTranslator(LazySpecializedFunction):
 
           context.copy(declare=True),
           safe_clCreateContext(context.copy(), devices=Ref(device_id.copy())),
+
+          commands.copy(declare=True),
           safe_clCreateCommandQueue(commands.copy(), context.copy(), device_id.copy()),
 
           kernel_source.copy(declare=True),
