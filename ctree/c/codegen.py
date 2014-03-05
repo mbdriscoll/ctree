@@ -132,7 +132,7 @@ class CCodeGen(CodeGenVisitor):
     return "%s%s" % (s, node.name)
 
   def visit_Define(self, node):
-    return "#define %s %s" % (self.defname, self.calc)
+    return "#define %s %s" % (node.defname, node.calc)
 
   def visit_Block(self, node):
      return self._genblock(node.body)

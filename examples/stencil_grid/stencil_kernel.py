@@ -25,6 +25,7 @@ import ast
 # from examples.stencil_grid.stencil_optimize_cpp import *
 # from examples.stencil_grid.stencil_convert import *
 import copy
+from copy import deepcopy
 
 import ctree.transformations as transform
 from ctree.jit import LazySpecializedFunction
@@ -37,8 +38,6 @@ from ctree.omp.nodes import *
 
 class SpecializedTranslator(LazySpecializedFunction):
   def __init__(self, func, input_grids, output_grid):
-    self.ghost_depth = output_grid.ghost_depth
-    self.neighbor_definition = input_grids[0].neighbor_definition
     self.input_grids = input_grids
     self.output_grid = output_grid
     super().__init__( get_ast(func), func.__name__ )
@@ -55,11 +54,10 @@ class SpecializedTranslator(LazySpecializedFunction):
     for arg in program_config[0]:
         kernel_sig.append(numpy.ctypeslib.ndpointer(arg[1], arg[2], arg[3]))
 
-    tree = StencilTransformer(program_config[0][0], program_config[0][-1], self.ghost_depth, self.neighbor_definition).visit(tree)
-    # print(ast.dump(tree))
+    tree = StencilTransformer(self.input_grids, self.output_grid).visit(tree)
     tree = transform.PyBasicConversions().visit(tree)
     params = tree.find(FunctionDecl, name="kernel").params
-    params.pop(0) # Remove self param
+    params.pop(0)
     self.gen_array_macro_definition(tree, params)
     tree.find(FunctionDecl, name="kernel").set_typesig(kernel_sig)
     tree = transform.ConvertNumpyNdpointers().visit(tree)
@@ -77,22 +75,25 @@ class SpecializedTranslator(LazySpecializedFunction):
         calc += ")"
         first_for.insert_before(Define(defname+params, calc))
 
-class Grid(object):
-    def __init__(self, grid):
-        self.shape = grid[3]
-
 class StencilTransformer(NodeTransformer):
 
 
-    def __init__(self, in_grid, out_grid, ghost_depth, neighbor_definition):
+    def __init__(self, input_grids, output_grid):
         # TODO: Give these wrapper classes?
-        self.in_grid = Grid(in_grid)
-        self.out_grid = Grid(out_grid)
-        self.ghost_depth = ghost_depth
+        self.input_grids = input_grids
+        self.output_grid = output_grid
+        self.ghost_depth = output_grid.ghost_depth
         self.next_fresh_var = 0
         self.var_list = []
-        self.neighbor_definition = neighbor_definition
+        self.input_dict = {}
         super(StencilTransformer, self).__init__()
+
+    def visit_FunctionDef(self, node):
+        for index, arg in enumerate(node.args.args[1:]):
+            if index < len(self.input_grids):
+                self.input_dict[arg.arg] = self.input_grids[index]
+        node.body = list(map(self.visit, node.body))
+        return node
 
     def gen_fresh_var(self):
         self.next_fresh_var += 1
@@ -103,12 +104,12 @@ class StencilTransformer(NodeTransformer):
         if type(node.iter) is ast.Call and \
            type(node.iter.func) is ast.Attribute:
             if node.iter.func.attr is 'interior_points':
-                dim = len(self.out_grid.shape)
+                dim = len(self.output_grid.shape)
                 curr_node = None
                 ret_node = None
                 for d in range(dim):  
                     initial = Constant(self.ghost_depth)
-                    end = Constant(self.out_grid.shape[d] - self.ghost_depth - 1)
+                    end = Constant(self.output_grid.shape[d] - self.ghost_depth - 1)
                     target = SymbolRef(self.gen_fresh_var())
                     if d == 0:
                         curr_node = For(Assign(SymbolRef(target.name, ct.c_int), initial),
@@ -142,14 +143,22 @@ class StencilTransformer(NodeTransformer):
                         curr_node = curr_node.body[0]
                 curr_node.body = list(map(self.visit, node.body))
                 return ret_node
-            if node.iter.func.attr is 'neighbors':
-                neighbors = self.neighbor_definition[node.iter.args[1].n]
-                neighbors_of_grid = node.iter.args[0]
+            elif node.iter.func.attr is 'neighbors':
+                neighbors_id = node.iter.args[1].n
+                grid_name = node.iter.func.value.id
+                grid = self.input_dict[grid_name]
+                zero_point = tuple([0 for x in range(grid.dim)])
+                neighbors = grid.neighbor_definition[neighbors_id]
+                neighbors_of_grid = node.iter.args[0].id
                 body = []
                 output_index = self.gen_fresh_var()
                 body.append(SymbolRef(output_index, ct.c_int))
                 statement = self.visit(node.body[0])
-                print(ast.dump(statement))
+                for x in grid.neighbors(zero_point, neighbors_id):
+                    self.offset_list = list(x)
+                    for statement in node.body:
+                        body.append(self.visit(deepcopy(statement)))
+                return body
         return node
 
     # Handle array references
