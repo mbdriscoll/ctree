@@ -1,6 +1,7 @@
 language: python
 
 python:
+  - "2.7"
   - "3.2"
   - "3.3"
 
@@ -40,7 +41,7 @@ script:
 
   # run test suite again from build dir to get coverage info
   - cd ${TRAVIS_BUILD_DIR}
-  - nosetests --with-coverage --cover-package=ctree --cover-min-percentage=90
+  - nosetests --with-coverage --cover-package=ctree --cover-min-percentage=89
 
 
 after_success:
@@ -48,8 +49,8 @@ after_success:
   # return early if not building ucb-sejits/ctree
   - "if [[ \"x${TRAVIS_REPO_SLUG}\" != 'xucb-sejits/ctree' ]]; then echo 'skipping coveralls/sphinx for non ucb-sejits/ctree builds.'; exit 0; fi"
 
-  # return early if not the first build in the job
-  - "if [[ $(echo ${TRAVIS_JOB_NUMBER} | cut -d. -f2) -ne 1 ]]; then echo 'Not sub-job #1; skipping doc build.'; exit 0; fi"
+  # only build docs using Python 3.3
+  - "if [[ \"x$(python -c 'import sys; print(sys.version_info[0:2])')\" != \"x(3, 3)\" ]]; then echo 'Not sub-job #1; skipping doc build.'; exit 0; fi"
 
   # publish coverage report
   - coveralls

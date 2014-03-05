@@ -7,8 +7,9 @@ from ctree.dotgen import DotGenVisitor
 # ---------------------------------------------------------------------------
 # DOT generator
 
+
 class OmpDotGen(DotGenVisitor):
-  """
-  Visitor to generator DOT.
-  """
-  pass
+    """
+    Visitor to generator DOT.
+    """
+    pass
