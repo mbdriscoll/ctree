@@ -2,7 +2,7 @@
 C preprocessor nodes supported by ctree.
 """
 
-from ctree.ast import CtreeNode
+from ctree.node import CtreeNode
 
 class CppNode(CtreeNode):
   """Base class for all C Preprocessor nodes in ctree."""

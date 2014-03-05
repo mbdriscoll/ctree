@@ -2,7 +2,7 @@ import os
 import ast
 import copy
 
-from ctree.ast import *
+from ctree.node import *
 from ctree.c.nodes import *
 from ctree.types import *
 from ctree.visitors import NodeTransformer
@@ -111,7 +111,7 @@ class FixUpParentPointers(NodeTransformer):
 
 class ResolveGeneratedPathRefs(NodeTransformer):
   """
-  Converts any instances of ctree.ast.GeneratedPathRef into strings containing the absolute path
+  Converts any instances of ctree.node.GeneratedPathRef into strings containing the absolute path
   of the target file.
   """
   def __init__(self, compilation_dir):

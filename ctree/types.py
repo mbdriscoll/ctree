@@ -1,6 +1,6 @@
 import abc
 
-from ctree.ast import CtreeNode
+from ctree.node import CtreeNode
 from ctree.visitors import NodeVisitor
 
 class CtreeType(CtreeNode):

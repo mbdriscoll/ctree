@@ -1,5 +1,5 @@
 from ctree.visitors import NodeVisitor
-from ctree.ast import *
+from ctree.node import *
 from ctree.c.nodes import *
 
 class DeclFinder(NodeVisitor):

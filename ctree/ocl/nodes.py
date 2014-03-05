@@ -2,7 +2,7 @@
 OpenCL nodes supported by ctree.
 """
 
-from ctree.ast import *
+from ctree.node import *
 
 class OclNode(CtreeNode):
   """Base class for all OpenCL nodes supported by ctree."""

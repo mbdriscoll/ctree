@@ -5,7 +5,7 @@ OpenMP nodes supported by ctree.
 import logging
 log = logging.getLogger(__name__)
 
-from ctree.ast import CtreeNode
+from ctree.node import CtreeNode
 
 # ---------------------------------------------------------------------------
 # openmp nodes

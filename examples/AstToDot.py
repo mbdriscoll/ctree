@@ -8,7 +8,7 @@ Usage:
 The resulting file can be viewed with a visualizer like Graphiz.
 """
 
-from ctree.ast import *
+from ctree.node import *
 from ctree.c.nodes import *
 from ctree.c.types import *
 

@@ -1,6 +1,6 @@
 import unittest
 
-from ctree.ast import *
+from ctree.node import *
 from ctree.c.nodes import *
 from ctree.c.types import *
 

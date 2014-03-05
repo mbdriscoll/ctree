@@ -8,7 +8,7 @@ import subprocess
 import logging
 log = logging.getLogger(__name__)
 
-from ctree.ast import CtreeNode, File
+from ctree.node import CtreeNode, File
 
 class CNode(CtreeNode):
   """Base class for all C nodes in ctree."""

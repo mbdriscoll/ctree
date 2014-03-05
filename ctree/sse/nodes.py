@@ -2,7 +2,7 @@
 SSE vector nodes supported by ctree.
 """
 
-from ctree.ast import CtreeNode
+from ctree.node import CtreeNode
 
 class SSENode(CtreeNode):
   """Base class for all SSE nodes supported by ctree."""

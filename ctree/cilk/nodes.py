@@ -2,7 +2,7 @@
 Cilk nodes supported by ctree.
 """
 
-from ctree.ast import CtreeNode
+from ctree.node import CtreeNode
 
 class CilkNode(CtreeNode):
   """Base class for all Cilk nodes supported by ctree."""

@@ -4,7 +4,7 @@ import shutil
 import tempfile
 
 import ctree
-from ctree.ast import *
+from ctree.node import *
 from ctree.c.nodes import *
 from ctree.frontend import get_ast
 from ctree.analyses import VerifyOnlyCtreeNodes
