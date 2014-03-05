@@ -2,7 +2,7 @@
 Macros for simplifying construction of C programs.
 """
 
-from ctree.ast import CtreeNode
+from ctree.nodes import CtreeNode
 from ctree.c.nodes import *
 from ctree.c.types import *
 

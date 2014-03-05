@@ -3,6 +3,7 @@ Parses the python AST below, transforms it to C, JITs it, and runs it.
 """
 
 import logging
+
 logging.basicConfig(level=20)
 
 import numpy as np
@@ -86,51 +87,53 @@ class OpTranslator(LazySpecializedFunction):
         ]
       ),
     ])
-
     tree = Project([kernel, control])
-
     return tree
 
 
 class ArrayOp(object):
-  """
-  A class for managing independent operation on elements
-  in numpy arrays.
-  """
-  def __init__(self):
-    """Instantiate translator."""
-    from ctree.frontend import get_ast
-    self.c_apply_all = OpTranslator(get_ast(self.apply), "apply_all")
+    """
+    A class for managing independent operation on elements
+    in numpy arrays.
+    """
 
-  def __call__(self, A):
-    """Apply the operator to the arguments via a generated function."""
-    return self.c_apply_all(A)
+    def __init__(self):
+        """Instantiate translator."""
+        from ctree.frontend import get_ast
+        self.c_apply_all = OpTranslator(get_ast(self.apply), "apply_all")
+
+    def __call__(self, A):
+        """Apply the operator to the arguments via a generated function."""
+        return self.c_apply_all(A)
 
 
 # ---------------------------------------------------------------------------
 # User code
 
 class Doubler(ArrayOp):
-  """Double elements of the array."""
-  def apply(x):
-    return x*2
+    """Double elements of the array."""
+
+    def apply(x):
+        return x * 2
+
 
 def py_doubler(A):
-  for i in range(len(A)):
-    A[i] *= 2
+    for i in range(len(A)):
+        A[i] *= 2
+
 
 def main():
-  c_doubler = Doubler()
+    c_doubler = Doubler()
 
-  # doubling doubles
-  actual_d   = np.ones(12, dtype=np.float64)
-  expected_d = np.ones(12, dtype=np.float64)
-  c_doubler(actual_d)
-  py_doubler(expected_d)
-  np.testing.assert_array_equal(actual_d, expected_d)
+    # doubling doubles
+    actual_d = np.ones(12, dtype=np.float64)
+    expected_d = np.ones(12, dtype=np.float64)
+    c_doubler(actual_d)
+    py_doubler(expected_d)
+    np.testing.assert_array_equal(actual_d, expected_d)
 
-  print("Success.")
+    print("Success.")
 
 
 if __name__ == '__main__':
-  main()
+    main()
