@@ -123,14 +123,6 @@ class FunctionCall(Expression):
     super().__init__()
 
 
-class ArrayRef(Expression):
-  """Cite me."""
-  _fields = ['base', 'offset']
-  def __init__(self, base=None, offset=None):
-    self.base = base
-    self.offset = offset
-    super().__init__()
-
 class Literal(Expression):
   """Cite me."""
   pass

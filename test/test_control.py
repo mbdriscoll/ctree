@@ -81,6 +81,6 @@ class TestFor(unittest.TestCase):
     incr = PostInc(SymbolRef("foo"))
     body = [FunctionCall(SymbolRef("printf"), [SymbolRef("foo")])]
     tree = For(init, test, incr, body)
-    self._check(tree, """for (foo = 0; foo < 10; foo++) {
+    self._check(tree, """for (foo = 0; foo < 10; foo ++) {
     printf(foo);
 }""")

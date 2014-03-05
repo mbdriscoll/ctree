@@ -59,16 +59,27 @@ class OpTranslator(LazySpecializedFunction):
     kernel_path_ref = kernel.get_generated_path_ref()
 
     device_id = SymbolRef("device_id", cl_device_id())
+    context = SymbolRef("context", cl_context())
+    commands = SymbolRef("commands", cl_command_queue())
+    kernel_source = SymbolRef("kernel_source", Ptr(Char()))
+    kernel_path = SymbolRef("kernel_path", Ptr(Char()))
 
     control = CFile("control", [
       CppInclude("stdio.h"),
       CppInclude("OpenCL/opencl.h"),
-      Assign(SymbolRef("kernel_path", Ptr(Char())), kernel_path_ref),
+      Assign(kernel_path.copy(declare=True), kernel_path_ref),
       FunctionDecl(Void(), "apply_all",
         params=[SymbolRef("A", A_type)],
         defn=[
           device_id.copy(declare=True),
           safe_clGetDeviceIDs(device_id=Ref(device_id.copy())),
+
+          context.copy(declare=True),
+          safe_clCreateContext(context.copy(), devices=Ref(device_id.copy())),
+          safe_clCreateCommandQueue(commands.copy(), context.copy(), device_id.copy()),
+
+          kernel_source.copy(declare=True),
+          read_program_into_string(kernel_source, kernel_path),
           Return(),
         ]
       ),

@@ -54,9 +54,9 @@ class CCodeGen(CodeGenVisitor):
 
   def visit_UnaryOp(self, node):
     if isinstance(node.op, (Op.PostInc, Op.PostDec)):
-      s = "%s%s" % (node.arg, node.op)
+      s = "%s %s" % (node.arg, node.op)
     else:
-      s = "%s%s" % (node.op, node.arg)
+      s = "%s %s" % (node.op, node.arg)
     return self._parentheses(node) % s
 
   def visit_BinaryOp(self, node):
@@ -142,6 +142,8 @@ class CCodeGen(CodeGenVisitor):
   def visit_Float(self, node):  return "float"
   def visit_Double(self, node): return "double"
   def visit_LongDouble(self, node): return "long double"
+
+  def visit_FILE(self, node): return "FILE"
 
   def visit_Ptr(self, node):
     base = node.base_type.codegen()

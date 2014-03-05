@@ -45,32 +45,32 @@ class TestPrecedence(unittest.TestCase):
   def test_preinc_muladd(self):
     a, b, c = self.args
     tree = Mul(PreInc(Add(a, b)), c)
-    self._check(tree, "++(a + b) * c")
+    self._check(tree, "++ (a + b) * c")
 
   def test_not_and_or(self):
     a, b, c = self.args
     tree = Not(Or(And(a, b), c))
-    self._check(tree, "!(a && b || c)")
+    self._check(tree, "! (a && b || c)")
 
   def test_sub_postinc(self):
     a, b, c = self.args
     tree = Sub(Sub(PostInc(a)), b)
-    self._check(tree, "-a++ - b")
+    self._check(tree, "- a ++ - b")
 
   def test_sub_unary_binary(self):
     a, b, c = self.args
     tree = Sub(Sub(a, b))
-    self._check(tree, "-(a - b)")
+    self._check(tree, "- (a - b)")
 
   def test_sub_add_unary_binary(self):
     a, b, c = self.args
     tree = Add(Sub(Sub(a, Add(b))), c)
-    self._check(tree, "-(a - +b) + c")
+    self._check(tree, "- (a - + b) + c")
 
   def test_postinc_unary(self):
     a, b, c = self.args
     tree = PostInc(Sub(a))
-    self._check(tree, "(-a)++")
+    self._check(tree, "(- a) ++")
 
 
 class TestAssociativityPrecedence(unittest.TestCase):

@@ -60,6 +60,8 @@ class NdPointer(CType):
   def as_ctype(self):
     return self.ptr
 
+class FILE(CType):
+  pass
 
 class CTypeResolver(CtreeTypeResolver):
   @staticmethod
