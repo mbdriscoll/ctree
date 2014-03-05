@@ -29,10 +29,8 @@ class CNode(CtreeNode):
 class CFile(CNode, File):
     """Represents a .c file."""
 
-    def __init__(self, name="generated", body=None):
+    def __init__(self, name="generated", body=[]):
         super(CFile, self).__init__(name, body)
-        if not body:
-            body = []
         self._ext = "c"
 
     def get_bc_filename(self):
@@ -106,17 +104,17 @@ class While(Statement):
     """Cite me."""
     _fields = ['cond', 'body']
 
-    def __init__(self, cond=None, body=None):
+    def __init__(self, cond=None, body=[]):
         self.cond = cond
-        self.body = body if body else []
+        self.body = body
         super(While, self).__init__()
 
 
 class DoWhile(Statement):
     _fields = ['body', 'cond']
 
-    def __init__(self, body=None, cond=None):
-        self.body = body if body else []
+    def __init__(self, body=[], cond=None):
+        self.body = body
         self.cond = cond
         super(DoWhile, self).__init__()
 
@@ -136,9 +134,9 @@ class FunctionCall(Expression):
     """Cite me."""
     _fields = ['func', 'args']
 
-    def __init__(self, func=None, args=None):
+    def __init__(self, func=None, args=[]):
         self.func = func
-        self.args = args if args else []
+        self.args = args
         super(FunctionCall, self).__init__()
 
 
@@ -159,8 +157,8 @@ class Block(Statement):
     """Cite me."""
     _fields = ['body']
 
-    def __init__(self, body=None):
-        self.body = body if body else []
+    def __init__(self, body=[]):
+        self.body = body
         super(Block, self).__init__()
 
 
@@ -175,7 +173,6 @@ class String(Literal):
 class SymbolRef(Literal):
     """Cite me."""
     _next_id = 0
-
     def __init__(self, name=None, type=None, _global=False):
         """
         Create a new symbol with the given name. If a declaration
@@ -209,16 +206,14 @@ class SymbolRef(Literal):
     def get_ctype(self):
         return self.type.as_ctype()
 
-
 class FunctionDecl(Statement):
     """Cite me."""
     _fields = ['params', 'defn']
-
-    def __init__(self, return_type=None, name=None, params=None, defn=None):
+    def __init__(self, return_type=None, name=None, params=[], defn=[]):
         self.return_type = return_type
         self.name = name
-        self.params = params if params else []
-        self.defn = defn if defn else []
+        self.params = params
+        self.defn = defn
         self.inline = False
         self.static = False
         self.kernel = False
@@ -226,14 +221,8 @@ class FunctionDecl(Statement):
 
     def get_type(self):
         from ctree.c.types import FuncType
-
         arg_types = [p.get_type() for p in self.params]
         return FuncType(self.return_type, arg_types)
-
-    def get_callable(self):
-        from ctree.jit import LazyTreeBuilder
-
-        return LazyTreeBuilder(self)
 
     def set_inline(self, value=True):
         self.inline = value
@@ -248,7 +237,7 @@ class FunctionDecl(Statement):
         return self
 
     def set_typesig(self, typesig):
-        assert len(typesig) == len(self.params) + 1
+        assert len(typesig) == len(self.params)+1
         self.return_type = typesig[0]
         for sym, ty in zip(self.params, typesig[1:]):
             sym.type = ty
