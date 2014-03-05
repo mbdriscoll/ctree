@@ -122,6 +122,9 @@ class Define(Statement):
     self.defname = defname
     self.calc = calc
     super().__init__()
+    
+  def _requires_semicolon(self):
+    return False
 
 
 class FunctionCall(Expression):

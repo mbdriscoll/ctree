@@ -34,6 +34,7 @@ from ctree.frontend import get_ast
 from ctree.visitors import NodeTransformer
 from ctree.c.nodes import *
 from ctree.omp.nodes import *
+from ctree.dotgen import to_dot
 
 
 class SpecializedTranslator(LazySpecializedFunction):
@@ -61,7 +62,7 @@ class SpecializedTranslator(LazySpecializedFunction):
     self.gen_array_macro_definition(tree, params)
     tree.find(FunctionDecl, name="kernel").set_typesig(kernel_sig)
     tree = transform.ConvertNumpyNdpointers().visit(tree)
-
+    # print(ast.dump(tree))
     return tree
 
   def gen_array_macro_definition(self, tree, arg_names):
@@ -71,7 +72,7 @@ class SpecializedTranslator(LazySpecializedFunction):
         params = "(" + ','.join(["_d"+str(x) for x in range(arg.dim)]) + ")"
         calc = "(_d%d" % (arg.dim - 1)
         for x in range(arg.dim - 1):
-            calc += "+(_d%s * %s)" % (str(x), str(arg.data.strides[x]/arg.data.itemsize))
+            calc += "+(_d%s * %s)" % (str(x), str(int(arg.data.strides[x]/arg.data.itemsize)))
         calc += ")"
         first_for.insert_before(Define(defname+params, calc))
 
@@ -92,12 +93,13 @@ class StencilTransformer(NodeTransformer):
         for index, arg in enumerate(node.args.args[1:]):
             if index < len(self.input_grids):
                 self.input_dict[arg.arg] = self.input_grids[index]
+            else:
+                self.output_grid_name = arg.arg
         node.body = list(map(self.visit, node.body))
         return node
 
     def gen_fresh_var(self):
         self.next_fresh_var += 1
-        self.var_list.append(self.next_fresh_var)
         return "x%d" % self.next_fresh_var
 
     def visit_For(self, node):
@@ -111,16 +113,17 @@ class StencilTransformer(NodeTransformer):
                     initial = Constant(self.ghost_depth)
                     end = Constant(self.output_grid.shape[d] - self.ghost_depth - 1)
                     target = SymbolRef(self.gen_fresh_var())
+                    self.var_list.append(target.name)
                     if d == 0:
                         curr_node = For(Assign(SymbolRef(target.name, ct.c_int), initial),
-                                       Lt(target, end),
+                                       LtE(target, end),
                                        PostInc(target),
                                        []
                                     )
                         ret_node = curr_node
                     elif d == dim - 2:
                         next_node = [OmpParallelFor(), For(Assign(SymbolRef(target.name, ct.c_int), initial),
-                                       Lt(target, end),
+                                       LtE(target, end),
                                        PostInc(target),
                                        []
                                     )]
@@ -128,7 +131,7 @@ class StencilTransformer(NodeTransformer):
                         curr_node = next_node[1]
                     elif d == dim - 1:
                         next_node = [OmpIvDep(), For(Assign(SymbolRef(target.name, ct.c_int), initial),
-                                       Lt(target, end),
+                                       LtE(target, end),
                                        PostInc(target),
                                        []
                                     )]
@@ -136,12 +139,12 @@ class StencilTransformer(NodeTransformer):
                         curr_node = next_node[1]
                     else:
                         curr_node.body = [For(Assign(SymbolRef(target.name, ct.c_int), initial),
-                                       Lt(target, end),
+                                       LtE(target, end),
                                        PostInc(target),
                                        []
                                     )]
                         curr_node = curr_node.body[0]
-                curr_node.body = list(map(self.visit, node.body))
+                curr_node.body = self.visit(node.body[0])
                 return ret_node
             elif node.iter.func.attr is 'neighbors':
                 neighbors_id = node.iter.args[1].n
@@ -151,8 +154,9 @@ class StencilTransformer(NodeTransformer):
                 neighbors = grid.neighbor_definition[neighbors_id]
                 neighbors_of_grid = node.iter.args[0].id
                 body = []
-                output_index = self.gen_fresh_var()
-                body.append(SymbolRef(output_index, ct.c_int))
+                self.output_index = self.gen_fresh_var()
+                body.append(SymbolRef(self.output_index, ct.c_int))
+                body.append(Assign(SymbolRef(self.output_index), self.gen_array_macro(self.output_grid_name, [SymbolRef(x) for x in self.var_list])))
                 statement = self.visit(node.body[0])
                 for x in grid.neighbors(zero_point, neighbors_id):
                     self.offset_list = list(x)
@@ -163,9 +167,29 @@ class StencilTransformer(NodeTransformer):
 
     # Handle array references
     def visit_Subscript(self, node):
-        array = node.value.id
-        ref = self.visit(node.slice)
-        return ArrayRef(SymbolRef(array), ref)
+        grid_name = node.value.id
+        target = node.slice.value
+        if grid_name is self.output_grid_name:
+            return ArrayRef(SymbolRef(self.output_grid_name), SymbolRef(self.output_index))
+        elif grid_name in self.input_dict:
+            grid = self.input_dict[grid_name]
+            zero_point = tuple([0 for x in range(grid.dim)])
+            index = self.gen_array_macro(grid_name, map(lambda x, y: Add(SymbolRef(x), SymbolRef(y)), self.var_list, zero_point))
+            return ArrayRef(SymbolRef(grid_name), index)
+        elif grid_name in self.neighbor_definitions:
+            index = self.gen_array_macro(grid_name, map(lambda x, y: Add(SymbolRef(x), SymbolRef(y)), self.var_list, self.offset_list))
+            return ArrayRef(SymbolRef(grid_name), index)
+        else:
+            return ArrayRef(SymbolRef(grid_name), SymbolRef(target))
+
+    def gen_array_macro(self, arg, point):
+        name = "_%s_array_macro" % arg
+        return FunctionCall(SymbolRef(name), point)
+
+    def visit_AugAssign(self, node):
+        # print(ast.dump(node))
+        return AddAssign(self.visit(node.target), self.visit(node.value))
+
 
 
 # may want to make this inherit from something else...

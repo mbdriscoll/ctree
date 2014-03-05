@@ -126,7 +126,7 @@ class StencilConvertAST(ast_tools.ConvertAST):
         for x in range(0,array.dim-1):
             calc += "+(_d%s * %s)" % (str(x), str(array.data.strides[x]/array.data.itemsize))
         calc += ")"
-        return cpp_ast.Define(defname+params, calc)
+        return cppast.Define(defname+params, calc)
 
     def gen_array_macro(self, arg, point):
         name = "_%s_array_macro" % arg
