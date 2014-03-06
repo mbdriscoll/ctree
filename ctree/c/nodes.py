@@ -12,6 +12,7 @@ log = logging.getLogger(__name__)
 from ctree.nodes import CtreeNode, File
 from ctree.util import singleton
 
+
 class CNode(CtreeNode):
     """Base class for all C nodes in ctree."""
 
@@ -135,11 +136,12 @@ class For(Statement):
 # TODO: Decide on naming scheme for define statements
 class Define(Statement):
     _fields = ['defname', 'calc']
+
     def __init__(self, defname=None, calc=None):
         self.defname = defname
         self.calc = calc
         super().__init__()
-      
+
     def _requires_semicolon(self):
         return False
 
