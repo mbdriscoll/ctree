@@ -54,7 +54,8 @@ gaussian1 = gaussian(stdev_d, radius*2)
 gaussian2 = gaussian(stdev_s, 256)
 kernel.kernel(in_grid, gaussian1, gaussian2, out_grid)
 
-print(out_grid)
+numpy.set_printoptions(threshold=numpy.nan)
+print(out_grid.data)
 for x in range(0,width):
     for y in range(0,height):
         pixels[y * width + x] = out_grid.data[(x, y)]
