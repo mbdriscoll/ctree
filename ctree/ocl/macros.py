@@ -35,14 +35,17 @@ def CL_SUCCESS():
 
 
 def safe_clGetDeviceIDs(platform=NULL(), device_type=CL_DEVICE_TYPE_DEFAULT(),
-                        num_entries=1, device_id=NULL(),
+                        num_entries=Constant(1), device_id=NULL(),
                         num_devices=NULL(), on_failure=None):
     # int to track exit status
     err = SymbolRef.unique("err", Int())
 
     # put failure code in list to go under If.elze
-    if not isinstance(on_failure, list):
-        on_failure = [on_failure]
+    if on_failure:
+        if not isinstance(on_failure, list):
+            on_failure = [on_failure]
+    else:
+        on_failure = []
 
     return Block([
         Assign(err.copy(declare=True),
@@ -54,14 +57,17 @@ def safe_clGetDeviceIDs(platform=NULL(), device_type=CL_DEVICE_TYPE_DEFAULT(),
     ])
 
 
-def safe_clCreateContext(context, properties=NULL(), num_devices=1,
+def safe_clCreateContext(context, properties=NULL(), num_devices=Constant(1),
                          devices=NULL(), pfn_notify=NULL(), user_data=NULL(), on_failure=None):
     # int to track exit status
     err = SymbolRef.unique("err", Int())
 
     # put failure code in list to go under If.elze
-    if not isinstance(on_failure, list):
-        on_failure = [on_failure]
+    if on_failure:
+        if not isinstance(on_failure, list):
+            on_failure = [on_failure]
+    else:
+        on_failure = []
 
     tree = Block([
         err.copy(declare=True),
@@ -84,8 +90,11 @@ def safe_clCreateCommandQueue(commands, context, device_id, properties=Constant(
     err = SymbolRef.unique("err", Int())
 
     # put failure code in list to go under If.elze
-    if not isinstance(on_failure, list):
-        on_failure = [on_failure]
+    if on_failure:
+        if not isinstance(on_failure, list):
+            on_failure = [on_failure]
+    else:
+        on_failure = []
 
     tree = Block([
         err.copy(declare=True),

@@ -234,5 +234,5 @@ class CommonDotGen(DotGenVisitor):
     """Manages coversion of all common nodes to dot."""
 
     def label_GeneratedPathRef(self, node):
-        return "target: %s" % node.filenode.get_filename()
+        return "target: %s" % node.target.get_filename()
 

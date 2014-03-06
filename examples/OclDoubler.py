@@ -91,6 +91,10 @@ class OpTranslator(LazySpecializedFunction):
             ),
         ])
         tree = Project([kernel, control])
+
+        with open("graph.dot", 'w') as f:
+          f.write( to_dot(tree) )
+
         return tree
 
 
