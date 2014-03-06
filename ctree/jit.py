@@ -27,7 +27,7 @@ class JitModule(object):
         log.info("Temporary compilation directory is: %s" % self.compilation_dir)
 
     def __del__(self):
-        if not ctree.config.get("jit", "PRESERVE_SRC_DIR"):
+        if not ctree.Config.get("jit", "PRESERVE_SRC_DIR"):
             log.info("Removing temporary compilation directory %s." % self.compilation_dir)
             shutil.rmtree(self.compilation_dir)
 

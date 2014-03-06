@@ -1,5 +1,8 @@
 *.py[cod]
 
+# iPython notebook extensions
+*.ipynb
+
 # C extensions
 *.so
 

@@ -1,3 +1,8 @@
+"""
+The ctree package
+
+
+"""
 from __future__ import print_function
 
 # ---------------------------------------------------------------------------
@@ -13,7 +18,7 @@ assert sys.version_info[0] >= 2, "ctree requires Python 2.7.x"
 
 import logging
 
-log = logging.getLogger(__name__)
+Log = logging.getLogger(__name__)
 
 
 # ---------------------------------------------------------------------------
@@ -28,20 +33,20 @@ except ImportError:
 
 from os import path, getcwd
 
-config = configparser.ConfigParser()
-default_cfg_file_path = path.join(path.abspath(path.dirname(__file__)), "defaults.cfg")
-log.info("reading default configuration from: %s" % default_cfg_file_path)
+Config = configparser.ConfigParser()
+Default_cfg_file_path = path.join(path.abspath(path.dirname(__file__)), "defaults.cfg")
+Log.info("reading default configuration from: %s" % Default_cfg_file_path)
 
-config.readfp(open(default_cfg_file_path), filename="defaults.cfg")
+Config.readfp(open(Default_cfg_file_path), filename="defaults.cfg")
 
 cfg_paths = [
     path.expanduser('~/.ctree.cfg'),
     path.join(getcwd(), ".ctree.cfg"),
 ]
-log.info("checking for config files at: %s" % cfg_paths)
+Log.info("checking for config files at: %s" % cfg_paths)
 
-found = config.read(cfg_paths)
-log.info("found config files: %s" % found)
+found = Config.read(cfg_paths)
+Log.info("found config files: %s" % found)
 
 if sys.version_info.major == 2:
     from io import BytesIO as Memfile
@@ -49,9 +54,9 @@ else:
     from io import StringIO as Memfile
 
 configfile = Memfile()
-config.write(configfile)
+Config.write(configfile)
 config_txt = configfile.getvalue()
-log.info("using configuration:\n%s" % config_txt)
+Log.info("using configuration:\n%s" % config_txt)
 configfile.close()
 
 
@@ -75,7 +80,7 @@ class Counter(object):
         kvs = ""
         for kv in self._counter.items():
             kvs += "  %s: %s\n" % kv
-        log.info("execution statistics: <<<\n%s>>>" % kvs)
+        Log.info("execution statistics: <<<\n%s>>>" % kvs)
 
 
 stats = Counter()
