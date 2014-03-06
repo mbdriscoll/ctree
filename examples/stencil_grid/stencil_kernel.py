@@ -18,6 +18,7 @@ is cached for future calls.
 """
 
 import numpy
+import math
 import inspect
 import ast
 # from examples.stencil_grid.stencil_python_front_end import *
@@ -37,15 +38,24 @@ from ctree.omp.nodes import *
 from ctree.dotgen import to_dot
 
 
+import logging
+
+logging.basicConfig(filename='tmp.txt',
+                            filemode='a',
+                            format='%(asctime)s,%(msecs)d %(name)s %(levelname)s %(message)s',
+                            datefmt='%H:%M:%S',
+                            level=20)
+
+
 class SpecializedTranslator(LazySpecializedFunction):
-  def __init__(self, func, input_grids, output_grid):
+  def __init__(self, func, entry_point, input_grids, output_grid):
     self.input_grids = input_grids
     self.output_grid = output_grid
-    super().__init__( get_ast(func), func.__name__ )
+    super().__init__( get_ast(func), entry_point )
 
   def args_to_subconfig(self, args):
     conf = ()
-    for arg in args[0]:
+    for arg in args:
         conf += ((len(arg), arg.dtype, arg.ndim, arg.shape),)
     return conf
 
@@ -106,6 +116,7 @@ class StencilTransformer(NodeTransformer):
            type(node.iter.func) is ast.Attribute:
             if node.iter.func.attr is 'interior_points':
                 dim = len(self.output_grid.shape)
+                self.kernel_target = node.target.id
                 curr_node = None
                 ret_node = None
                 for d in range(dim):  
@@ -144,6 +155,7 @@ class StencilTransformer(NodeTransformer):
                                     )]
                         curr_node = curr_node.body[0]
                 curr_node.body = self.visit(node.body[0])
+                self.kernel_target = None
                 return ret_node
             elif node.iter.func.attr is 'neighbors':
                 neighbors_id = node.iter.args[1].n
@@ -152,15 +164,18 @@ class StencilTransformer(NodeTransformer):
                 zero_point = tuple([0 for x in range(grid.dim)])
                 neighbors = grid.neighbor_definition[neighbors_id]
                 neighbors_of_grid = node.iter.args[0].id
+                self.neighbor_target = node.target.id
+                self.neighbor_grid_name = grid_name
                 body = []
                 self.output_index = self.gen_fresh_var()
                 body.append(SymbolRef(self.output_index, Int()))
                 body.append(Assign(SymbolRef(self.output_index), self.gen_array_macro(self.output_grid_name, [SymbolRef(x) for x in self.var_list])))
-                statement = self.visit(node.body[0])
+                statement = node.body[0]
                 for x in grid.neighbors(zero_point, neighbors_id):
                     self.offset_list = list(x)
                     for statement in node.body:
                         body.append(self.visit(deepcopy(statement)))
+                self.neighbor_target = None
                 return body
         return node
 
@@ -168,18 +183,33 @@ class StencilTransformer(NodeTransformer):
     def visit_Subscript(self, node):
         grid_name = node.value.id
         target = node.slice.value
-        if grid_name is self.output_grid_name:
-            return ArrayRef(SymbolRef(self.output_grid_name), SymbolRef(self.output_index))
-        elif grid_name in self.input_dict:
-            grid = self.input_dict[grid_name]
-            zero_point = tuple([0 for x in range(grid.dim)])
-            index = self.gen_array_macro(grid_name, map(lambda x, y: Add(SymbolRef(x), SymbolRef(y)), self.var_list, zero_point))
-            return ArrayRef(SymbolRef(grid_name), index)
-        elif grid_name in self.neighbor_definitions:
-            index = self.gen_array_macro(grid_name, map(lambda x, y: Add(SymbolRef(x), SymbolRef(y)), self.var_list, self.offset_list))
-            return ArrayRef(SymbolRef(grid_name), index)
-        else:
-            return ArrayRef(SymbolRef(grid_name), SymbolRef(target))
+        if isinstance(target, ast.Name):
+            target = target.id
+            if grid_name is self.output_grid_name and target == self.kernel_target:
+                return ArrayRef(SymbolRef(self.output_grid_name), SymbolRef(self.output_index))
+            elif grid_name in self.input_dict and target == self.kernel_target:
+                grid = self.input_dict[grid_name]
+                zero_point = tuple([0 for x in range(grid.dim)])
+                index = self.gen_array_macro(grid_name, list(map(lambda x, y: Add(SymbolRef(x), SymbolRef(y)), self.var_list, zero_point)))
+                return ArrayRef(SymbolRef(grid_name), index)
+            elif grid_name == self.neighbor_grid_name:
+                index = self.gen_array_macro(grid_name, list(map(lambda x, y: Add(SymbolRef(x), SymbolRef(y)), self.var_list, self.offset_list)))
+                return ArrayRef(SymbolRef(grid_name), index)
+        elif isinstance(target, ast.Call):
+            return ArrayRef(SymbolRef(grid_name), self.visit(target))
+        return node
+
+    def visit_Call(self, node):
+        if node.func.id == 'distance':
+            zero_point = tuple([0 for x in range(len(self.offset_list))])
+            return Constant(self.distance(zero_point, self.offset_list))
+        elif node.func.id == 'int':
+            return Cast(Int(), self.visit(node.args[0]))
+        node.args = list(map(self.visit, node.args))
+        return node
+
+    def distance(sel, x, y):
+        return math.sqrt(sum([(x[i]-y[i])**2 for i in range(0, len(x))]))        
 
     def gen_array_macro(self, arg, point):
         name = "_%s_array_macro" % arg
@@ -243,8 +273,8 @@ class StencilKernel(object):
             return self.pure_python_kernel(*args)
 
         myargs = [y.data for y in args]
-        self.model = SpecializedTranslator(self.model, args[0:-1], args[-1])
-        self.model(myargs)
+        self.model = SpecializedTranslator(self.model, "kernel", args[0:-1], args[-1])
+        return self.model(*myargs)
 
         #FIXME: instead of doing this short-circuit, we should use the Asp infrastructure to
         # do it, by passing in a lambda that does this check
