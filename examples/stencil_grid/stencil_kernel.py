@@ -41,7 +41,7 @@ from ctree.dotgen import to_dot
 import logging
 
 logging.basicConfig(filename='tmp.txt',
-                            filemode='a',
+                            filemode='w',
                             format='%(asctime)s,%(msecs)d %(name)s %(levelname)s %(message)s',
                             datefmt='%H:%M:%S',
                             level=20)

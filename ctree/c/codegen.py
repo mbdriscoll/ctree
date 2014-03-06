@@ -22,8 +22,8 @@ class CCodeGen(CodeGenVisitor):
         enclose with parentheses.
         """
         parent = getattr(node, 'parent', None)
-        if isinstance(node, (UnaryOp, BinaryOp, TernaryOp)) and\
-                isinstance(parent, (UnaryOp, BinaryOp, TernaryOp)):
+        if isinstance(node, (UnaryOp, BinaryOp, TernaryOp, Cast)) and\
+                isinstance(parent, (UnaryOp, BinaryOp, TernaryOp, Cast)):
             prec = get_precedence(node)
             parent_prec = get_precedence(parent)
             is_not_last_child = isinstance(parent, UnaryOp) or\
@@ -74,7 +74,8 @@ class CCodeGen(CodeGenVisitor):
         return self._parentheses(node) % s
 
     def visit_Cast(self, node):
-        return "(%s) %s" % (node.type, node.value)
+        s = "(%s) %s" % (node.type, node.value)
+        return self._parentheses(node) % s
 
     def visit_Constant(self, node):
         if isinstance(node.value, str):
