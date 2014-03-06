@@ -79,9 +79,9 @@ class SpecializedTranslator(LazySpecializedFunction):
     for index, arg in enumerate(self.input_grids + (self.output_grid, )):
         defname = "_%s_array_macro" % arg_names[index]
         params = "(" + ','.join(["_d"+str(x) for x in range(arg.dim)]) + ")"
-        calc = "(_d%d" % (arg.dim - 1)
+        calc = "((_d%d)" % (arg.dim - 1)
         for x in range(arg.dim - 1):
-            calc += "+(_d%s * %s)" % (str(x), str(int(arg.data.strides[x]/arg.data.itemsize)))
+            calc += "+((_d%s) * %s)" % (str(x), str(int(arg.data.strides[x]/arg.data.itemsize)))
         calc += ")"
         first_for.insert_before(Define(defname+params, calc))
 
@@ -208,7 +208,7 @@ class StencilTransformer(NodeTransformer):
         node.args = list(map(self.visit, node.args))
         return node
 
-    def distance(sel, x, y):
+    def distance(self, x, y):
         return math.sqrt(sum([(x[i]-y[i])**2 for i in range(0, len(x))]))        
 
     def gen_array_macro(self, arg, point):

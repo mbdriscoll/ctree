@@ -55,7 +55,7 @@ class CCodeGen(CodeGenVisitor):
 
     def visit_UnaryOp(self, node):
         if isinstance(node.op, (Op.PostInc, Op.PostDec)):
-            s = "%s %s" % (node.arg, node.op)
+            s = "%s%s" % (node.arg, node.op)
         else:
             s = "%s %s" % (node.op, node.arg)
         return self._parentheses(node) % s
