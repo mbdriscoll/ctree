@@ -168,8 +168,7 @@ class StencilTransformer(NodeTransformer):
                 self.neighbor_grid_name = grid_name
                 body = []
                 self.output_index = self.gen_fresh_var()
-                body.append(SymbolRef(self.output_index, Int()))
-                body.append(Assign(SymbolRef(self.output_index), self.gen_array_macro(self.output_grid_name, [SymbolRef(x) for x in self.var_list])))
+                body.append(Assign(SymbolRef(self.output_index, Int()), self.gen_array_macro(self.output_grid_name, [SymbolRef(x) for x in self.var_list])))
                 statement = node.body[0]
                 for x in grid.neighbors(zero_point, neighbors_id):
                     self.offset_list = list(x)
