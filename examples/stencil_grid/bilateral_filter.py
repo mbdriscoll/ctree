@@ -4,6 +4,7 @@ from examples.stencil_grid.stencil_grid import StencilGrid
 import sys
 import numpy
 import math
+import time
 
 width = int(sys.argv[2])
 height = int(sys.argv[3])
@@ -52,7 +53,18 @@ for x in range(0,width):
 
 gaussian1 = gaussian(stdev_d, radius*2)
 gaussian2 = gaussian(stdev_s, 256)
-kernel.kernel(in_grid, gaussian1, gaussian2, out_grid)
+class Timer:
+    def __enter__(self):
+        self.start = time.clock()
+        return self
+
+    def __exit__(self, *args):
+        self.end = time.clock()
+        self.interval = self.end - self.start
+
+with Timer() as t:
+    kernel.kernel(in_grid, gaussian1, gaussian2, out_grid)
+print("C version time: %.03fs" % t.interval)
 
 numpy.set_printoptions(threshold=numpy.nan)
 
@@ -60,7 +72,10 @@ actual_grid = StencilGrid([width,height])
 actual_grid.ghost_depth = radius
 naive = Kernel()
 naive.pure_python = True
-naive.kernel(in_grid, gaussian1, gaussian2, actual_grid)
+with Timer() as t:
+    naive.kernel(in_grid, gaussian1, gaussian2, actual_grid)
+print("Python version time: %.03fs" % t.interval)
+
 numpy.testing.assert_array_almost_equal(actual_grid.data, out_grid.data, decimal=5)
 exit()
 
