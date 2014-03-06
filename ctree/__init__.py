@@ -20,11 +20,11 @@ log = logging.getLogger(__name__)
 # configuration file parsing
 
 try:
-    # python 3
-    import configparser
-except ImportError:
     # python 2
     import ConfigParser as configparser
+except ImportError:
+    # python 3
+    import configparser
 
 from os import path, getcwd
 
