@@ -5,7 +5,7 @@ Code generator for C constructs.
 from ctree.codegen import CodeGenVisitor
 from ctree.c.nodes import Op
 from ctree.c.types import Ptr, get_ctree_type
-from ctree.precedence import UnaryOp, BinaryOp, TernaryOp
+from ctree.precedence import UnaryOp, BinaryOp, TernaryOp, Cast
 from ctree.precedence import get_precedence, is_left_associative
 
 

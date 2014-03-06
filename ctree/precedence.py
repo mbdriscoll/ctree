@@ -3,7 +3,7 @@ Utilities for determining precedence in C, with the goal of minimizing the
 number of parentheses in the generated code.
 """
 
-from ctree.c.nodes import UnaryOp, BinaryOp, TernaryOp
+from ctree.c.nodes import UnaryOp, BinaryOp, TernaryOp, Cast
 
 # ---------------------------------------------------------------------------
 # dictionary of node class -> precedence ids, where 1 denotes the highest-
