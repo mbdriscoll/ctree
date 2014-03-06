@@ -241,10 +241,11 @@ class FunctionDecl(Statement):
         self.kernel = value
         return self
 
-    def set_typesig(self, typesig):
-        assert len(typesig) == len(self.params)+1
-        self.return_type = typesig[0]
-        for sym, ty in zip(self.params, typesig[1:]):
+    def set_typesig(self, func_type):
+        from ctree.c.types import FuncType
+        assert isinstance(func_type, FuncType)
+        self.return_type = func_type.return_type
+        for sym, ty in zip(self.params, func_type.arg_types):
             sym.type = ty
         return self
 

@@ -8,6 +8,7 @@ logging.basicConfig(level=20)
 
 import numpy as np
 
+from ctree.c.types import FuncType
 from ctree.transformations import *
 from ctree.frontend import get_ast
 from ctree.jit import LazySpecializedFunction
@@ -32,11 +33,12 @@ class BasicTranslator(LazySpecializedFunction):
         """Convert the Python AST to a C AST."""
         tree = PyBasicConversions().visit(tree)
 
+        fib_fn = tree.find(FunctionDecl, name="fib")
         fib_arg_type = program_config[0]
-        fib_sig = (fib_arg_type, fib_arg_type)
-        tree.find(FunctionDecl, name="fib").set_typesig(fib_sig)
+        fib_type = FuncType(fib_arg_type, [fib_arg_type])
+        fib_fn.set_typesig(fib_type)
 
-        return tree
+        return tree, fib_type.as_ctype()
 
 
 def main():

@@ -42,8 +42,7 @@ class OpTranslator(LazySpecializedFunction):
         A_type = NdPointer(A_dtype, A_ndim, A_shape)
 
         apply_one = PyBasicConversions().visit(py_ast.body[0])
-        apply_one_typesig = [A_type.get_base_type(),
-                             A_type.get_base_type()]
+        apply_one_typesig = FuncType(A_type.get_base_type(), [A_type.get_base_type()])
         apply_one.set_typesig(apply_one_typesig)
 
         apply_kernel = FunctionDecl(Void(), "apply_kernel",
@@ -75,17 +74,6 @@ class OpTranslator(LazySpecializedFunction):
             FunctionDecl(Void(), "apply_all",
                          params=[SymbolRef("A", A_type)],
                          defn=[
-                             device_id.copy(declare=True),
-                             safe_clGetDeviceIDs(device_id=Ref(device_id.copy())),
-
-                             context.copy(declare=True),
-                             safe_clCreateContext(context.copy(), devices=Ref(device_id.copy())),
-
-                             commands.copy(declare=True),
-                             safe_clCreateCommandQueue(commands.copy(), context.copy(), device_id.copy()),
-
-                             kernel_source.copy(declare=True),
-                             read_program_into_string(kernel_source, kernel_path),
                              Return(),
                          ]
             ),
@@ -95,7 +83,8 @@ class OpTranslator(LazySpecializedFunction):
         with open("graph.dot", 'w') as f:
           f.write( to_dot(tree) )
 
-        return tree
+        entry_point_typesig = tree.find(FunctionDecl, name="apply_all").get_type().as_ctype()
+        return tree, entry_point_typesig
 
 
 class ArrayOp(object):

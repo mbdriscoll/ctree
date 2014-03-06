@@ -34,3 +34,12 @@ class StringTemplate(TemplateNode):
         from string import Template
         self._template = Template(dedented_txt)
         self._children = child_dict
+        self._fields = list(child_dict.keys())
+
+    def __getattr__(self, name):
+        """Check in child_dict if 'name' is a child."""
+        try:
+            return self._children[name]
+        except KeyError:
+            pass
+        raise AttributeError(name)

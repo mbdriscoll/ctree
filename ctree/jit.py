@@ -34,12 +34,11 @@ class JitModule(object):
     def _link_in(self, submodule):
         self.ll_module.link_in(submodule)
 
-    def get_callable(self, tree):
+    def get_callable(self, entry_point_name, entry_point_typesig):
         """Returns a python callable that dispatches to the requested C function."""
-        assert isinstance(tree, FunctionDecl)
 
         # get llvm represetation of function
-        ll_function = self.ll_module.get_function_named(tree.name)
+        ll_function = self.ll_module.get_function_named(entry_point_name)
 
         # run jit compiler
         from llvm.ee import EngineBuilder
@@ -48,8 +47,7 @@ class JitModule(object):
         c_func_ptr = self.exec_engine.get_pointer_to_function(ll_function)
 
         # cast c_func_ptr to python callable using ctypes
-        cfunctype = tree.get_type().as_ctype()
-        return cfunctype(c_func_ptr)
+        return entry_point_typesig(c_func_ptr)
 
 
 class _ConcreteSpecializedFunction(object):
@@ -57,15 +55,14 @@ class _ConcreteSpecializedFunction(object):
     A function backed by generated code.
     """
 
-    def __init__(self, project, entry_point_name):
+    def __init__(self, project, entry_point_name, entry_point_typesig):
         assert isinstance(project, Project), \
             "Expected a Project but it got a %s." % type(project)
         assert project.parent is None, \
             "Expected null project.parent, but got: %s." % type(project.parent)
         self.module = project.codegen()
         log.info("Full LLVM program is: <<<\n%s\n>>>" % self.module.ll_module)
-        entry_point = project.find(FunctionDecl, name=entry_point_name)
-        self.fn = self.module.get_callable(entry_point)
+        self.fn = self.module.get_callable(entry_point_name, entry_point_typesig)
 
     def __call__(self, *args, **kwargs):
         assert not kwargs, "Passing kwargs to SpecializedFunction.__call__ isn't supported."
@@ -121,11 +118,11 @@ class LazySpecializedFunction(object):
             log.info("specialized function cache hit!")
         else:
             log.info("specialized function cache miss.")
-            c_ast = self.transform(copy.deepcopy(self.original_tree), program_config)
+            c_ast, entry_point_typesig = self.transform(copy.deepcopy(self.original_tree), program_config)
             assert isinstance(c_ast, Project), \
                 "Expected transform() to return a Project instance, instead got %s." % repr(c_ast)
             VerifyOnlyCtreeNodes().visit(c_ast)
-            self.c_functions[program_config] = _ConcreteSpecializedFunction(c_ast, self.entry_point_name)
+            self.c_functions[program_config] = _ConcreteSpecializedFunction(c_ast, self.entry_point_name, entry_point_typesig)
 
         return self.c_functions[program_config](*args)
 
