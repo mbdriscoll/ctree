@@ -13,7 +13,7 @@ class CppNode(CtreeNode):
 
         return CppCodeGen(indent).visit(self)
 
-    def _to_dot(self, indent=0):
+    def _to_dot(self):
         from ctree.cpp.dotgen import CppDotGen
 
         return CppDotGen().visit(self)
