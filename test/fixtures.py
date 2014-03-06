@@ -8,6 +8,7 @@ from ctree.c.types import *
 # ---------------------------------------------------------------------------
 # integer identity
 
+
 def identity(x):
     return x
 

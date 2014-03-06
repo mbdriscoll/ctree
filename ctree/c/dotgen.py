@@ -9,6 +9,7 @@ class CDotGen(DotGenVisitor):
     """
     Manages generation of DOT.
     """
+
     def label_SymbolRef(self, node):
         s = r"name: %s" % node.name
         if node.type:
@@ -35,7 +36,7 @@ class CDotGen(DotGenVisitor):
         return "name: %s" % node.name
 
     def label_NdPointer(self, node):
-        s    = "dtype: %s\n" % node.ptr.dtype
+        s = "dtype: %s\n" % node.ptr.dtype
         s += "ndim, shape:    %s, %s\n" % (node.ptr.ndim, node.ptr.shape)
         s += "flags: %s" % node.ptr.flags
         return s

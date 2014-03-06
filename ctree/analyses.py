@@ -1,6 +1,9 @@
+"""
+validation of ast trees
+"""
 from ctree.visitors import NodeVisitor
-from ctree.nodes import *
-from ctree.c.nodes import *
+from ctree.nodes import CtreeNode, ast
+from ctree.c.nodes import SymbolRef
 
 
 class DeclFinder(NodeVisitor):
@@ -9,6 +12,7 @@ class DeclFinder(NodeVisitor):
     """
 
     def find(self, node):
+        "look for a declaration of a symbol ref"
         assert isinstance(node, SymbolRef), \
             "DeclFinder only works on SymbolRefs for now."
 
@@ -20,6 +24,9 @@ class DeclFinder(NodeVisitor):
 
 
 class AstValidationError(Exception):
+    """
+    Exception for non C nodes in an AST
+    """
     pass
 
 
@@ -43,12 +50,13 @@ class VerifyParentPointers(NodeVisitor):
     """
 
     def _check(self, child, parent):
+        "throw if child.parent is not the actual parent"
         if child.parent != parent:
             raise AstValidationError("Expect parent of %s to be %s, but got %s instead." %
                                      (child, parent, child.parent))
 
     def generic_visit(self, node):
-        for fieldname, child in ast.iter_fields(node):
+        for _, child in ast.iter_fields(node):
             if type(child) is list:
                 for grandchild in child:
                     self._check(grandchild, node)

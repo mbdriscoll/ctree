@@ -22,6 +22,7 @@ from ctree.types import get_ctree_type
 # ---------------------------------------------------------------------------
 # Specializer code
 
+
 class OpTranslator(LazySpecializedFunction):
     def args_to_subconfig(self, args):
         """
@@ -30,7 +31,7 @@ class OpTranslator(LazySpecializedFunction):
         might be processed by the same generated code.
         """
         A = args[0]
-        return (len(A), A.dtype, A.ndim, A.shape)
+        return len(A), A.dtype, A.ndim, A.shape
 
     def transform(self, py_ast, program_config):
         """

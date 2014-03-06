@@ -1,10 +1,12 @@
+"""
+A set of basic transformers for python asts
+"""
 import os
 import ast
-import copy
 
-from ctree.nodes import *
-from ctree.c.nodes import *
-from ctree.types import *
+from ctree.nodes import Project
+from ctree.c.nodes import Op, Constant, String, SymbolRef, BinaryOp, TernaryOp, Return
+from ctree.c.nodes import If, CFile, FunctionCall, FunctionDecl
 from ctree.visitors import NodeTransformer
 
 

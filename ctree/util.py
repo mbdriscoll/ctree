@@ -6,6 +6,12 @@ import math
 import time
 
 
+def singleton(cls):
+    instance = cls()
+    instance.__call__ = lambda: instance
+    return instance
+
+
 class Timer(object):
     """
     Context manager for timing sections of code.
@@ -56,7 +62,7 @@ class Timer(object):
     def __enter__(self):
         self.watches[self._key].start()
 
-    def __exit__(self, type, value, traceback):
+    def __exit__(self, sym_type, value, traceback):
         self.watches[self._key].lap()
 
     def __call__(self, key):
@@ -79,7 +85,7 @@ class DotManager(object):
         import io
         from IPython.display import Image
 
-        import ctree.dotgen.to_dot
+        from  ctree.dotgen import to_dot
 
         dot_text = to_dot(ast_node)
 
@@ -93,13 +99,15 @@ class DotManager(object):
         return Image(dot_output, embed=True)
 
     @staticmethod
-    def run_dot(code, options=[], format='png'):
+    def run_dot(code, options=None, output_format='png'):
         # mostly copied from sphinx.ext.graphviz.render_dot
         import os
         from subprocess import Popen, PIPE
         from sphinx.util.osutil import EPIPE, EINVAL
 
-        dot_args = ['dot'] + options + ['-T', format]
+        if not options:
+            options = []
+        dot_args = ['dot'] + options + ['-T', output_format]
         if os.name == 'nt':
             # Avoid opening shell window.
             # * https://github.com/tkf/ipython-hierarchymagic/issues/1

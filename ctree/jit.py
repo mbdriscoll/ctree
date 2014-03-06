@@ -1,12 +1,11 @@
-import os
+"just in time utilities"
 import copy
 import shutil
 import tempfile
 
 import ctree
-from ctree.nodes import *
-from ctree.c.nodes import *
-from ctree.frontend import get_ast
+from ctree.nodes import Project
+from ctree.c.nodes import FunctionDecl
 from ctree.analyses import VerifyOnlyCtreeNodes
 
 import llvm.core as ll
