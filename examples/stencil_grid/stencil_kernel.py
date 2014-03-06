@@ -55,14 +55,14 @@ class SpecializedTranslator(LazySpecializedFunction):
 
   def args_to_subconfig(self, args):
     conf = ()
-    for arg in args:
-        conf += ((len(arg), arg.dtype, arg.ndim, arg.shape),)
+    # for arg in args:
+        # conf += ((len(arg), arg.dtype, arg.ndim, arg.shape),)
     return conf
 
   def transform(self, tree, program_config):
     """Convert the Python AST to a C AST."""
     kernel_sig = [Void()]
-    for arg in program_config[0]:
+    for arg in [(len(grid.data), grid.data.dtype, grid.data.ndim, grid.data.shape) for grid in self.input_grids + (self.output_grid, )]:
         kernel_sig.append(NdPointer(arg[1], arg[2], arg[3]))
 
     tree = StencilTransformer(self.input_grids, self.output_grid).visit(tree)
@@ -139,14 +139,14 @@ class StencilTransformer(NodeTransformer):
                                     )]
                         curr_node.body = next_node
                         curr_node = next_node[1]
-                    elif d == dim - 1:
-                        next_node = [OmpIvDep(), For(Assign(SymbolRef(target.name, Int()), initial),
-                                       LtE(target, end),
-                                       PostInc(target),
-                                       []
-                                    )]
-                        curr_node.body = next_node
-                        curr_node = next_node[1]
+                    # elif d == dim - 1:
+                    #     next_node = [OmpIvDep(), For(Assign(SymbolRef(target.name, Int()), initial),
+                    #                    LtE(target, end),
+                    #                    PostInc(target),
+                    #                    []
+                    #                 )]
+                    #     curr_node.body = next_node
+                    #     curr_node = next_node[1]
                     else:
                         curr_node.body = [For(Assign(SymbolRef(target.name, Int()), initial),
                                        LtE(target, end),
