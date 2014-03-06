@@ -12,6 +12,7 @@ class DeclFinder(NodeVisitor):
     """
 
     def find(self, node):
+        "look for a declaration of a symbol ref"
         assert isinstance(node, SymbolRef), \
             "DeclFinder only works on SymbolRefs for now."
 
@@ -49,6 +50,7 @@ class VerifyParentPointers(NodeVisitor):
     """
 
     def _check(self, child, parent):
+        "throw if child.parent is not the actual parent"
         if child.parent != parent:
             raise AstValidationError("Expect parent of %s to be %s, but got %s instead." %
                                      (child, parent, child.parent))

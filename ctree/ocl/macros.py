@@ -3,8 +3,9 @@ Macros for simplifying construction of OpenCL
 programs.
 """
 
-from ctree.c.nodes import *
-from ctree.c.types import *
+from ctree.c.nodes import SymbolRef, Block, Assign, FunctionCall
+from ctree.c.nodes import If, Eq, NotEq, Or, Not, Ref, Constant, String
+from ctree.c.types import Ptr, Long, FILE
 from ctree.c.macros import NULL, printf
 from ctree.c.types import Int
 

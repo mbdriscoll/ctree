@@ -2,12 +2,11 @@
 Code generator for C constructs.
 """
 
-from ctree.nodes import CtreeNode
-from ctree.types import get_ctree_type
 from ctree.codegen import CodeGenVisitor
-from ctree.c.nodes import *
-from ctree.c.types import *
-from ctree.precedence import *
+from ctree.c.nodes import Op
+from ctree.c.types import Ptr, get_ctree_type
+from ctree.precedence import UnaryOp, BinaryOp, TernaryOp
+from ctree.precedence import get_precedence, is_left_associative
 
 
 class CCodeGen(CodeGenVisitor):

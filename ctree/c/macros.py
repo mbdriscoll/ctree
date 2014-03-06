@@ -2,7 +2,7 @@
 Macros for simplifying construction of C programs.
 """
 
-from ctree.c.nodes import *
+from ctree.c.nodes import SymbolRef, CtreeNode, FunctionCall, String
 
 
 def NULL():
