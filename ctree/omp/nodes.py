@@ -20,8 +20,9 @@ class OmpNode(CtreeNode):
 
         return OmpCodeGen(indent).visit(self)
 
-    def dotgen(self, indent=0):
+    def _to_dot(self, indent=0):
         from ctree.omp.dotgen import OmpDotGen
+
         return OmpDotGen().visit(self)
 
     def _requires_semicolon(self):

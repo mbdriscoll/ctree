@@ -83,7 +83,7 @@ class Counter(object):
         key_values_string = ""
         for key_value in self._counter.items():
             key_values_string += "  %s: %s\n" % key_value
-        LOG.info("execution statistics: <<<\n%s>>>", key_values_string)
+        LOG.info("execution statistics: (((\n%s)))", key_values_string)
 
 
 STATS = Counter()

@@ -11,11 +11,6 @@ class OclType(CtreeType):
 
         return OclCodeGen().visit(self)
 
-    def dotgen(self):
-        from ctree.ocl.dotgen import OclDotGen
-
-        return OclDotGen().visit(self)
-
     def as_ctype(self):
         raise NotImplementedError()
 

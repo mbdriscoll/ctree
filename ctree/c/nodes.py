@@ -40,19 +40,20 @@ class CFile(CNode, File):
         return "%s.bc" % self.name
 
     def _compile(self, program_text, compilation_dir):
+        import ctree
+        from ctree.util import truncate
+
         c_src_file = os.path.join(compilation_dir, self.get_filename())
         ll_bc_file = os.path.join(compilation_dir, self.get_bc_filename())
         log.info("File for generated C: %s", c_src_file)
         log.info("File for generated LLVM: %s", ll_bc_file)
-        log.info("Generated C program: <<<\n%s\n>>>", program_text)
+        log.info("Generated C program: (((\n%s\n)))", truncate(program_text))
 
         # write program text to C file
         with open(c_src_file, 'w') as c_file:
             c_file.write(program_text)
 
         # call clang to generate LLVM bitcode file
-        import ctree
-
         CC = ctree.CONFIG.get('jit', 'CC')
         CFLAGS = ctree.CONFIG.get('jit', 'CFLAGS')
         compile_cmd = "%s -emit-llvm %s -o %s -c %s" % (CC, CFLAGS, ll_bc_file, c_src_file)
@@ -64,7 +65,7 @@ class CFile(CNode, File):
 
         with open(ll_bc_file, 'rb') as bc:
             ll_module = llvm.core.Module.from_bitcode(bc)
-        log.debug("Generated LLVM Program: <<<\n%s\n>>>", ll_module)
+        log.debug("Generated LLVM Program: (((\n%s\n)))", ll_module)
 
         return ll_module
 

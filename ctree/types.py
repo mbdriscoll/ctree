@@ -11,9 +11,6 @@ class CtreeType(CtreeNode):
     def as_ctypes(self):
         raise Exception("%s should override as_ctypes()" % type(self))
 
-    def dotgen(self):
-        raise Exception("%s should override dotgen()" % type(self))
-
     def __eq__(self, other):
         return str(self) == str(other)
 

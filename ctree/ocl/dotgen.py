@@ -9,4 +9,5 @@ class OclDotGen(DotGenVisitor):
     """
     Visitor to generator DOT.
     """
-    pass
+    def label_OclFile(self, node):
+        return node.get_filename()
