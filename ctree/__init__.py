@@ -1,3 +1,8 @@
+"""
+The ctree package
+
+
+"""
 from __future__ import print_function
 
 # ---------------------------------------------------------------------------
@@ -13,46 +18,47 @@ assert sys.version_info[0] >= 2, "ctree requires Python 2.7.x"
 
 import logging
 
-log = logging.getLogger(__name__)
+LOG = logging.getLogger(__name__)
 
 
 # ---------------------------------------------------------------------------
 # configuration file parsing
 
+# pylint disable=import-error
 try:
-    # python 3
-    import configparser
-except ImportError:
     # python 2
     import ConfigParser as configparser
+except ImportError:
+    # python 3
+    import configparser
+# pylint enable=import-error
 
 from os import path, getcwd
 
-config = configparser.ConfigParser()
-default_cfg_file_path = path.join(path.abspath(path.dirname(__file__)), "defaults.cfg")
-log.info("reading default configuration from: %s" % default_cfg_file_path)
+CONFIG = configparser.ConfigParser()
+DEFAULT_CFG_FILE_PATH = path.join(path.abspath(path.dirname(__file__)), "defaults.cfg")
+LOG.info("reading default configuration from: %s", DEFAULT_CFG_FILE_PATH)
 
-config.readfp(open(default_cfg_file_path), filename="defaults.cfg")
+CONFIG.readfp(open(DEFAULT_CFG_FILE_PATH), filename="defaults.cfg")
 
-cfg_paths = [
+CFG_PATHS = [
     path.expanduser('~/.ctree.cfg'),
     path.join(getcwd(), ".ctree.cfg"),
 ]
-log.info("checking for config files at: %s" % cfg_paths)
+LOG.info("checking for config files at: %s", CFG_PATHS)
 
-found = config.read(cfg_paths)
-log.info("found config files: %s" % found)
+LOG.info("found config files: %s", CONFIG.read(CFG_PATHS))
 
 if sys.version_info.major == 2:
     from io import BytesIO as Memfile
 else:
     from io import StringIO as Memfile
 
-configfile = Memfile()
-config.write(configfile)
-config_txt = configfile.getvalue()
-log.info("using configuration:\n%s" % config_txt)
-configfile.close()
+CONFIGFILE = Memfile()
+CONFIG.write(CONFIGFILE)
+CONFIG_TXT = CONFIGFILE.getvalue()
+LOG.info("using configuration:\n%s", CONFIG_TXT)
+CONFIGFILE.close()
 
 
 # ---------------------------------------------------------------------------
@@ -69,14 +75,16 @@ class Counter(object):
         self._counter = collections.Counter()
 
     def log(self, event_str):
+        """record a single named event"""
         self._counter[event_str] += 1
 
     def report(self):
-        kvs = ""
-        for kv in self._counter.items():
-            kvs += "  %s: %s\n" % kv
-        log.info("execution statistics: <<<\n%s>>>" % kvs)
+        """send a counter report of all named events to the log"""
+        key_values_string = ""
+        for key_value in self._counter.items():
+            key_values_string += "  %s: %s\n" % key_value
+        LOG.info("execution statistics: <<<\n%s>>>", key_values_string)
 
 
-stats = Counter()
-atexit.register(stats.report)
+STATS = Counter()
+atexit.register(STATS.report)

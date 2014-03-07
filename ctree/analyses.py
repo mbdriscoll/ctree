@@ -11,6 +11,9 @@ class DeclFinder(NodeVisitor):
     Returns the first use of a particular symbol.
     """
 
+    def __init__(self):
+        self.decl = None
+
     def find(self, node):
         "look for a declaration of a symbol ref"
         assert isinstance(node, SymbolRef), \

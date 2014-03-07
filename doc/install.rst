@@ -3,10 +3,10 @@
 Ctree Installation
 ==================
 
-Dependecies
------------
+Dependencies
+------------
 
-* Install `Python 3.2+ <http://python.org/>`_.
+* Install `Python 2.7.x <http://python.org/>`_.
 * Install `Clang and LLVM 3.3 <http://llvm.org/>`_.
 * Install `llvmpy <http://www.llvmpy.org/>`_.
 

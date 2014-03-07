@@ -24,11 +24,11 @@ class JitModule(object):
         self.compilation_dir = tempfile.mkdtemp(prefix="ctree-", dir=tempfile.gettempdir())
         self.ll_module = ll.Module.new('ctree')
         self.ll_exec_engine = None
-        log.info("Temporary compilation directory is: %s" % self.compilation_dir)
+        log.info("Temporary compilation directory is: %s", self.compilation_dir)
 
     def __del__(self):
-        if not ctree.config.get("jit", "PRESERVE_SRC_DIR"):
-            log.info("Removing temporary compilation directory %s." % self.compilation_dir)
+        if not ctree.CONFIG.get("jit", "PRESERVE_SRC_DIR"):
+            log.info("Removing temporary compilation directory %s.", self.compilation_dir)
             shutil.rmtree(self.compilation_dir)
 
     def _link_in(self, submodule):
@@ -100,21 +100,21 @@ class LazySpecializedFunction(object):
         Determines the program_configuration to be run. If it has yet to be built,
         build it. Then, execute it.
         """
-        ctree.stats.log("specialized function call")
+        ctree.STATS.log("specialized function call")
         assert not kwargs, "Passing kwargs to specialized functions isn't supported."
-        log.info("detected specialized function call with arg types: %s" % [type(a) for a in args])
+        log.info("detected specialized function call with arg types: %s", [type(a) for a in args])
 
         args_subconfig = self._args_to_subconfig_safely(args)
         tuner_subconfig = self._next_tuning_config()
         program_config = (args_subconfig, tuner_subconfig)
 
-        log.info("specializer returned subconfig for arguments: %s" % (args_subconfig,))
-        log.info("tuner returned subconfig: %s" % (tuner_subconfig,))
+        log.info("specializer returned subconfig for arguments: %s", (args_subconfig,))
+        log.info("tuner returned subconfig: %s", tuner_subconfig)
 
         from ctree.dotgen import to_dot
 
         if program_config in self.c_functions:
-            ctree.stats.log("specialized function cache hit")
+            ctree.STATS.log("specialized function cache hit")
             log.info("specialized function cache hit!")
         else:
             log.info("specialized function cache miss.")
@@ -148,5 +148,5 @@ class LazySpecializedFunction(object):
         this particular invocation.
         """
         log.warn("arguments will not influence program_config. " +
-                 "Consider overriding args_to_subconfig() in %s." % type(self).__name__)
+                 "Consider overriding args_to_subconfig() in %s.", type(self).__name__)
         return ()

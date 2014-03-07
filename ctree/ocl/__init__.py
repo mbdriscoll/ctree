@@ -14,7 +14,7 @@ try:
     import ctypes.util
 
     libOpenCL = ctypes.util.find_library("OpenCL")
-    log.info("loading libOpenCL from %s" % libOpenCL)
+    log.info("loading libOpenCL from %s", libOpenCL)
 
     import llvm.core
 

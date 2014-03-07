@@ -12,6 +12,7 @@ log = logging.getLogger(__name__)
 from ctree.nodes import CtreeNode, File
 from ctree.util import singleton
 
+
 class CNode(CtreeNode):
     """Base class for all C nodes in ctree."""
 
@@ -41,9 +42,9 @@ class CFile(CNode, File):
     def _compile(self, program_text, compilation_dir):
         c_src_file = os.path.join(compilation_dir, self.get_filename())
         ll_bc_file = os.path.join(compilation_dir, self.get_bc_filename())
-        log.info("File for generated C: %s" % c_src_file)
-        log.info("File for generated LLVM: %s" % ll_bc_file)
-        log.info("Generated C program: <<<\n%s\n>>>" % program_text)
+        log.info("File for generated C: %s", c_src_file)
+        log.info("File for generated LLVM: %s", ll_bc_file)
+        log.info("Generated C program: <<<\n%s\n>>>", program_text)
 
         # write program text to C file
         with open(c_src_file, 'w') as c_file:
@@ -52,10 +53,10 @@ class CFile(CNode, File):
         # call clang to generate LLVM bitcode file
         import ctree
 
-        CC = ctree.config.get('jit', 'CC')
-        CFLAGS = ctree.config.get('jit', 'CFLAGS')
+        CC = ctree.CONFIG.get('jit', 'CC')
+        CFLAGS = ctree.CONFIG.get('jit', 'CFLAGS')
         compile_cmd = "%s -emit-llvm %s -o %s -c %s" % (CC, CFLAGS, ll_bc_file, c_src_file)
-        log.info("Compilation command: %s" % compile_cmd)
+        log.info("Compilation command: %s", compile_cmd)
         subprocess.check_call(compile_cmd, shell=True)
 
         # load llvm bitcode
@@ -63,7 +64,7 @@ class CFile(CNode, File):
 
         with open(ll_bc_file, 'rb') as bc:
             ll_module = llvm.core.Module.from_bitcode(bc)
-        log.info("Generated LLVM Program: <<<\n%s\n>>>" % ll_module)
+        log.info("Generated LLVM Program: <<<\n%s\n>>>", ll_module)
 
         return ll_module
 
