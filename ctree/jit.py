@@ -61,7 +61,7 @@ class _ConcreteSpecializedFunction(object):
         assert project.parent is None, \
             "Expected null project.parent, but got: %s." % type(project.parent)
         self.module = project.codegen()
-        log.info("Full LLVM program is: <<<\n%s\n>>>" % self.module.ll_module)
+        log.debug("Full LLVM program is: <<<\n%s\n>>>" % self.module.ll_module)
         self.fn = self.module.get_callable(entry_point_name, entry_point_typesig)
 
     def __call__(self, *args, **kwargs):

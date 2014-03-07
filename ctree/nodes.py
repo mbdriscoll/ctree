@@ -227,7 +227,7 @@ class CommonCodeGen(CodeGenVisitor):
         return ";\n".join(map(str, node.body)) + ";\n"
 
     def visit_GeneratedPathRef(self, node):
-        raise Exception("Unresolved GeneratedPathRefs to file %s." % (node.filenode.get_filename()))
+        raise Exception("Unresolved GeneratedPathRefs to file %s." % (node.target.get_filename()))
 
 
 class CommonDotGen(DotGenVisitor):

@@ -64,7 +64,7 @@ class CFile(CNode, File):
 
         with open(ll_bc_file, 'rb') as bc:
             ll_module = llvm.core.Module.from_bitcode(bc)
-        log.info("Generated LLVM Program: <<<\n%s\n>>>", ll_module)
+        log.debug("Generated LLVM Program: <<<\n%s\n>>>", ll_module)
 
         return ll_module
 

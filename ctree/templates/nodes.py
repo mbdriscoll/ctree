@@ -34,7 +34,7 @@ class StringTemplate(TemplateNode):
         from string import Template
         self._template = Template(dedented_txt)
         self._children = child_dict
-        self._fields = list(child_dict.keys())
+        self._fields = child_dict.keys()
 
     def __getattr__(self, name):
         """Check in child_dict if 'name' is a child."""
@@ -43,3 +43,7 @@ class StringTemplate(TemplateNode):
         except KeyError:
             pass
         raise AttributeError(name)
+
+    # FIXME StringTemplate don't work with NodeTransformers very well
+    # because the new, returned node isn't updated in the _children
+    # dictionary.
