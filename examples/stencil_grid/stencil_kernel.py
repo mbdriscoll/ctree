@@ -157,7 +157,14 @@ class StencilTransformer(NodeTransformer):
                                        []
                                     )]
                         curr_node = curr_node.body[0]
-                curr_node.body = self.visit(node.body[0])
+                self.output_index = self.gen_fresh_var()
+                curr_node.body = [Assign(SymbolRef(self.output_index, Int()), self.gen_array_macro(self.output_grid_name, [SymbolRef(x) for x in
+                                         self.var_list]))]
+                for elem in map(self.visit, node.body):
+                    if type(elem) == list:
+                        curr_node.body.extend(elem)
+                    else:
+                        curr_node.body.append(elem)
                 self.kernel_target = None
                 return ret_node
             elif node.iter.func.attr is 'neighbors':
@@ -170,8 +177,6 @@ class StencilTransformer(NodeTransformer):
                 self.neighbor_target = node.target.id
                 self.neighbor_grid_name = grid_name
                 body = []
-                self.output_index = self.gen_fresh_var()
-                body.append(Assign(SymbolRef(self.output_index, Int()), self.gen_array_macro(self.output_grid_name, [SymbolRef(x) for x in self.var_list])))
                 statement = node.body[0]
                 for x in grid.neighbors(zero_point, neighbors_id):
                     self.offset_list = list(x)
@@ -221,6 +226,8 @@ class StencilTransformer(NodeTransformer):
         # print(ast.dump(node))
         return AddAssign(self.visit(node.target), self.visit(node.value))
 
+    def visit_Assign(self, node):
+        return Assign(self.visit(node.targets[0]), self.visit(node.value))
 
 
 # may want to make this inherit from something else...
