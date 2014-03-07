@@ -3,7 +3,6 @@ import unittest
 from ctree.jit import *
 from fixtures import *
 
-
 class TestJit(unittest.TestCase):
     def test_identity(self):
         mod = JitModule()
@@ -41,3 +40,11 @@ class TestJit(unittest.TestCase):
         self.assertEqual(choose(0.8, 44, 122), c_choose_fn(0.8, 44, 122))
         self.assertEqual(choose(0.3, 27, 39), c_choose_fn(0.3, 27, 39))
         self.assertEqual(choose(0.7, 27, 39), c_choose_fn(0.7, 27, 39))
+
+    def test_l2norm(self):
+        mod = JitModule()
+        submod = CFile("generated", [l2norm_ast])._compile(l2norm_ast.codegen(), mod.compilation_dir)
+        mod._link_in(submod)
+        entry = l2norm_ast.find(FunctionDecl, name="l2norm")
+        c_l2norm_fn = mod.get_callable(entry.name, entry.get_type().as_ctype())
+        self.assertEqual(l2norm(np.ones(12, dtype=np.float64)), c_l2norm_fn(np.ones(12, dtype=np.float64), 12))

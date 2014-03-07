@@ -5,7 +5,7 @@ Code generator for C constructs.
 from ctree.codegen import CodeGenVisitor
 from ctree.c.nodes import Op
 from ctree.c.types import Ptr, get_ctree_type
-from ctree.precedence import UnaryOp, BinaryOp, TernaryOp
+from ctree.precedence import UnaryOp, BinaryOp, TernaryOp, Cast
 from ctree.precedence import get_precedence, is_left_associative
 
 
@@ -22,12 +22,13 @@ class CCodeGen(CodeGenVisitor):
         enclose with parentheses.
         """
         parent = getattr(node, 'parent', None)
-        if isinstance(node, (UnaryOp, BinaryOp, TernaryOp)) and \
-                isinstance(parent, (UnaryOp, BinaryOp, TernaryOp)):
+        if isinstance(node, (UnaryOp, BinaryOp, TernaryOp)) and\
+                isinstance(parent, (UnaryOp, BinaryOp, TernaryOp, Cast)):
             prec = get_precedence(node)
             parent_prec = get_precedence(parent)
-            is_not_last_child = isinstance(parent, UnaryOp) or \
-                                (isinstance(parent, BinaryOp) and node is parent.left) or \
+            is_not_last_child = isinstance(parent, UnaryOp) or\
+                                isinstance(parent, Cast) or\
+                                (isinstance(parent, BinaryOp) and node is parent.left) or\
                                 (isinstance(parent, TernaryOp) and node is not parent.elze)
             assoc_left = is_left_associative(parent)
             if (prec < parent_prec) or \
@@ -74,7 +75,8 @@ class CCodeGen(CodeGenVisitor):
         return self._parentheses(node) % s
 
     def visit_Cast(self, node):
-        return "(%s) %s" % (node.type, node.value)
+        s = "(%s) %s" % (node.type, node.value)
+        return self._parentheses(node) % s
 
     def visit_Constant(self, node):
         if isinstance(node.value, str):
@@ -176,3 +178,6 @@ class CCodeGen(CodeGenVisitor):
 
     def visit_FILE(self, node):
         return "FILE"
+
+    def visit_Define(self, node):
+        return "#define %s %s" % (node.defname, node.calc)

@@ -30,3 +30,9 @@ class OmpCodeGen(CodeGenVisitor):
 
     def visit_OmpNoWaitClause(self, node):
         return "nowait"
+
+    def visit_OmpIvDep(self, node):
+        s = "#pragma IVDEP"
+        if node.clauses:
+          s += " " + ", ".join(map(str, node.clauses))
+        return s     

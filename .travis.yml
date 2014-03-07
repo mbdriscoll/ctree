@@ -12,7 +12,6 @@ env:
   matrix:
     - LLVM_VERSION=3.3
 
-
 before_install:
 
   - sudo apt-get update -qq
@@ -22,7 +21,7 @@ before_install:
 install:
 
   # coverage and doc generator
-  - pip install Sphinx coveralls
+  - pip install numpy Sphinx coveralls
 
   # install llvmpy
   - git clone git://github.com/llvmpy/llvmpy.git ${HOME}/llvmpy

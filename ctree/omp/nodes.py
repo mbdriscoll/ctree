@@ -22,7 +22,6 @@ class OmpNode(CtreeNode):
 
     def dotgen(self, indent=0):
         from ctree.omp.dotgen import OmpDotGen
-
         return OmpDotGen().visit(self)
 
     def _requires_semicolon(self):
@@ -45,6 +44,11 @@ class OmpParallelFor(OmpNode):
 
     def __init__(self, clauses=None):
         self.clauses = clauses if clauses else []
+
+class OmpIvDep(OmpNode):
+  _field = ['clauses']
+  def __init__(self, clauses=[]):
+    self.clauses = clauses
 
 
 class OmpClause(OmpNode):

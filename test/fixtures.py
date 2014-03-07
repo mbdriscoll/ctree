@@ -4,6 +4,7 @@ A collection of pre-built ASTs for use in testing.
 
 from ctree.c.nodes import *
 from ctree.c.types import *
+from ctree.cpp.nodes import *
 
 # ---------------------------------------------------------------------------
 # integer identity
@@ -89,3 +90,33 @@ choose_ast = \
                    Return(SymbolRef("b")),
                ])
         ])
+
+
+# ---------------------------------------------------------------------------
+# a function that takes a numpy array
+
+import math
+import numpy as np
+
+def l2norm(A):
+    return math.sqrt(sum(x*x for x in A))
+
+l2norm_ast = CFile("generated", [
+    CppInclude("math.h"),
+    FunctionDecl(Double(), "l2norm",
+        params=[
+            SymbolRef("A", NdPointer(np.float64, 1, 12)),
+            SymbolRef("n", Int()),
+        ],
+        defn=[
+            SymbolRef("sum", Double()),
+            For(Assign(SymbolRef("i", Int()), Constant(0)),
+                Lt(SymbolRef("i"), SymbolRef("n")),
+                PostInc(SymbolRef("i")), [
+                AddAssign(SymbolRef("sum"),
+                          Mul(ArrayRef(SymbolRef("A"), SymbolRef("i")),
+                              ArrayRef(SymbolRef("A"), SymbolRef("i")))),
+        ]),
+        Return( FunctionCall("sqrt", [SymbolRef("sum")]) ),
+    ])
+])

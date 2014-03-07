@@ -3,7 +3,7 @@ Utilities for determining precedence in C, with the goal of minimizing the
 number of parentheses in the generated code.
 """
 
-from ctree.c.nodes import UnaryOp, BinaryOp, TernaryOp
+from ctree.c.nodes import UnaryOp, BinaryOp, TernaryOp, Cast
 
 # ---------------------------------------------------------------------------
 # dictionary of node class -> precedence ids, where 1 denotes the highest-
@@ -28,7 +28,7 @@ _EXPR_TO_PRECEDENCE = {
     'SubUnary': 3,
     'Not': 3,
     'BitNot': 3,
-    # 'cast': 3,
+    'Cast': 3,
     'Deref': 3,
     'Ref': 3,
     'SizeOf': 3,
@@ -85,6 +85,8 @@ def get_precedence(node):
             op = type(node.op)
         elif isinstance(node, TernaryOp):
             op = TernaryOp
+        elif isinstance(node, Cast):
+            op = Cast
         else:
             raise Exception("Cannot determine operator for node %d.\n", node)
 
