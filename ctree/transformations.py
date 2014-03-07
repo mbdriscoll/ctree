@@ -96,10 +96,6 @@ class PyBasicConversions(NodeTransformer):
     def visit_arg(self, node):
         return SymbolRef(node.arg, node.annotation)
 
-    def visit_Assign(self, node):
-        print(dir(node.targets))
-        print(node.values)
-        exit()
 
 class FixUpParentPointers(NodeTransformer):
     """
