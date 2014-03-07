@@ -26,6 +26,9 @@ class Timer(object):
             self.x = 0.0
             self.x2 = 0.0
             self.nLaps = 0
+            self._start = 0
+            self._key = None
+            self._exec_engine = None
 
         def start(self):
             self._start = time.time()
@@ -58,6 +61,7 @@ class Timer(object):
 
     def __init__(self):
         self.watches = {}
+        self._key = None
 
     def __enter__(self):
         self.watches[self._key].start()

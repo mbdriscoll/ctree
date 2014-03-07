@@ -23,7 +23,7 @@ class JitModule(object):
     def __init__(self):
         self.compilation_dir = tempfile.mkdtemp(prefix="ctree-", dir=tempfile.gettempdir())
         self.ll_module = ll.Module.new('ctree')
-        self.ll_exec_engine = None
+        self.exec_engine = None
         log.info("Temporary compilation directory is: %s", self.compilation_dir)
 
     def __del__(self):

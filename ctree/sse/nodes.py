@@ -13,7 +13,7 @@ class SSENode(CtreeNode):
 
         return SseCodeGen(indent).visit(self)
 
-    def dotgen(self, indent=0):
+    def dotgen(self, _):
         from ctree.sse.dotgen import SseDotGen
 
         return SseDotGen().visit(self)
