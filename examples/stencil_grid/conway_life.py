@@ -15,8 +15,8 @@ def render(sk, msg="---"):
     Simplistic render of a life board
     """
     print(msg)
-    for h in xrange(sk.shape[0]):
-        for w in xrange(sk.shape[1]):
+    for h in range(sk.shape[0]):
+        for w in range(sk.shape[1]):
             if sk[h][w] > 0:
                 print('*', end='')
             else:
@@ -49,7 +49,7 @@ def run_game(width=25, height=25, generations=1):
 
     # create a stencil grid for t+1
     current_grid = StencilGrid([height, width])
-    all_neighbors = [(x, y) for x in xrange(-1, 2) for y in xrange(-1, 2)]
+    all_neighbors = [(x, y) for x in range(-1, 2) for y in range(-1, 2)]
     all_neighbors.remove((0, 0))
     current_grid.neighbor_definition.append(all_neighbors)
 
@@ -60,6 +60,7 @@ def run_game(width=25, height=25, generations=1):
 
     # create a stencil grid for t+1
     future_grid = StencilGrid([height, width])
+    future_grid.neighbor_definition.append(all_neighbors)
 
     new_state_map = StencilGrid([16])
     for index, new_state in enumerate([0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0]):
@@ -67,7 +68,7 @@ def run_game(width=25, height=25, generations=1):
 
     render(current_grid, "Original input")
 
-    for generation in xrange(generations):
+    for generation in range(generations):
         kernel.kernel(current_grid, new_state_map, future_grid)
         current_grid, future_grid = future_grid, current_grid
 
@@ -75,3 +76,4 @@ def run_game(width=25, height=25, generations=1):
 
 if __name__ == '__main__':
     run_game()
+    run_game(generations=20)
