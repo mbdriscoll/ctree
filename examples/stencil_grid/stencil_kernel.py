@@ -61,9 +61,10 @@ class SpecializedTranslator(LazySpecializedFunction):
 
   def transform(self, tree, program_config):
     """Convert the Python AST to a C AST."""
-    kernel_sig = [Void()]
+    param_types = []
     for arg in program_config[0]:
-        kernel_sig.append(NdPointer(arg[1], arg[2], arg[3]))
+        param_types.append(NdPointer(arg[1], arg[2], arg[3]))
+    kernel_sig = FuncType(Void(), param_types)
 
     tree = StencilTransformer(self.input_grids, self.output_grid).visit(tree)
     tree = transform.PyBasicConversions().visit(tree)
@@ -72,7 +73,8 @@ class SpecializedTranslator(LazySpecializedFunction):
     self.gen_array_macro_definition(tree, params)
     tree.find(FunctionDecl, name="kernel").set_typesig(kernel_sig)
     # print(ast.dump(tree))
-    return tree
+    entry_point_typesig = tree.find(FunctionDecl, name="kernel").get_type().as_ctype()
+    return tree, entry_point_typesig
 
   def gen_array_macro_definition(self, tree, arg_names):
     first_for = tree.find(For)
@@ -273,8 +275,8 @@ class StencilKernel(object):
             return self.pure_python_kernel(*args)
 
         myargs = [y.data for y in args]
-        self.model = SpecializedTranslator(self.model, "kernel", args[0:-1], args[-1])
-        return self.model(*myargs)
+        model = SpecializedTranslator(self.model, "kernel", args[0:-1], args[-1])
+        return model(*myargs)
 
         #FIXME: instead of doing this short-circuit, we should use the Asp infrastructure to
         # do it, by passing in a lambda that does this check
