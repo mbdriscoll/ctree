@@ -13,8 +13,8 @@ int apply_all($array_decl)
     const unsigned int count = $count;  // number of elements in array
     int err;                            // error code returned from api calls
 
-    size_t global;                      // global domain size for our calculation
-    size_t local;                       // local domain size for our calculation
+    size_t global = $count;             // global domain size for our calculation
+    size_t local = 32;                  // local domain size for our calculation
 
     cl_device_id device_id;             // compute device id
     cl_context context;                 // compute context
@@ -154,7 +154,6 @@ int apply_all($array_decl)
     // Execute the kernel over the entire range of our 1d input data set
     // using the maximum number of work group items for this device
     //
-    global = count;
     err = clEnqueueNDRangeKernel(commands, kernel, 1, NULL, &global, &local, 0, NULL, NULL);
     if (err)
     {

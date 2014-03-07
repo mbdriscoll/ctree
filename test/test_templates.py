@@ -1,3 +1,4 @@
+import os
 import unittest
 from textwrap import dedent
 
@@ -107,25 +108,25 @@ class TestStringTemplates(unittest.TestCase):
 
 
 try:
-    import os
     import examples
 except ImportError:
     HAVE_EXAMPLES = False
 else:
     HAVE_EXAMPLES = True
 
-unittest.skipUnless(HAVE_EXAMPLES, "$CTREE/examples not in PYTHONPATH")
 class TestFileTemplates(unittest.TestCase):
     def _check(self, tree, expected):
         actual = tree.codegen()
         self.assertEqual(actual, dedent(expected))
 
+    unittest.skipUnless(HAVE_EXAMPLES, "$CTREE/examples not in PYTHONPATH")
     def test_simple_file_template(self):
         from ctree.c.nodes import String
         path = os.path.join(*(examples.__path__ + ["templates", "printf.tmpl.c"]))
         tree = FileTemplate(path, {'fmt': String('Hello, world!')})
         self._check(tree, 'printf("Hello, world!");')
 
+    unittest.skipUnless(HAVE_EXAMPLES, "$CTREE/examples not in PYTHONPATH")
     def test_file_template_dotgen(self):
         from ctree.c.nodes import String
         path = os.path.join(*(examples.__path__ + ["templates", "printf.tmpl.c"]))
