@@ -60,6 +60,7 @@ def run_game(width=25, height=25, generations=1):
 
     # create a stencil grid for t+1
     future_grid = StencilGrid([height, width])
+    future_grid.neighbor_definition.append(all_neighbors)
 
     new_state_map = StencilGrid([16])
     for index, new_state in enumerate([0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0]):
@@ -75,3 +76,4 @@ def run_game(width=25, height=25, generations=1):
 
 if __name__ == '__main__':
     run_game()
+    run_game(generations=20)
