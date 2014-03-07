@@ -3,7 +3,6 @@ import unittest
 from ctree.jit import *
 from fixtures import *
 
-
 class TestJit(unittest.TestCase):
     def test_identity(self):
         mod = JitModule()

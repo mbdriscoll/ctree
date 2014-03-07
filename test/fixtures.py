@@ -95,41 +95,28 @@ choose_ast = \
 # ---------------------------------------------------------------------------
 # a function that takes a numpy array
 
-try:
-    import math
-    import numpy as np
+import math
+import numpy as np
 
-    def l2norm(A):
-        return math.sqrt(sum(x*x for x in A))
+def l2norm(A):
+    return math.sqrt(sum(x*x for x in A))
 
-    """
-    double l2norm(double* A, int n) {
-      double sum = 0;
-      for (int i = 0; i < n; i++)
-        sum += A[i] * A[i];
-      return sqrt(sum);
-    }
-    """
-
-    l2norm_ast = CFile("generated", [
-        CppInclude("math.h"),
-        FunctionDecl(Double(), "l2norm",
-            params=[
-                SymbolRef("A", NdPointer(np.float64, 1, 12)),
-                SymbolRef("n", Int()),
-            ],
-            defn=[
-                SymbolRef("sum", Double()),
-                For(Assign(SymbolRef("i", Int()), Constant(0)),
-                    Lt(SymbolRef("i"), SymbolRef("n")),
-                    PostInc(SymbolRef("i")), [
-                    AddAssign(SymbolRef("sum"),
-                              Mul(ArrayRef(SymbolRef("A"), SymbolRef("i")),
-                                  ArrayRef(SymbolRef("A"), SymbolRef("i")))),
-            ]),
-            Return( FunctionCall("sqrt", [SymbolRef("sum")]) ),
-        ])
+l2norm_ast = CFile("generated", [
+    CppInclude("math.h"),
+    FunctionDecl(Double(), "l2norm",
+        params=[
+            SymbolRef("A", NdPointer(np.float64, 1, 12)),
+            SymbolRef("n", Int()),
+        ],
+        defn=[
+            SymbolRef("sum", Double()),
+            For(Assign(SymbolRef("i", Int()), Constant(0)),
+                Lt(SymbolRef("i"), SymbolRef("n")),
+                PostInc(SymbolRef("i")), [
+                AddAssign(SymbolRef("sum"),
+                          Mul(ArrayRef(SymbolRef("A"), SymbolRef("i")),
+                              ArrayRef(SymbolRef("A"), SymbolRef("i")))),
+        ]),
+        Return( FunctionCall("sqrt", [SymbolRef("sum")]) ),
     ])
-
-except ImportError:
-    pass
+])

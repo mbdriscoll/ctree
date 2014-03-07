@@ -10,8 +10,7 @@ env:
     # encrypted OAuth token so Travis can commit docs back to Github
     - secure: "QBB2KT4EFUdSkH9fjo5J/02zuZlD0FbVsKwYJgW6c4INp1UY/nx0nrsgjPSZQMD2HBztdfEZInugoVrOJwXBzWJ5Ioc19T9oYhnzaIF6oJRo1mTYDhragvdwiLfb0AyylGq7bgP4lgoMBtE1Oxauf0rKVEYiVeEhvHJup/di6A4="
   matrix:
-    - LLVM_VERSION=3.3 WITH_NUMPY=1
-    - LLVM_VERSION=3.3 WITH_NUMPY=0
+    - LLVM_VERSION=3.3
 
 before_install:
 
@@ -23,7 +22,6 @@ install:
 
   # coverage and doc generator
   - pip install numpy Sphinx coveralls
-  - if [[ ${WITH_NUMPY} -eq 1 ]] ; then pip install numpy; fi
 
   # install llvmpy
   - git clone git://github.com/llvmpy/llvmpy.git ${HOME}/llvmpy
