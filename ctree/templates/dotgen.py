@@ -12,3 +12,6 @@ class TemplateDotGen(DotGenVisitor):
     def label_StringTemplate(self, node):
         return "template: <<<\n%s\n>>>" % \
             node._template.template.replace("\n", "\\n").replace('"', r"\"")
+
+    def label_FileTemplate(self, node):
+        return "path: %s" % node._template_path

@@ -1,8 +1,9 @@
 import unittest
 from textwrap import dedent
 
-from ctree.templates.nodes import *
+from ctree.templates.nodes import StringTemplate, FileTemplate
 from ctree.c.nodes import Constant, While
+from ctree.dotgen import to_dot
 
 
 class TestStringTemplates(unittest.TestCase):
@@ -30,7 +31,6 @@ class TestStringTemplates(unittest.TestCase):
             'one': Constant(1),
             'two': Constant(2),
         })
-        from ctree.dotgen import to_dot
         dot = to_dot(tree)
 
     def test_indent_0(self):
@@ -104,3 +104,30 @@ class TestStringTemplates(unittest.TestCase):
 
         template_node, string = tree, tree.val
         self.assertIs(string.parent, template_node)
+
+
+try:
+    import os
+    import examples
+except ImportError:
+    HAVE_EXAMPLES = False
+else:
+    HAVE_EXAMPLES = True
+
+unittest.skipUnless(HAVE_EXAMPLES, "$CTREE/examples not in PYTHONPATH")
+class TestFileTemplates(unittest.TestCase):
+    def _check(self, tree, expected):
+        actual = tree.codegen()
+        self.assertEqual(actual, dedent(expected))
+
+    def test_simple_file_template(self):
+        from ctree.c.nodes import String
+        path = os.path.join(*(examples.__path__ + ["templates", "printf.tmpl.c"]))
+        tree = FileTemplate(path, {'fmt': String('Hello, world!')})
+        self._check(tree, 'printf("Hello, world!");')
+
+    def test_file_template_dotgen(self):
+        from ctree.c.nodes import String
+        path = os.path.join(*(examples.__path__ + ["templates", "printf.tmpl.c"]))
+        tree = FileTemplate(path, {'fmt': String('Hello, world!')})
+        to_dot(tree)
