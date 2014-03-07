@@ -29,21 +29,36 @@ class StringTemplate(TemplateNode):
         and subtrees (CtreeNodes).
         """
         from textwrap import dedent
-        dedented_txt = dedent(template_txt)
-
         from string import Template
+        from collections import namedtuple
+
+        dedented_txt = dedent(template_txt)
         self._template = Template(dedented_txt)
         self._children = child_dict
         self._fields = child_dict.keys()
+        super(StringTemplate, self).__init__()
+
+    def __setattr__(self, name, val):
+        from ctree.nodes import CtreeNode
+
+        if name == "_children":
+            # set parent pointers in child_dict
+            assert isinstance(val, dict)
+            super(StringTemplate, self).__setattr__(name, val)
+            for name, child in val.items():
+                child.parent = self
+        elif hasattr(self, "_children") and name in self._children:
+            # insert into _children dictionary and set parent pointers
+            self._children[name] = val
+            if isinstance(val, CtreeNode):
+                val.parent = self
+        else:
+            # do standard attribute resolution
+            super(StringTemplate, self).__setattr__(name, val)
 
     def __getattr__(self, name):
-        """Check in child_dict if 'name' is a child."""
-        try:
-            return self._children[name]
-        except KeyError:
-            pass
-        raise AttributeError(name)
-
-    # FIXME StringTemplate don't work with NodeTransformers very well
-    # because the new, returned node isn't updated in the _children
-    # dictionary.
+        if name != "_children" and name in self._children:
+          child = self._children[name]
+          assert child.parent == self, "Encountered bad parent pointer to %s." % repr(child.parent)
+          return self._children[name]
+        raise AttributeError("'%s' has no attribute '%s'" % (type(self).__name__, name))

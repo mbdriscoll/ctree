@@ -74,3 +74,33 @@ class TestStringTemplates(unittest.TestCase):
 
         tree = SymbolsToStrings().visit(tree)
         self._check(tree, 'char *str = "hello"')
+
+    def test_template_parent_pointers(self):
+        from ctree.c.nodes import SymbolRef
+
+        symbol = SymbolRef("hello")
+        template = "char *str = $val"
+        template_args = {
+            'val': symbol,
+        }
+        node = StringTemplate(template, template_args)
+        self.assertIs(symbol.parent, node)
+
+    def test_template_parent_pointers_with_transformer(self):
+        from ctree.visitors import NodeTransformer
+        from ctree.c.nodes import String, SymbolRef
+
+        template = "char *str = $val"
+        template_args = {
+            'val': SymbolRef("hello"),
+        }
+
+        class SymbolsToStrings(NodeTransformer):
+            def visit_SymbolRef(self, node):
+                return String(node.name)
+
+        tree = StringTemplate(template, template_args)
+        tree = SymbolsToStrings().visit(tree)
+
+        template_node, string = tree, tree.val
+        self.assertIs(string.parent, template_node)
