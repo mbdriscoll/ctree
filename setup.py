@@ -13,6 +13,7 @@ setup(
     'ctree.omp',
     'ctree.py',
     'ctree.sse',
+    'ctree.templates',
   ],
 
   package_data = {
