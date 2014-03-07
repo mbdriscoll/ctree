@@ -119,7 +119,7 @@ class StencilTransformer(NodeTransformer):
                 self.kernel_target = node.target.id
                 curr_node = None
                 ret_node = None
-                for d in range(dim):  
+                for d in range(dim):
                     initial = Constant(self.ghost_depth)
                     end = Constant(self.output_grid.shape[d] - self.ghost_depth - 1)
                     target = SymbolRef(self.gen_fresh_var())
@@ -209,7 +209,7 @@ class StencilTransformer(NodeTransformer):
         return node
 
     def distance(self, x, y):
-        return math.sqrt(sum([(x[i]-y[i])**2 for i in range(0, len(x))]))        
+        return math.sqrt(sum([(x[i]-y[i])**2 for i in range(0, len(x))]))
 
     def gen_array_macro(self, arg, point):
         name = "_%s_array_macro" % arg
@@ -249,7 +249,7 @@ class StencilKernel(object):
         self.should_unroll = True
         self.should_cacheblock = False
         self.block_size = 1
-        
+
         # replace kernel with shadow version
         self.kernel = self.shadow_kernel
 
@@ -266,7 +266,7 @@ class StencilKernel(object):
         mod.add_to_init([cpp_ast.Statement("import_array();")])
         if self.with_cilk:
             mod.module.add_to_preamble([cpp_ast.Include("cilk/cilk.h", True)])
-        
+
 
     def shadow_kernel(self, *args):
         if self.pure_python:
@@ -288,7 +288,7 @@ class StencilKernel(object):
 
         # ask asp infrastructure for machine and platform info, including if cilk+ is available
         #FIXME: implement.  set self.with_cilk=true if cilk is available
-        
+
         input_grids = args[0:-1]
         output_grid = args[-1]
         model = copy.deepcopy(self.model)
@@ -307,7 +307,7 @@ class StencilKernel(object):
 
         # we only cache block if the size is large enough for blocking
         # or if the user has told us to
-        
+
         if (len(args[0].shape) > 1 and args[0].shape[0] > 128):
             self.should_cacheblock = True
             self.block_sizes = [16, 32, 48, 64, 128, 160, 192, 256]
@@ -326,13 +326,13 @@ class StencilKernel(object):
                         c = list(b)
                         c.append(1)
                         #variants.append(Converter(model, input_grids, output_grid, unroll_factor=u, block_factor=c).run())
-                        
+
                         variant = StencilOptimizeCpp(copy.deepcopy(base_variant), output_grid.shape, unroll_factor=u, block_factor=c).run()
                         variants.append(variant)
                         variant_names.append("kernel_block_%s_unroll_%s" % ('_'.join([str(y) for y in c]) ,u))
 
                         debug_print("ADDING BLOCKED")
-                        
+
         if self.should_unroll:
             for x in [2,4,8,16]: #,32,64]:
                 check_valid = max(map(
@@ -354,7 +354,7 @@ class StencilKernel(object):
         self.set_compiler_flags(mod)
         mod.add_function("kernel", variants, variant_names)
 
-        # package arguments and do the call 
+        # package arguments and do the call
         myargs = [y.data for y in args]
         mod.kernel(*myargs)
 
@@ -363,7 +363,7 @@ class StencilKernel(object):
 
     def set_compiler_flags(self, mod):
         import asp.config
-        
+
         if self.with_cilk or asp.config.CompilerDetector().detect("icc"):
             mod.backends["c++"].toolchain.cc = "icc"
             mod.backends["c++"].toolchain.cflags += ["-intel-extensions", "-fast", "-restrict"]

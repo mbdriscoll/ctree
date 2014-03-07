@@ -77,7 +77,6 @@ with Timer() as t:
 print("Python version time: %.03fs" % t.interval)
 
 numpy.testing.assert_array_almost_equal(actual_grid.data, out_grid.data, decimal=5)
-exit()
 
 for x in range(0,width):
     for y in range(0,height):
