@@ -12,8 +12,8 @@ from ctree.frontend import get_ast
 class TestSetTypeSig(unittest.TestCase):
     def _check(self, func_type, tree):
         if isinstance(tree, FunctionDecl):
-            self.assertEqual(tree.return_type, func_type[0])
-            for param, expected_type in zip(tree.params, func_type[1:]):
+            self.assertEqual(tree.return_type, func_type.return_type)
+            for param, expected_type in zip(tree.params, func_type.arg_types):
                 self.assertEqual(param.type, expected_type)
         elif isinstance(tree, ast.Module):
             self._check(func_type, tree.body[0])
@@ -21,22 +21,22 @@ class TestSetTypeSig(unittest.TestCase):
             self.fail("Can't check param setting on %s object." % tree)
 
     def test_no_args(self):
-        func_type = [Long()]
+        func_type = FuncType(Long())
         get_two_ast.set_typesig(func_type)
         self._check(func_type, get_two_ast)
 
     def test_one_arg(self):
-        func_type = [Long(), Long()]
+        func_type = FuncType(Long(), [Long()])
         fib_ast.set_typesig(func_type)
         self._check(func_type, fib_ast)
 
     def test_two_args(self):
-        func_type = [Long(), Long(), Long()]
+        func_type = FuncType(Long(), [Long(), Long()])
         gcd_ast.set_typesig(func_type)
         self._check(func_type, gcd_ast)
 
     def test_mixed_args(self):
-        func_type = [Long(), Double(), Long(), Long()]
+        func_type = FuncType(Long(), [Double(), Long(), Long()])
         choose_ast.set_typesig(func_type)
         self._check(func_type, choose_ast)
 

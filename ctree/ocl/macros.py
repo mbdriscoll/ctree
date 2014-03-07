@@ -35,14 +35,17 @@ def CL_SUCCESS():
 
 
 def safe_clGetDeviceIDs(platform=NULL(), device_type=CL_DEVICE_TYPE_DEFAULT(),
-                        num_entries=1, device_id=NULL(),
+                        num_entries=Constant(1), device_id=NULL(),
                         num_devices=NULL(), on_failure=None):
     # int to track exit status
     err = SymbolRef.unique("err", Int())
 
     # put failure code in list to go under If.elze
-    if not isinstance(on_failure, list):
-        on_failure = [on_failure]
+    if on_failure:
+        if not isinstance(on_failure, list):
+            on_failure = [on_failure]
+    else:
+        on_failure = []
 
     return Block([
         Assign(err.copy(declare=True),
@@ -54,14 +57,17 @@ def safe_clGetDeviceIDs(platform=NULL(), device_type=CL_DEVICE_TYPE_DEFAULT(),
     ])
 
 
-def safe_clCreateContext(context, properties=NULL(), num_devices=1,
+def safe_clCreateContext(context, properties=NULL(), num_devices=Constant(1),
                          devices=NULL(), pfn_notify=NULL(), user_data=NULL(), on_failure=None):
     # int to track exit status
     err = SymbolRef.unique("err", Int())
 
     # put failure code in list to go under If.elze
-    if not isinstance(on_failure, list):
-        on_failure = [on_failure]
+    if on_failure:
+        if not isinstance(on_failure, list):
+            on_failure = [on_failure]
+    else:
+        on_failure = []
 
     tree = Block([
         err.copy(declare=True),
@@ -84,8 +90,11 @@ def safe_clCreateCommandQueue(commands, context, device_id, properties=Constant(
     err = SymbolRef.unique("err", Int())
 
     # put failure code in list to go under If.elze
-    if not isinstance(on_failure, list):
-        on_failure = [on_failure]
+    if on_failure:
+        if not isinstance(on_failure, list):
+            on_failure = [on_failure]
+    else:
+        on_failure = []
 
     tree = Block([
         err.copy(declare=True),
@@ -120,23 +129,30 @@ def read_program_into_string(kernel_source, kernel_path):
     return tree
 
 
-sample_code = '''
-128     FILE *kernelFile = fopen("/Users/mbdriscoll/tmp/learn_ocl/square.cl", "rb");
-129     if (kernelFile == NULL) {
-130         printf("Error: Coudn't open kernel file.\n");
-131         return EXIT_FAILURE;
-132     }
-134     fseek(kernelFile, 0 , SEEK_END);
-135     long kernelFileSize = ftell(kernelFile);
-136     rewind(kernelFile);
-140     char *KernelSource = malloc(kernelFileSize*sizeof(char));
-141     if (KernelSource == NULL) {
-142         printf("Error: failed to allocate memory to hold kernel text.\n");
-143         return EXIT_FAILURE;
-144     }
-148     int result = fread(KernelSource, sizeof(char), kernelFileSize, kernelFile);
-149     if (result != kernelFileSize) {
-150         printf("Error: read fewer bytes of kernel text than expected.\n");
-151         return EXIT_FAILURE;
-153     fclose(kernelFile);
-'''
+def read_program_into_string(symbol_node, path_node):
+    """
+    Builts a block that opens the given file, reads it into memory,
+    and assigns symbol_node to point to it.
+    """
+
+    template = """
+        FILE *kernelFile = fopen("/Users/mbdriscoll/tmp/learn_ocl/square.cl", "rb");
+        if (kernelFile == NULL) {
+            printf("Error: Coudn't open kernel file.\n");
+            return EXIT_FAILURE;
+        }
+        fseek(kernelFile, 0 , SEEK_END);
+        long kernelFileSize = ftell(kernelFile);
+        rewind(kernelFile);
+        char *KernelSource = malloc(kernelFileSize*sizeof(char));
+        if (KernelSource == NULL) {
+            printf("Error: failed to allocate memory to hold kernel text.\n");
+            return EXIT_FAILURE;
+        }
+        int result = fread(KernelSource, sizeof(char), kernelFileSize, kernelFile);
+        if (result != kernelFileSize) {
+            printf("Error: read fewer bytes of kernel text than expected.\n");
+            return EXIT_FAILURE;
+        fclose(kernelFile);
+    """
+

@@ -15,10 +15,10 @@ class TestTranslator(LazySpecializedFunction):
 
     def transform(self, tree, program_config):
         arg_types = program_config[0]
-        func_type = [arg_types[0]] + list(arg_types)
+        func_type = FuncType(arg_types[0], list(arg_types))
 
         tree.set_typesig(func_type)
-        tree = Project([CFile("generated", [tree])])
+        tree = Project([CFile("generated", [tree])]), func_type.as_ctype()
 
         return tree
 

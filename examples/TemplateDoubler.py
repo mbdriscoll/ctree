@@ -11,9 +11,7 @@ import numpy as np
 from ctree.frontend import get_ast
 from ctree.c.nodes import *
 from ctree.c.types import *
-from ctree.ocl.nodes import *
-from ctree.ocl.types import *
-from ctree.ocl.macros import *
+from ctree.templates.nodes import *
 from ctree.dotgen import to_dot
 from ctree.transformations import *
 from ctree.jit import LazySpecializedFunction
@@ -43,21 +41,21 @@ class OpTranslator(LazySpecializedFunction):
         array_type = NdPointer(A_dtype, A_ndim, A_shape)
         apply_one_typesig = FuncType(inner_type, [inner_type])
 
+        template_entries = {
+            'array_decl': SymbolRef("A", array_type),
+            'array_ref' : SymbolRef("A"),
+            'num_items' : Constant(len_A),
+        }
+
         tree = CFile("generated", [
             py_ast.body[0],
-            FunctionDecl(Void(), "apply_all",
-                         params=[SymbolRef("A", array_type)],
-                         defn=[
-                             For(Assign(SymbolRef("i", Int()), Constant(0)),
-                                 Lt(SymbolRef("i"), Constant(len_A)),
-                                 PostInc(SymbolRef("i")),
-                                 [
-                                     Assign(ArrayRef(SymbolRef("A"), SymbolRef("i")),
-                                            FunctionCall(SymbolRef("apply"), [ArrayRef(SymbolRef("A"),
-                                                                                       SymbolRef("i"))])),
-                                 ]),
-                         ]
-            ),
+            StringTemplate("""\
+            void apply_all($array_decl) {
+                for (int i = 0; i < $num_items; i++) {
+                    $array_ref[i] = apply( $array_ref[i] );
+                }
+            }
+            """, template_entries)
         ])
 
         tree = PyBasicConversions().visit(tree)
@@ -66,8 +64,10 @@ class OpTranslator(LazySpecializedFunction):
         apply_one.set_static().set_inline()
         apply_one.set_typesig(apply_one_typesig)
 
-        entry_point_typesig = tree.find(FunctionDecl, name="apply_all").get_type().as_ctype()
+        with open("graph.dot", 'w') as f:
+            f.write( to_dot(tree) )
 
+        entry_point_typesig = FuncType(Void(), [array_type]).as_ctype()
         return Project([tree]), entry_point_typesig
 
 
