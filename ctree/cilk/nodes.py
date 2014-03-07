@@ -13,7 +13,7 @@ class CilkNode(CtreeNode):
 
         return CilkCodeGen(indent).visit(self)
 
-    def dotgen(self, indent=0):
+    def dotgen(self, _):
         from ctree.cilk.dotgen import CilkDotGen
 
         return CilkDotGen().visit(self)
