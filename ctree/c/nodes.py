@@ -133,6 +133,19 @@ class For(Statement):
         super(For, self).__init__()
 
 
+# TODO: Decide on naming scheme for define statements
+class Define(Statement):
+    _fields = ['defname', 'calc']
+
+    def __init__(self, defname=None, calc=None):
+        self.defname = defname
+        self.calc = calc
+        super().__init__()
+
+    def _requires_semicolon(self):
+        return False
+
+
 class FunctionCall(Expression):
     """Cite me."""
     _fields = ['func', 'args']
