@@ -24,11 +24,11 @@ class JitModule(object):
         self.compilation_dir = tempfile.mkdtemp(prefix="ctree-", dir=tempfile.gettempdir())
         self.ll_module = ll.Module.new('ctree')
         self.ll_exec_engine = None
-        log.info("Temporary compilation directory is: %s" % self.compilation_dir)
+        log.info("Temporary compilation directory is: %s", self.compilation_dir)
 
     def __del__(self):
         if not ctree.CONFIG.get("jit", "PRESERVE_SRC_DIR"):
-            log.info("Removing temporary compilation directory %s." % self.compilation_dir)
+            log.info("Removing temporary compilation directory %s.", self.compilation_dir)
             shutil.rmtree(self.compilation_dir)
 
     def _link_in(self, submodule):
@@ -63,7 +63,7 @@ class _ConcreteSpecializedFunction(object):
         assert project.parent is None, \
             "Expected null project.parent, but got: %s." % type(project.parent)
         self.module = project.codegen()
-        log.info("Full LLVM program is: <<<\n%s\n>>>" % self.module.ll_module)
+        log.info("Full LLVM program is: <<<\n%s\n>>>", self.module.ll_module)
         entry_point = project.find(FunctionDecl, name=entry_point_name)
         self.fn = self.module.get_callable(entry_point)
 
@@ -105,14 +105,14 @@ class LazySpecializedFunction(object):
         """
         ctree.STATS.log("specialized function call")
         assert not kwargs, "Passing kwargs to specialized functions isn't supported."
-        log.info("detected specialized function call with arg types: %s" % [type(a) for a in args])
+        log.info("detected specialized function call with arg types: %s", [type(a) for a in args])
 
         args_subconfig = self._args_to_subconfig_safely(args)
         tuner_subconfig = self._next_tuning_config()
         program_config = (args_subconfig, tuner_subconfig)
 
-        log.info("specializer returned subconfig for arguments: %s" % (args_subconfig,))
-        log.info("tuner returned subconfig: %s" % (tuner_subconfig,))
+        log.info("specializer returned subconfig for arguments: %s", (args_subconfig,))
+        log.info("tuner returned subconfig: %s", (tuner_subconfig,))
 
         from ctree.dotgen import to_dot
 
@@ -151,5 +151,5 @@ class LazySpecializedFunction(object):
         this particular invocation.
         """
         log.warn("arguments will not influence program_config. " +
-                 "Consider overriding args_to_subconfig() in %s." % type(self).__name__)
+                 "Consider overriding args_to_subconfig() in %s.", type(self).__name__)
         return ()
