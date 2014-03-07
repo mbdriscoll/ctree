@@ -2,7 +2,7 @@ import ast
 import sys
 import unittest
 
-from fixtures import *
+from fixtures.sample_asts import *
 from ctree.transformations import *
 from ctree.c.nodes import *
 from ctree.c.types import *

@@ -6,7 +6,7 @@ from ctree.types import get_ctree_type
 
 from ctree.jit import LazySpecializedFunction
 
-from fixtures import *
+from fixtures.sample_asts import *
 
 
 class TestTranslator(LazySpecializedFunction):

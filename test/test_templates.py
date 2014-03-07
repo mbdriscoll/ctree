@@ -6,6 +6,7 @@ from ctree.templates.nodes import StringTemplate, FileTemplate
 from ctree.c.nodes import Constant, While
 from ctree.dotgen import to_dot
 
+import fixtures
 
 class TestStringTemplates(unittest.TestCase):
     def _check(self, tree, expected):
@@ -107,28 +108,19 @@ class TestStringTemplates(unittest.TestCase):
         self.assertIs(string.parent, template_node)
 
 
-try:
-    import examples
-except ImportError:
-    HAVE_EXAMPLES = False
-else:
-    HAVE_EXAMPLES = True
-
 class TestFileTemplates(unittest.TestCase):
     def _check(self, tree, expected):
         actual = tree.codegen()
         self.assertEqual(actual, dedent(expected))
 
-    unittest.skipUnless(HAVE_EXAMPLES, "$CTREE/examples not in PYTHONPATH")
     def test_simple_file_template(self):
         from ctree.c.nodes import String
-        path = os.path.join(*(examples.__path__ + ["templates", "printf.tmpl.c"]))
+        path = os.path.join(*(fixtures.__path__ + ["templates", "printf.tmpl.c"]))
         tree = FileTemplate(path, {'fmt': String('Hello, world!')})
         self._check(tree, 'printf("Hello, world!");')
 
-    unittest.skipUnless(HAVE_EXAMPLES, "$CTREE/examples not in PYTHONPATH")
     def test_file_template_dotgen(self):
         from ctree.c.nodes import String
-        path = os.path.join(*(examples.__path__ + ["templates", "printf.tmpl.c"]))
+        path = os.path.join(*(fixtures.__path__ + ["templates", "printf.tmpl.c"]))
         tree = FileTemplate(path, {'fmt': String('Hello, world!')})
         to_dot(tree)
