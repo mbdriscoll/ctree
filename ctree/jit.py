@@ -24,11 +24,11 @@ class JitModule(object):
         self.compilation_dir = tempfile.mkdtemp(prefix="ctree-", dir=tempfile.gettempdir())
         self.ll_module = ll.Module.new('ctree')
         self.exec_engine = None
-        log.info("Temporary compilation directory is: %s", self.compilation_dir)
+        log.info("temporary compilation directory is: %s", self.compilation_dir)
 
     def __del__(self):
         if not ctree.CONFIG.get("jit", "PRESERVE_SRC_DIR"):
-            log.info("Removing temporary compilation directory %s.", self.compilation_dir)
+            log.info("removing temporary compilation directory %s.", self.compilation_dir)
             shutil.rmtree(self.compilation_dir)
 
     def _link_in(self, submodule):
@@ -61,7 +61,7 @@ class _ConcreteSpecializedFunction(object):
         assert project.parent is None, \
             "Expected null project.parent, but got: %s." % type(project.parent)
         self.module = project.codegen()
-        log.debug("Full LLVM program is: <<<\n%s\n>>>" % self.module.ll_module)
+        log.debug("full LLVM program is: <<<\n%s\n>>>" % self.module.ll_module)
         self.fn = self.module.get_callable(entry_point_name, entry_point_typesig)
 
     def __call__(self, *args, **kwargs):

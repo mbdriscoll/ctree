@@ -175,9 +175,9 @@ class Project(CommonNode):
         # now that we have a concrete compilation dir, resolve references to it
         from ctree.transformations import ResolveGeneratedPathRefs
 
-        log.info("automatically resolving GeneratedPathRef nodes.")
         resolver = ResolveGeneratedPathRefs(module.compilation_dir)
         self.files = [resolver.visit(f) for f in self.files]
+        log.info("automatically resolved %d GeneratedPathRef node(s).", resolver.count)
 
         # transform all files into llvm modules and link them into the master module
         for f in self.files:

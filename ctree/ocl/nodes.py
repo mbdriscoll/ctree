@@ -36,8 +36,8 @@ class OclFile(OclNode, File):
         write the ocl program to a text file and compile it
         """
         cl_src_file = os.path.join(compilation_dir, self.get_filename())
-        log.info("File for generated OpenCL: %s" % cl_src_file)
-        log.info("Generated OpenCL code: (((\n%s\n)))" % program_text)
+        log.info("file for generated OpenCL: %s" % cl_src_file)
+        log.info("generated OpenCL code: (((\n%s\n)))" % program_text)
 
         # write program text to C file
         with open(cl_src_file, 'w') as cl_file:
