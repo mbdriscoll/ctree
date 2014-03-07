@@ -40,7 +40,7 @@ script:
 
   # run test suite again from build dir to get coverage info
   - cd ${TRAVIS_BUILD_DIR}
-  - nosetests --with-coverage --cover-package=ctree --cover-min-percentage=89
+  - nosetests --verbose --with-coverage --cover-package=ctree --cover-min-percentage=89
 
 
 after_success:
