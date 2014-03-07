@@ -58,7 +58,7 @@ class StringTemplate(TemplateNode):
 
     def __getattr__(self, name):
         if name != "_children" and name in self._children:
-          child = self._children[name]
-          assert child.parent == self, "Encountered bad parent pointer to %s." % repr(child.parent)
-          return self._children[name]
+            child = self._children[name]
+            assert child.parent == self, "Encountered bad parent pointer to %s." % repr(child.parent)
+            return self._children[name]
         raise AttributeError("'%s' has no attribute '%s'" % (type(self).__name__, name))
