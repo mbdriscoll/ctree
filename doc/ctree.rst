@@ -25,14 +25,6 @@ ctree.analyses module
     :undoc-members:
     :show-inheritance:
 
-ctree.ast module
-----------------
-
-.. automodule:: ctree.ast
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
 ctree.codegen module
 --------------------
 

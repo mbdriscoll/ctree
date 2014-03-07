@@ -27,7 +27,7 @@ class JitModule(object):
         log.info("Temporary compilation directory is: %s" % self.compilation_dir)
 
     def __del__(self):
-        if not ctree.Config.get("jit", "PRESERVE_SRC_DIR"):
+        if not ctree.CONFIG.get("jit", "PRESERVE_SRC_DIR"):
             log.info("Removing temporary compilation directory %s." % self.compilation_dir)
             shutil.rmtree(self.compilation_dir)
 
@@ -103,7 +103,7 @@ class LazySpecializedFunction(object):
         Determines the program_configuration to be run. If it has yet to be built,
         build it. Then, execute it.
         """
-        ctree.stats.log("specialized function call")
+        ctree.STATS.log("specialized function call")
         assert not kwargs, "Passing kwargs to specialized functions isn't supported."
         log.info("detected specialized function call with arg types: %s" % [type(a) for a in args])
 
@@ -117,7 +117,7 @@ class LazySpecializedFunction(object):
         from ctree.dotgen import to_dot
 
         if program_config in self.c_functions:
-            ctree.stats.log("specialized function cache hit")
+            ctree.STATS.log("specialized function cache hit")
             log.info("specialized function cache hit!")
         else:
             log.info("specialized function cache miss.")

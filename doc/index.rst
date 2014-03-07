@@ -1,7 +1,7 @@
 .. index:
 
 Welcome to the ctree documentation
-===================
+==================================
 
 Getting Started
 ===============

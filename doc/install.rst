@@ -4,7 +4,7 @@ Ctree Installation
 ==================
 
 Dependencies
------------
+------------
 
 * Install `Python 2.7.x <http://python.org/>`_.
 * Install `Clang and LLVM 3.3 <http://llvm.org/>`_.
@@ -19,7 +19,6 @@ Ctree is available from GitHub and must be built from source:
 
    $ git clone git@github.com:ucb-sejits/ctree.git
    $ cd ctree
-   $ python setup.py build
    $ python setup.py install
 
 To verify your installation, install nose:
