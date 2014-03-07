@@ -56,3 +56,21 @@ class TestStringTemplates(unittest.TestCase):
         self._check(tree, """\
         while(1)
             printf("hello");""")
+
+    def test_template_with_transformer(self):
+        from ctree.visitors import NodeTransformer
+        from ctree.c.nodes import String, SymbolRef
+
+        template = "char *str = $val"
+        template_args = {
+            'val': SymbolRef("hello"),
+        }
+        tree = StringTemplate(template, template_args)
+        self._check(tree, 'char *str = hello')
+
+        class SymbolsToStrings(NodeTransformer):
+            def visit_SymbolRef(self, node):
+                return String(node.name)
+
+        tree = SymbolsToStrings().visit(tree)
+        self._check(tree, 'char *str = "hello"')
