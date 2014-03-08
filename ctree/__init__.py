@@ -19,7 +19,7 @@ assert sys.version_info[0] >= 2, "ctree requires Python 2.7.x"
 import logging
 
 LOG = logging.getLogger(__name__)
-
+LOG.info("initializing ctree")
 
 # ---------------------------------------------------------------------------
 # configuration file parsing

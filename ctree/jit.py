@@ -7,6 +7,7 @@ import ctree
 from ctree.nodes import Project
 from ctree.c.nodes import FunctionDecl
 from ctree.analyses import VerifyOnlyCtreeNodes
+from ctree.tune import CtreeTuner
 
 import llvm.core as ll
 
@@ -79,6 +80,7 @@ class LazySpecializedFunction(object):
         self.original_tree = py_ast
         self.entry_point_name = entry_point_name
         self.c_functions = {}  # typesig -> callable map
+        self.tuner = CtreeTuner(self.get_tuning_space())
 
     def _args_to_subconfig_safely(self, args):
         """
@@ -93,7 +95,7 @@ class LazySpecializedFunction(object):
         return subconfig
 
     def _next_tuning_config(self):
-        return ()
+        return self.tuner.get_next_config()
 
     def __call__(self, *args, **kwargs):
         """
@@ -108,7 +110,7 @@ class LazySpecializedFunction(object):
         tuner_subconfig = self._next_tuning_config()
         program_config = (args_subconfig, tuner_subconfig)
 
-        log.info("specializer returned subconfig for arguments: %s", (args_subconfig,))
+        log.info("specializer returned subconfig for arguments: %s", args_subconfig)
         log.info("tuner returned subconfig: %s", tuner_subconfig)
 
         from ctree.dotgen import to_dot
@@ -117,6 +119,7 @@ class LazySpecializedFunction(object):
             ctree.STATS.log("specialized function cache hit")
             log.info("specialized function cache hit!")
         else:
+            ctree.STATS.log("specialized function cache miss")
             log.info("specialized function cache miss.")
             c_ast, entry_point_typesig = self.transform(copy.deepcopy(self.original_tree), program_config)
             assert isinstance(c_ast, Project), \
@@ -124,7 +127,12 @@ class LazySpecializedFunction(object):
             VerifyOnlyCtreeNodes().visit(c_ast)
             self.c_functions[program_config] = _ConcreteSpecializedFunction(c_ast, self.entry_point_name, entry_point_typesig)
 
-        return self.c_functions[program_config](*args)
+        retval = self.c_functions[program_config](*args)
+
+        import random
+        self.tuner.report(time=random.random())
+
+        return retval
 
     # =====================================================
     # Methods to be overridden by the user
@@ -136,7 +144,7 @@ class LazySpecializedFunction(object):
         """
         raise NotImplementedError()
 
-    def set_tuning_space(self, space):
+    def get_tuning_space(self, space):
         """
         Define the space of possible implementations.
         """

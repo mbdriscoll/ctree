@@ -52,3 +52,7 @@ htmlcov
 
 # virtualenv subdirs
 venv*
+
+# opentuner stuff
+opentuner.db
+opentuner.log
