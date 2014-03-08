@@ -2,7 +2,7 @@ import unittest
 
 from ctree.dotgen import to_dot
 from ctree.frontend import get_ast
-from fixtures import *
+from fixtures.sample_asts import *
 
 
 class TestDotGen(unittest.TestCase):

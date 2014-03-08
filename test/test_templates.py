@@ -1,9 +1,12 @@
+import os
 import unittest
 from textwrap import dedent
 
-from ctree.templates.nodes import *
+from ctree.templates.nodes import StringTemplate, FileTemplate
 from ctree.c.nodes import Constant, While
+from ctree.dotgen import to_dot
 
+import fixtures
 
 class TestStringTemplates(unittest.TestCase):
     def _check(self, tree, expected):
@@ -30,7 +33,6 @@ class TestStringTemplates(unittest.TestCase):
             'one': Constant(1),
             'two': Constant(2),
         })
-        from ctree.dotgen import to_dot
         dot = to_dot(tree)
 
     def test_indent_0(self):
@@ -56,3 +58,69 @@ class TestStringTemplates(unittest.TestCase):
         self._check(tree, """\
         while(1)
             printf("hello");""")
+
+    def test_template_with_transformer(self):
+        from ctree.visitors import NodeTransformer
+        from ctree.c.nodes import String, SymbolRef
+
+        template = "char *str = $val"
+        template_args = {
+            'val': SymbolRef("hello"),
+        }
+        tree = StringTemplate(template, template_args)
+        self._check(tree, 'char *str = hello')
+
+        class SymbolsToStrings(NodeTransformer):
+            def visit_SymbolRef(self, node):
+                return String(node.name)
+
+        tree = SymbolsToStrings().visit(tree)
+        self._check(tree, 'char *str = "hello"')
+
+    def test_template_parent_pointers(self):
+        from ctree.c.nodes import SymbolRef
+
+        symbol = SymbolRef("hello")
+        template = "char *str = $val"
+        template_args = {
+            'val': symbol,
+        }
+        node = StringTemplate(template, template_args)
+        self.assertIs(symbol.parent, node)
+
+    def test_template_parent_pointers_with_transformer(self):
+        from ctree.visitors import NodeTransformer
+        from ctree.c.nodes import String, SymbolRef
+
+        template = "char *str = $val"
+        template_args = {
+            'val': SymbolRef("hello"),
+        }
+
+        class SymbolsToStrings(NodeTransformer):
+            def visit_SymbolRef(self, node):
+                return String(node.name)
+
+        tree = StringTemplate(template, template_args)
+        tree = SymbolsToStrings().visit(tree)
+
+        template_node, string = tree, tree.val
+        self.assertIs(string.parent, template_node)
+
+
+class TestFileTemplates(unittest.TestCase):
+    def _check(self, tree, expected):
+        actual = tree.codegen()
+        self.assertEqual(actual, dedent(expected))
+
+    def test_simple_file_template(self):
+        from ctree.c.nodes import String
+        path = os.path.join(*(fixtures.__path__ + ["templates", "printf.tmpl.c"]))
+        tree = FileTemplate(path, {'fmt': String('Hello, world!')})
+        self._check(tree, 'printf("Hello, world!");')
+
+    def test_file_template_dotgen(self):
+        from ctree.c.nodes import String
+        path = os.path.join(*(fixtures.__path__ + ["templates", "printf.tmpl.c"]))
+        tree = FileTemplate(path, {'fmt': String('Hello, world!')})
+        to_dot(tree)

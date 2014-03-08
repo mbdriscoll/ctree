@@ -11,32 +11,36 @@ class CDotGen(DotGenVisitor):
     """
 
     def label_SymbolRef(self, node):
-        s = r"name: %s" % node.name
         if node.type:
-            s += r"\ntype: %s" % node.type
-        return s
+            return r"%s %s" % (node.type, node.name)
+        else:
+            return r"%s" % (node.name)
 
     def label_FunctionDecl(self, node):
-        s = r"name: %s\nreturn_type: %s" % (node.name, node.return_type)
+        s = r""
         if node.static:
-            s += r"\nstatic"
+            s += r"static "
         if node.inline:
-            s += r"\ninline"
+            s += r"inline "
         if node.kernel:
-            s += r"\n__kernel"
+            s += r"__kernel "
+        s += r"%s %s(...)" % (node.return_type, node.name)
         return s
 
     def label_Constant(self, node):
-        return "value: %s" % node.value
+        return str(node.value)
 
     def label_String(self, node):
-        return r'values: \"%s\"' % r'\" \"'.join(node.values)
+        return r'\" \"'.join(node.values)
 
     def label_CFile(self, node):
-        return "name: %s" % node.name
+        return node.get_filename()
 
     def label_NdPointer(self, node):
         s = "dtype: %s\n" % node.ptr.dtype
         s += "ndim, shape:    %s, %s\n" % (node.ptr.ndim, node.ptr.shape)
         s += "flags: %s" % node.ptr.flags
         return s
+
+    def label_BinaryOp(self, node):
+        return type(node.op).__name__

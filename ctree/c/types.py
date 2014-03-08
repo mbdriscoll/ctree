@@ -11,11 +11,6 @@ class CType(CtreeType):
 
         return CCodeGen().visit(self)
 
-    def dotgen(self):
-        from ctree.c.dotgen import CDotGen
-
-        return CDotGen().visit(self)
-
     def as_ctype(self):
         return self._ctype
 

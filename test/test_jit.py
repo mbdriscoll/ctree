@@ -1,7 +1,7 @@
 import unittest
 
 from ctree.jit import *
-from fixtures import *
+from fixtures.sample_asts import *
 
 class TestJit(unittest.TestCase):
     def test_identity(self):

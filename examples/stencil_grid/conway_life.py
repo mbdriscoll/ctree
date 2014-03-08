@@ -34,7 +34,6 @@ class ConwayKernel(StencilKernel):
     """
 
     def kernel(self, in_img, new_state_map, out_img):
-
         for x in out_img.interior_points():
             out_img[x] = in_img[x] * 8
             for y in in_img.neighbors(x, 2):
