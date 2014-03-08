@@ -27,7 +27,7 @@ import ast
 # from examples.stencil_grid.stencil_convert import *
 from copy import deepcopy
 
-import ctree.transformations as transform
+from ctree.transformations import PyBasicConversions
 from ctree.jit import LazySpecializedFunction
 from ctree.c.types import *
 from ctree.frontend import get_ast
