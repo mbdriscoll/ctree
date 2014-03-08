@@ -16,6 +16,7 @@ class StencilGrid(object):
         self.set_grid_variables()
         self.set_interior()
         # add default neighbor definition
+        self.neighbor_definition = []
         self.set_default_neighbor_definition()
 
     # want this to be indexable
@@ -74,7 +75,6 @@ class StencilGrid(object):
         # TODO
         return []
 
-
     def neighbors(self, center, neighbors_id):
         """
         Returns the list of neighbors with the given neighbors_id. By
@@ -83,6 +83,9 @@ class StencilGrid(object):
         respectively. Uses neighbor_definition to determine what the
         neighbors are.
         """
+        # import pprint
+        # print( "neighbors_id %s" % neighbors_id )
+        # pprint.pprint(self.neighbor_definition)
         # return tuples for each neighbor
         for neighbor in self.neighbor_definition[neighbors_id]:
             yield tuple(map(lambda a,b: a+b, list(center), list(neighbor)))

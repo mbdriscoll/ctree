@@ -5,7 +5,7 @@ use a stencil kernel to compute successive generation of a conway life game
 from __future__ import print_function
 
 import numpy as np
-
+import copy
 from examples.stencil_grid.stencil_kernel import StencilKernel
 from examples.stencil_grid.stencil_grid import StencilGrid
 
@@ -24,7 +24,7 @@ def render(sk, msg="---"):
         print('')
 
 
-class Kernel(StencilKernel):
+class ConwayKernel(StencilKernel):
     """
     in_img is the life board at time t
     out_img is the life board at time t+1
@@ -34,6 +34,7 @@ class Kernel(StencilKernel):
     """
 
     def kernel(self, in_img, new_state_map, out_img):
+
         for x in out_img.interior_points():
             out_img[x] = in_img[x] * 8
             for y in in_img.neighbors(x, 2):
@@ -44,7 +45,7 @@ class Kernel(StencilKernel):
 def run_game(width=25, height=25, generations=1):
     """play the game on board of specified size"""
 
-    kernel = Kernel()
+    kernel = ConwayKernel()
     kernel.should_unroll = False
 
     # create a stencil grid for t+1
@@ -52,20 +53,18 @@ def run_game(width=25, height=25, generations=1):
     all_neighbors = [(x, y) for x in range(-1, 2) for y in range(-1, 2)]
     all_neighbors.remove((0, 0))
     current_grid.neighbor_definition.append(all_neighbors)
+    future_grid = copy.deepcopy(current_grid)  # this will be swapped to current after each iteration
 
     # Randomly initialize a quarter of the cells to 1
     for x in current_grid.interior_points():
         if np.random.random() > 0.75:
             current_grid[x] = 1
 
-    # create a stencil grid for t+1
-    future_grid = StencilGrid([height, width])
-
     new_state_map = StencilGrid([16])
     for index, new_state in enumerate([0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0]):
         new_state_map[index] = new_state
 
-    render(current_grid, "Original input")
+    # render(current_grid, "Original input")
 
     for generation in range(generations):
         kernel.kernel(current_grid, new_state_map, future_grid)
@@ -74,4 +73,11 @@ def run_game(width=25, height=25, generations=1):
     render(current_grid, "\nStencil version of kernel gives")
 
 if __name__ == '__main__':
-    run_game()
+    import sys
+    parameters = len(sys.argv)
+
+    width = 25 if parameters < 2 else int(sys.argv[1])
+    height = 25 if parameters < 3 else int(sys.argv[2])
+    generations = 1 if parameters < 4 else int(sys.argv[3])
+    run_game(width, height, generations)
+
