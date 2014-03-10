@@ -79,7 +79,7 @@ class StencilConvert(LazySpecializedFunction):
 
     def gen_array_macro_definition(self, tree, arg_names):
         first_for = tree.find(For)
-        for index, arg in enumerate(self.input_grids + (self.output_grid, )):
+        for index, arg in enumerate(self.input_grids + (self.output_grid,)):
             defname = "_%s_array_macro" % arg_names[index]
             params = ','.join(["_d"+str(x) for x in range(arg.dim)])
             params = "(%s)" % params
@@ -124,16 +124,18 @@ class StencilTransformer(NodeTransformer):
                 curr_node = None
                 ret_node = None
                 for d in range(dim):
-                    initial = Constant(self.ghost_depth)
-                    end = Constant(self.output_grid.shape[d] -
-                                   self.ghost_depth - 1)
-                    target = SymbolRef(self.gen_fresh_var())
                     self.var_list.append(target.name)
-                    for_loop = For(Assign(SymbolRef(target.name, Int()),
-                                          initial),
-                                   LtE(target, end),
-                                   PostInc(target),
-                                   [])
+                    for_loop = For(
+                        Assign(SymbolRef(target.name, Int()),
+                               Constant(self.ghost_depth)),
+                        LtE(SymbolRef(self.gen_fresh_var()),
+                            Constant(
+                                self.output_grid.shape[d] -
+                                self.ghost_depth - 1)
+                            ),
+                        PostInc(target),
+                        [])
+
                     if d == 0:
                         ret_node = for_loop
                     else:
