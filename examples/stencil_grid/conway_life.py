@@ -29,13 +29,13 @@ class ConwayKernel(StencilKernel):
     in_img is the life board at time t
     out_img is the life board at time t+1
     new_state_map defines the output state for a cell
-        first 8 indices are for dead cell, next 8 are for live cell
+        first 9 indices are for dead cell, next 9 are for live cell
         value at index is the new cell state
     """
 
     def kernel(self, in_img, new_state_map, out_img):
         for x in out_img.interior_points():
-            out_img[x] = in_img[x] * 8
+            out_img[x] = in_img[x] * 9
             for y in in_img.neighbors(x, 2):
                 out_img[x] += in_img[y]
             out_img[x] = new_state_map[int(out_img[x])]
@@ -46,7 +46,7 @@ class IteratedConwayKernel(StencilKernel):
     in_img is the life board at time t
     out_img is the life board at time t+1
     new_state_map defines the output state for a cell
-        first 8 indices are for dead cell, next 8 are for live cell
+        first 9 indices are for dead cell, next 9 are for live cell
         value at index is the new cell state
     """
 
