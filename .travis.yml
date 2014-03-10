@@ -2,8 +2,8 @@ language: python
 
 python:
   - "2.7"
-  - "3.2"
-  - "3.3"
+  #- "3.2"
+  #- "3.3"
 
 env:
   global:
@@ -27,6 +27,14 @@ install:
   - git clone git://github.com/llvmpy/llvmpy.git ${HOME}/llvmpy
   - cd ${HOME}/llvmpy
   - LLVM_CONFIG_PATH=/usr/bin/llvm-config-$LLVM_VERSION python setup.py install
+
+  # install opentuner
+  - cd ${HOME}
+  - git clone git@github.com:mbdriscoll/opentuner.git
+  - cd ${HOME}/opentuner
+  - sudo apt-get install `cat debian-packages-deps | tr '\n' ' '`
+  - pip install -r python-packages
+  - export PYTHONPATH=`pwd`:$PYTHONPATH
 
   # install ctree via setup.py
   - cd ${TRAVIS_BUILD_DIR}
