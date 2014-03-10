@@ -124,11 +124,12 @@ class StencilTransformer(NodeTransformer):
                 curr_node = None
                 ret_node = None
                 for d in range(dim):
+                    target = SymbolRef(self.gen_fresh_var())
                     self.var_list.append(target.name)
                     for_loop = For(
                         Assign(SymbolRef(target.name, Int()),
                                Constant(self.ghost_depth)),
-                        LtE(SymbolRef(self.gen_fresh_var()),
+                        LtE(target,
                             Constant(
                                 self.output_grid.shape[d] -
                                 self.ghost_depth - 1)
