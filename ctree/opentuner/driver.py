@@ -6,7 +6,7 @@ import argparse
 import Queue as queue # queue in 3.x
 
 import ctree
-from ctree.tune import Tuner
+from ctree.tune import TuningDriver
 
 import opentuner
 from opentuner.measurement import MeasurementInterface
@@ -59,7 +59,7 @@ class OpenTunerThread(threading.Thread):
         log.info("tuning thread '%s' terminating.", self.name)
 
 
-class OpenTunerDriver(Tuner):
+class OpenTunerDriver(TuningDriver):
     """
     Object that interacts with backend tuners. Provides
     a stream of configurations, as well as an interface

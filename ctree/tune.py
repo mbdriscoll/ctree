@@ -3,7 +3,7 @@ log = logging.getLogger(__name__)
 
 import abc
 
-class Tuner(object):
+class TuningDriver(object):
     """
     Object that interacts with backend tuners. Provides
     an infinite stream of configurations, as well as an
@@ -24,12 +24,12 @@ class Tuner(object):
         pass
 
     @abc.abstractmethod
-    def report(self, time=float('inf'), accuracy=None, energy=None, size=None, confidence=None):
+    def report(self, **kwargs):
         """Reports performance of most recent configuration."""
         pass
 
 
-class NullTuningDriver(object):
+class NullTuningDriver(TuningDriver):
     """
     Provides a stream of None's, and ignores reports()s.
     """
