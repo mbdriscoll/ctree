@@ -62,49 +62,46 @@ class IteratedConwayKernel(StencilKernel):
                 out_img[x] = new_state_map[int(out_img[x])]
 
 
-def run_game(width=25, height=25, generations=1):
-    """play the game on board of specified size"""
-
-    kernel = ConwayKernel()
-    kernel.should_unroll = False
-    # kernel.pure_python = True
-
-    # create a stencil grid for t+1
-    current_grid = StencilGrid([height, width])
-    all_neighbors = [(x, y) for x in range(-1, 2) for y in range(-1, 2)]
-    all_neighbors.remove((0, 0))
-    current_grid.neighbor_definition.append(all_neighbors)
-    future_grid = copy.deepcopy(current_grid)  # this will be swapped to current after each iteration
-
-    # Randomly initialize a quarter of the cells to 1
-    for x in current_grid.interior_points():
-        if np.random.random() > 0.75:
-            current_grid[x] = 1
-
-    new_state_map = StencilGrid([18])
-    for index, new_state in enumerate([0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0]):
-        new_state_map[index] = new_state
-
-    #render(current_grid, "Original input")
-
-    for generation in range(generations):
-        kernel.kernel(current_grid, new_state_map, future_grid)
-        current_grid, future_grid = future_grid, current_grid
-        print("gen %s" % generation)
-
-    # render(current_grid, "\nStencil version of kernel gives")
-
 class GameRunner(object):
-    def __init__(self, width, height, generations):
+    def __init__(self, width, height, pure_python=False, should_unroll=False):
         self.width = width
         self.height = height
-        self.generations = generations
+
+        self.kernel = ConwayKernel()
+        self.kernel.pure_python = pure_python
+        self.kernel.should_unroll = should_unroll
+        # kernel.pure_python = True
+
+        # create a stencil grid for t+1
+        self.current_grid = StencilGrid([height, width])
+        all_neighbors = [(x, y) for x in range(-1, 2) for y in range(-1, 2)]
+        all_neighbors.remove((0, 0))
+        self.current_grid.neighbor_definition.append(all_neighbors)
+        self.future_grid = copy.deepcopy(self.current_grid)  # this will be swapped to current after each iteration
+
+        # Randomly initialize a quarter of the cells to 1
+        for x in self.current_grid.interior_points():
+            if np.random.random() > 0.75:
+                self.current_grid[x] = 1
+
+        self.new_state_map = StencilGrid([18])
+        for index, new_state in enumerate([0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0]):
+            self.new_state_map[index] = new_state
+
+    def set_pure_python(self, new_mode):
+        self.kernel.pure_python = new_mode
+
+    def run_game(self, generations=1):
+        for generation in range(generations):
+            self.kernel.kernel(self.current_grid, self.new_state_map, self.future_grid)
+            self.current_grid, self.future_grid = self.future_grid, self.current_grid
+            print("gen %s" % generation)
 
     def __call__(self, *args, **kwargs):
-        run_game(self.width, self.height, self.generations)
+        self.run_game()
 
     def run(self):
-        run_game(self.width, self.height, self.generations)
+        self.run_game()
 
 
 if __name__ == '__main__':
@@ -116,8 +113,11 @@ if __name__ == '__main__':
     height = 25 if parameters < 3 else int(sys.argv[2])
     generations = 1 if parameters < 4 else int(sys.argv[3])
 
-    game_runner = GameRunner(width, height, generations)
+    game_runner = GameRunner(width, height)
 
     #game_runner()
-    timeit.timeit(stmt=game_runner, number=10)
+    game_runner.set_pure_python(True)
+    print("average time for specialized %s" % timeit.timeit(stmt=game_runner, number=10))
+    game_runner.set_pure_python(False)
+    print("average time for specialized %s" % timeit.timeit(stmt=game_runner, number=10))
 
