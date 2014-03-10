@@ -7,7 +7,6 @@ import ctree
 from ctree.nodes import Project
 from ctree.c.nodes import FunctionDecl
 from ctree.analyses import VerifyOnlyCtreeNodes
-from ctree.tune import CtreeTuner
 
 import llvm.core as ll
 
@@ -79,8 +78,8 @@ class LazySpecializedFunction(object):
     def __init__(self, py_ast, entry_point_name):
         self.original_tree = py_ast
         self.entry_point_name = entry_point_name
-        self.c_functions = {}  # typesig -> callable map
-        self.tuner = CtreeTuner(self.get_tuning_space())
+        self.c_functions = {}  # config -> callable map
+        self.tuner = self.get_tuning_driver()
 
     def _args_to_subconfig_safely(self, args):
         """
@@ -144,11 +143,13 @@ class LazySpecializedFunction(object):
         """
         raise NotImplementedError()
 
-    def get_tuning_space(self, space):
+    def get_tuning_driver(self):
         """
         Define the space of possible implementations.
         """
-        raise NotImplementedError()
+        from ctree.tune import NullTuningDriver
+
+        return NullTuningDriver()
 
     def args_to_subconfig(self, args):
         """

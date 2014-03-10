@@ -1,128 +1,46 @@
 import logging
 log = logging.getLogger(__name__)
 
-import threading
-import argparse
-import Queue as queue # queue in 3.x
+import abc
 
-
-import ctree
-
-import opentuner
-from opentuner.measurement import MeasurementInterface
-from opentuner.resultsdb.models import Result
-from opentuner.tuningrunmain import TuningRunMain
-import opentuner.search.manipulator as ot
-
-# copy relevant names into ctree.tune namespace
-ConfigurationManipulator = ot.ConfigurationManipulator
-Parameter              = ot.Parameter
-PrimitiveParameter     = ot.PrimitiveParameter
-NumericParameter       = ot.NumericParameter
-IntegerParameter       = ot.IntegerParameter
-FloatParameter         = ot.FloatParameter
-ScaledNumericParameter = ot.ScaledNumericParameter
-LogIntegerParameter    = ot.LogIntegerParameter
-LogFloatParameter      = ot.LogFloatParameter
-PowerOfTwoParameter    = ot.PowerOfTwoParameter
-ComplexParameter       = ot.ComplexParameter
-BooleanParameter       = ot.BooleanParameter
-SwitchParameter        = ot.SwitchParameter
-EnumParameter          = ot.EnumParameter
-PermutationParameter   = ot.PermutationParameter
-ScheduleParameter      = ot.ScheduleParameter
-SelectorParameter      = ot.SelectorParameter
-ArrayParameter         = ot.ArrayParameter
-BooleanArrayParameter  = ot.BooleanArrayParameter
-ParameterProxy         = ot.ParameterProxy
-
-
-class CtreeTunerThread(threading.Thread):
-    """
-    Thread to drive OpenTuner.
-    """
-    def __init__(self, manipulator, results_queue, configs_queue):
-        super(CtreeTunerThread, self).__init__()
-        self._manipulator = manipulator
-        self._results = results_queue
-        self._configs = configs_queue
-        self.daemon = True
-
-    def run(self):
-        """Starts the main OpenTuner loop."""
-        log.info("tuning thread '%s' starting.", self.name)
-        arg_parser = argparse.ArgumentParser(parents=opentuner.argparsers())
-        tuner_args = arg_parser.parse_args(ctree.CONFIG.get("tuning", "opentuner_args").split())
-        interface = CtreeMeasurementInterface(self._manipulator, self._results, self._configs)
-        TuningRunMain(interface, tuner_args).main()
-        log.info("tuning thread '%s' terminating.", self.name)
-
-
-class CtreeTuner(object):
+class Tuner(object):
     """
     Object that interacts with backend tuners. Provides
-    a stream of configurations, as well as an interface
-    to report on the performance of each.
+    an infinite stream of configurations, as well as an
+    interface to report on the performance of each.
     """
+    __metaclass__ = abc.ABCMeta
+
+    @abc.abstractmethod
     def __init__(self, manipulator):
         """
-        Creates communication queues and spawn a thread
-        to run the tuning logic.
+        Creates a tuner to search in the given space.
         """
-        self._results = queue.Queue(1)
-        self._configs = queue.Queue(1)
-        CtreeTunerThread(manipulator, self._results, self._configs).start()
+        pass
 
+    @abc.abstractmethod
     def get_next_config(self):
         """Get the next configuration to test."""
-        timeout = ctree.CONFIG.getint("tuning", "timeout")
-        try:
-            return self._configs.get(True, timeout)
-        except queue.Empty:
-            log.warning("exhausted stream of tuning configurations")
+        pass
+
+    @abc.abstractmethod
+    def report(self, time=float('inf'), accuracy=None, energy=None, size=None, confidence=None):
+        """Reports performance of most recent configuration."""
+        pass
+
+
+class NullTuningDriver(object):
+    """
+    Provides a stream of None's, and ignores reports()s.
+    """
+    def __init__(self):
+        """Do nothing."""
+        pass
+
+    def get_next_config(self):
+        """Yield the empty configuration."""
         return None
 
-    def report(self, time=float('inf'), accuracy=None, energy=None, size=None, confidence=None):
-        """Report the performance of the most recent configuration."""
-        timeout = ctree.CONFIG.getint("tuning", "timeout")
-        result = Result(time=time, accuracy=accuracy, energy=energy, size=size, confidence=confidence)
-        try:
-            self._results.put(result, True, timeout)
-        except queue.Full:
-            log.warning("exhausted stream of tuning configurations")
-
-
-class CtreeMeasurementInterface(MeasurementInterface):
-    """
-    Ctree interface to opentuner.
-    """
-    def __init__(self, manipulator, results_queue, configs_queue, *args, **kwargs):
-        """
-        Create a new measurement interface with knowledge of the
-        queues to communicate with the ctree jit module.
-        """
-        super(CtreeMeasurementInterface, self).__init__(*args, **kwargs)
-        self._manipulator = manipulator
-        self._results = results_queue
-        self._configs = configs_queue
-
-    def manipulator(self):
-        """
-        Retrieves the tuning space originally provided
-        by the specializer.
-        """
-        return self._manipulator
-
-    def run(self, desired_result, input, limit):
-        """
-        Build the program specified by 'desired_result' and report
-        its performance. With threading, we place the config in the
-        output queue, then wait for a Result in the input queue.
-        """
-        timeout = ctree.CONFIG.getint("tuning", "timeout")
-        self._configs.put(desired_result.configuration, True, timeout)
-        return self._results.get(True, timeout)
-
-    def save_final_config(self, configuration):
-        """Report best configuration."""
-        log.info("best configuration found to be: %s", configuration)
+    def report(self, *args, **kwargs):
+        """Ignore reports."""
+        pass
