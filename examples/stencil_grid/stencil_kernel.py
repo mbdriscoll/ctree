@@ -25,71 +25,73 @@ import ast
 # from examples.stencil_grid.stencil_unroll_neighbor_iter import *
 # from examples.stencil_grid.stencil_optimize_cpp import *
 # from examples.stencil_grid.stencil_convert import *
-import copy
 from copy import deepcopy
 
-import ctree.transformations as transform
+from ctree.transformations import PyBasicConversions
 from ctree.jit import LazySpecializedFunction
 from ctree.c.types import *
 from ctree.frontend import get_ast
 from ctree.visitors import NodeTransformer
 from ctree.c.nodes import *
 from ctree.omp.nodes import *
-from ctree.dotgen import to_dot
 
 
-import logging
+# import logging
 
-logging.basicConfig(filename='tmp.txt',
-                            filemode='w',
-                            format='%(asctime)s,%(msecs)d %(name)s %(levelname)s %(message)s',
-                            datefmt='%H:%M:%S',
-                            level=20)
+# logging.basicConfig(filename='tmp.txt',
+#                             filemode='w',
+#                             format='%(asctime)s,%(msecs)d %(name)s %(levelname)s %(message)s',
+#                             datefmt='%H:%M:%S',
+#                             level=20)
 
 
-class SpecializedTranslator(LazySpecializedFunction):
-  def __init__(self, func, entry_point, input_grids, output_grid):
-    self.input_grids = input_grids
-    self.output_grid = output_grid
-    super().__init__( get_ast(func), entry_point )
+class StencilConvert(LazySpecializedFunction):
+    def __init__(self, func, entry_point, input_grids, output_grid):
+        self.input_grids = input_grids
+        self.output_grid = output_grid
+        super().__init__(get_ast(func), entry_point)
 
-  def args_to_subconfig(self, args):
-    conf = ()
-    for arg in args:
-        conf += ((len(arg), arg.dtype, arg.ndim, arg.shape),)
-    return conf
+    def args_to_subconfig(self, args):
+        conf = ()
+        for arg in args:
+            conf += ((len(arg), arg.dtype, arg.ndim, arg.shape),)
+        return conf
 
-  def transform(self, tree, program_config):
-    """Convert the Python AST to a C AST."""
-    param_types = []
-    for arg in program_config[0]:
-        param_types.append(NdPointer(arg[1], arg[2], arg[3]))
-    kernel_sig = FuncType(Void(), param_types)
+    def transform(self, tree, program_config):
+        """Convert the Python AST to a C AST."""
+        param_types = []
+        for arg in program_config[0]:
+            param_types.append(NdPointer(arg[1], arg[2], arg[3]))
+        kernel_sig = FuncType(Void(), param_types)
 
-    tree = StencilTransformer(self.input_grids, self.output_grid).visit(tree)
-    tree = transform.PyBasicConversions().visit(tree)
-    params = tree.find(FunctionDecl, name="kernel").params
-    params.pop(0)
-    self.gen_array_macro_definition(tree, params)
-    tree.find(FunctionDecl, name="kernel").set_typesig(kernel_sig)
-    # print(ast.dump(tree))
-    entry_point_typesig = tree.find(FunctionDecl, name="kernel").get_type().as_ctype()
-    return tree, entry_point_typesig
+        for transformer in [StencilTransformer(self.input_grids,
+                                               self.output_grid),
+                            PyBasicConversions()]:
+            tree = transformer.visit(tree)
+        # remove self param
+        # TODO: Better way to do this?
+        params = tree.find(FunctionDecl, name="kernel").params
+        params.pop(0)
+        self.gen_array_macro_definition(tree, params)
+        entry_point = tree.find(FunctionDecl, name="kernel")
+        entry_point.set_typesig(kernel_sig)
+        return tree, entry_point.get_type().as_ctype()
 
-  def gen_array_macro_definition(self, tree, arg_names):
-    first_for = tree.find(For)
-    for index, arg in enumerate(self.input_grids + (self.output_grid, )):
-        defname = "_%s_array_macro" % arg_names[index]
-        params = "(" + ','.join(["_d"+str(x) for x in range(arg.dim)]) + ")"
-        calc = "((_d%d)" % (arg.dim - 1)
-        for x in range(arg.dim - 1):
-            calc += "+((_d%s) * %s)" % (str(x), str(int(arg.data.strides[x]/arg.data.itemsize)))
-        calc += ")"
-        first_for.insert_before(Define(defname+params, calc))
+    def gen_array_macro_definition(self, tree, arg_names):
+        first_for = tree.find(For)
+        for index, arg in enumerate(self.input_grids + (self.output_grid,)):
+            defname = "_%s_array_macro" % arg_names[index]
+            params = ','.join(["_d"+str(x) for x in range(arg.dim)])
+            params = "(%s)" % params
+            calc = "((_d%d)" % (arg.dim - 1)
+            for x in range(arg.dim - 1):
+                dim = str(int(arg.data.strides[x]/arg.data.itemsize))
+                calc += "+((_d%s) * %s)" % (str(x), dim)
+            calc += ")"
+            first_for.insert_before(Define(defname+params, calc))
+
 
 class StencilTransformer(NodeTransformer):
-
-
     def __init__(self, input_grids, output_grid):
         # TODO: Give these wrapper classes?
         self.input_grids = input_grids
@@ -122,44 +124,32 @@ class StencilTransformer(NodeTransformer):
                 curr_node = None
                 ret_node = None
                 for d in range(dim):
-                    initial = Constant(self.ghost_depth)
-                    end = Constant(self.output_grid.shape[d] - self.ghost_depth - 1)
-                    target = SymbolRef(self.gen_fresh_var())
                     self.var_list.append(target.name)
+                    for_loop = For(
+                        Assign(SymbolRef(target.name, Int()),
+                               Constant(self.ghost_depth)),
+                        LtE(SymbolRef(self.gen_fresh_var()),
+                            Constant(
+                                self.output_grid.shape[d] -
+                                self.ghost_depth - 1)
+                            ),
+                        PostInc(target),
+                        [])
+
                     if d == 0:
-                        curr_node = For(Assign(SymbolRef(target.name, Int()), initial),
-                                       LtE(target, end),
-                                       PostInc(target),
-                                       []
-                                    )
-                        ret_node = curr_node
-                    elif d == dim - 2:
-                        next_node = [OmpParallelFor(), For(Assign(SymbolRef(target.name, Int()), initial),
-                                       LtE(target, end),
-                                       PostInc(target),
-                                       []
-                                    )]
-                        curr_node.body = next_node
-                        curr_node = next_node[1]
-                    elif d == dim - 1:
-                        next_node = [OmpIvDep(), For(Assign(SymbolRef(target.name, Int()),
-                            initial),
-                                       LtE(target, end),
-                                       PostInc(target),
-                                       []
-                                    )]
-                        curr_node.body = next_node
-                        curr_node = next_node[1]
+                        ret_node = for_loop
                     else:
-                        curr_node.body = [For(Assign(SymbolRef(target.name, Int()), initial),
-                                       LtE(target, end),
-                                       PostInc(target),
-                                       []
-                                    )]
-                        curr_node = curr_node.body[0]
+                        curr_node.body = [for_loop]
+                        if d == dim - 2:
+                            curr_node.body.insert(0, OmpParallelFor())
+                        elif d == dim - 1:
+                            curr_node.body.insert(0, OmpIvDep())
+                    curr_node = for_loop
                 self.output_index = self.gen_fresh_var()
-                curr_node.body = [Assign(SymbolRef(self.output_index, Int()), self.gen_array_macro(self.output_grid_name, [SymbolRef(x) for x in
-                                         self.var_list]))]
+                pt = [SymbolRef(x) for x in self.var_list]
+                macro = self.gen_array_macro(self.output_grid_name, pt)
+                curr_node.body = [Assign(SymbolRef(self.output_index, Int()),
+                                         macro)]
                 for elem in map(self.visit, node.body):
                     if type(elem) == list:
                         curr_node.body.extend(elem)
@@ -172,8 +162,6 @@ class StencilTransformer(NodeTransformer):
                 grid_name = node.iter.func.value.id
                 grid = self.input_dict[grid_name]
                 zero_point = tuple([0 for x in range(grid.dim)])
-                neighbors = grid.neighbor_definition[neighbors_id]
-                neighbors_of_grid = node.iter.args[0].id
                 self.neighbor_target = node.target.id
                 self.neighbor_grid_name = grid_name
                 body = []
@@ -192,15 +180,21 @@ class StencilTransformer(NodeTransformer):
         target = node.slice.value
         if isinstance(target, ast.Name):
             target = target.id
-            if grid_name is self.output_grid_name and target == self.kernel_target:
-                return ArrayRef(SymbolRef(self.output_grid_name), SymbolRef(self.output_index))
-            elif grid_name in self.input_dict and target == self.kernel_target:
-                grid = self.input_dict[grid_name]
-                zero_point = tuple([0 for x in range(grid.dim)])
-                index = self.gen_array_macro(grid_name, list(map(lambda x, y: Add(SymbolRef(x), SymbolRef(y)), self.var_list, zero_point)))
-                return ArrayRef(SymbolRef(grid_name), index)
+            if target == self.kernel_target:
+                if grid_name is self.output_grid_name:
+                    return ArrayRef(SymbolRef(self.output_grid_name),
+                                    SymbolRef(self.output_index))
+                elif grid_name in self.input_dict:
+                    grid = self.input_dict[grid_name]
+                    zero_point = tuple([0 for x in range(grid.dim)])
+                    pt = list(map(lambda x, y: Add(SymbolRef(x), SymbolRef(y)),
+                                  self.var_list, zero_point))
+                    index = self.gen_array_macro(grid_name, pt)
+                    return ArrayRef(SymbolRef(grid_name), index)
             elif grid_name == self.neighbor_grid_name:
-                index = self.gen_array_macro(grid_name, list(map(lambda x, y: Add(SymbolRef(x), SymbolRef(y)), self.var_list, self.offset_list)))
+                pt = list(map(lambda x, y: Add(SymbolRef(x), SymbolRef(y)),
+                              self.var_list, self.offset_list))
+                index = self.gen_array_macro(grid_name, pt)
                 return ArrayRef(SymbolRef(grid_name), index)
         elif isinstance(target, ast.Call):
             return ArrayRef(SymbolRef(grid_name), self.visit(target))
@@ -223,8 +217,9 @@ class StencilTransformer(NodeTransformer):
         return FunctionCall(SymbolRef(name), point)
 
     def visit_AugAssign(self, node):
-        # print(ast.dump(node))
-        return AddAssign(self.visit(node.target), self.visit(node.value))
+        # TODO: Handle all types?
+        if type(node.op) is ast.Add:
+            return AddAssign(self.visit(node.target), self.visit(node.value))
 
     def visit_Assign(self, node):
         return Assign(self.visit(node.targets[0]), self.visit(node.value))
@@ -241,9 +236,9 @@ class StencilKernel(object):
             raise Exception("No kernel method defined.")
 
         # get text of kernel() method and parse into a StencilModel
-        self.kernel_src = inspect.getsource(self.kernel)
+        # self.kernel_src = inspect.getsource(self.kernel)
         # print(self.kernel_src)
-        self.kernel_ast = ast.parse(self.remove_indentation(self.kernel_src))
+        # self.kernel_ast = ast.parse(self.remove_indentation(self.kernel_src))
         # print(ast.dump(self.kernel_ast, include_attributes=True))
 
         # self.model = StencilPythonFrontEnd().parse(self.kernel_ast)
@@ -251,7 +246,6 @@ class StencilKernel(object):
 
         self.model = self.kernel
         # print(self.new_kernel)
-
 
         self.pure_python = False
         self.pure_python_kernel = self.kernel
@@ -265,131 +259,9 @@ class StencilKernel(object):
         self.specialized_sizes = None
         self.with_cilk = with_cilk
 
-    def remove_indentation(self, src):
-        return src.lstrip()
-
-    def add_libraries(self, mod):
-        # these are necessary includes, includedirs, and init statements to use the numpy library
-        mod.add_library("numpy",[numpy.get_include()+"/numpy"])
-        mod.add_header("arrayobject.h")
-        mod.add_to_init([cpp_ast.Statement("import_array();")])
-        if self.with_cilk:
-            mod.module.add_to_preamble([cpp_ast.Include("cilk/cilk.h", True)])
-
-
     def shadow_kernel(self, *args):
         if self.pure_python:
             return self.pure_python_kernel(*args)
 
-        myargs = [y.data for y in args]
-        model = SpecializedTranslator(self.model, "kernel", args[0:-1], args[-1])
-        return model(*myargs)
-
-        #FIXME: instead of doing this short-circuit, we should use the Asp infrastructure to
-        # do it, by passing in a lambda that does this check
-        # if already specialized to these sizes, just run
-        if self.specialized_sizes and self.specialized_sizes == [y.shape for y in args]:
-            debug_print("match!")
-            self.mod.kernel(*[y.data for y in args])
-            return
-
-        # otherwise, do the first-run flow
-
-        # ask asp infrastructure for machine and platform info, including if cilk+ is available
-        #FIXME: implement.  set self.with_cilk=true if cilk is available
-
-        input_grids = args[0:-1]
-        output_grid = args[-1]
-        model = copy.deepcopy(self.model)
-        model = StencilUnrollNeighborIter(model, input_grids, output_grid).run()
-
-        # depending on whether cilk is available, we choose which converter to use
-        if not self.with_cilk:
-            Converter = StencilConvertAST
-        else:
-            Converter = StencilConvertASTCilk
-
-        # generate variant with no unrolling, then generate variants for various unrollings
-        base_variant = Converter(model, input_grids, output_grid).run()
-        variants = [base_variant]
-        variant_names = ["kernel"]
-
-        # we only cache block if the size is large enough for blocking
-        # or if the user has told us to
-
-        if (len(args[0].shape) > 1 and args[0].shape[0] > 128):
-            self.should_cacheblock = True
-            self.block_sizes = [16, 32, 48, 64, 128, 160, 192, 256]
-        else:
-            self.should_cacheblock = False
-            self.block_sizes = []
-
-        if self.should_cacheblock and self.should_unroll:
-            import itertools
-            for b in list(set(itertools.permutations(self.block_sizes, len(args[0].shape)-1))):
-                for u in [1,2,4,8]:
-                    # ensure the unrolling is valid for the given blocking
-
-                    #if b[len(b)-1] >= u:
-                    if args[0].shape[len(args[0].shape)-1] >= u:
-                        c = list(b)
-                        c.append(1)
-                        #variants.append(Converter(model, input_grids, output_grid, unroll_factor=u, block_factor=c).run())
-
-                        variant = StencilOptimizeCpp(copy.deepcopy(base_variant), output_grid.shape, unroll_factor=u, block_factor=c).run()
-                        variants.append(variant)
-                        variant_names.append("kernel_block_%s_unroll_%s" % ('_'.join([str(y) for y in c]) ,u))
-
-                        debug_print("ADDING BLOCKED")
-
-        if self.should_unroll:
-            for x in [2,4,8,16]: #,32,64]:
-                check_valid = max(map(
-                    # FIXME: is this the right way to figure out valid unrollings?
-                    lambda y: (y.shape[-1]-2*y.ghost_depth) % x,
-                    args))
-
-                if check_valid == 0:
-                    debug_print("APPENDING VARIANT %s" % x)
-                    variants.append(StencilOptimizeCpp(copy.deepcopy(base_variant), output_grid.shape, unroll_factor=x).run())
-                    variant_names.append("kernel_unroll_%s" % x)
-
-        debug_print(variant_names)
-        from asp.jit import asp_module
-
-        mod = self.mod = asp_module.ASPModule()
-        self.add_libraries(mod)
-
-        self.set_compiler_flags(mod)
-        mod.add_function("kernel", variants, variant_names)
-
-        # package arguments and do the call
-        myargs = [y.data for y in args]
-        mod.kernel(*myargs)
-
-        # save parameter sizes for next run
-        self.specialized_sizes = [x.shape for x in args]
-
-    def set_compiler_flags(self, mod):
-        import asp.config
-
-        if self.with_cilk or asp.config.CompilerDetector().detect("icc"):
-            mod.backends["c++"].toolchain.cc = "icc"
-            mod.backends["c++"].toolchain.cflags += ["-intel-extensions", "-fast", "-restrict"]
-            # original, below is chick debugging mac mod.backends["c++"].toolchain.cflags += ["-openmp", "-fno-fnalias", "-fno-alias"]
-            mod.backends["c++"].toolchain.cflags += ["-fno-fnalias", "-fno-alias"]
-            mod.backends["c++"].toolchain.cflags += ["-I/usr/include/x86_64-linux-gnu"]
-            mod.backends["c++"].toolchain.cflags.remove('-fwrapv')
-            mod.backends["c++"].toolchain.cflags.remove('-O2')
-            mod.backends["c++"].toolchain.cflags.remove('-g')
-            mod.backends["c++"].toolchain.cflags.remove('-g')
-            mod.backends["c++"].toolchain.cflags.remove('-fno-strict-aliasing')
-        else:
-            # original, mac debugging by chick            mod.backends["c++"].toolchain.cflags += ["-fopenmp", "-O3", "-msse3", "-Wno-unknown-pragmas"]
-            mod.backends["c++"].toolchain.cflags += ["-O3", "-msse3", "-Wno-unknown-pragmas"]
-
-        if mod.backends["c++"].toolchain.cflags.count('-Os') > 0:
-            mod.backends["c++"].toolchain.cflags.remove('-Os')
-        if mod.backends["c++"].toolchain.cflags.count('-O2') > 0:
-            mod.backends["c++"].toolchain.cflags.remove('-O2')
-        debug_print("toolchain" + str(mod.backends["c++"].toolchain.cflags))
+        model = StencilConvert(self.model, "kernel", args[0:-1], args[-1])
+        return model(*[arg.data for arg in args])

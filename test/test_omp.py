@@ -25,6 +25,10 @@ class TestOmpCodegen(unittest.TestCase):
         node = OmpParallel([OmpNumThreadsClause(Constant(3))])
         self.assertEqual(str(node), "#pragma omp parallel num_threads(3)")
 
+    def test_ivdep(self):
+        node = OmpIvDep()
+        self.assertEqual(str(node), "#pragma IVDEP")
+
     def test_no_semicolons(self):
         """There shouldn't be semicolons after Omp statementss."""
         node = Block([OmpParallel(), Assign(SymbolRef("x"), Constant(3))])

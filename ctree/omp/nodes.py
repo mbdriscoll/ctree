@@ -46,10 +46,12 @@ class OmpParallelFor(OmpNode):
     def __init__(self, clauses=None):
         self.clauses = clauses if clauses else []
 
+
 class OmpIvDep(OmpNode):
-  _field = ['clauses']
-  def __init__(self, clauses=[]):
-    self.clauses = clauses
+    _field = ['clauses']
+
+    def __init__(self, clauses=[]):
+        self.clauses = clauses
 
 
 class OmpClause(OmpNode):
