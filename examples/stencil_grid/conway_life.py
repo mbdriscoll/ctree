@@ -56,7 +56,7 @@ class IteratedConwayKernel(StencilKernel):
     def kernel(self, in_img, new_state_map, out_img):
         for generation in range(self.generations):
             for x in out_img.interior_points():
-                out_img[x] = in_img[x] * 8
+                out_img[x] = in_img[x] * 9
                 for y in in_img.neighbors(x, 2):
                     out_img[x] += in_img[y]
                 out_img[x] = new_state_map[int(out_img[x])]
@@ -81,8 +81,8 @@ def run_game(width=25, height=25, generations=1):
         if np.random.random() > 0.75:
             current_grid[x] = 1
 
-    new_state_map = StencilGrid([16])
-    for index, new_state in enumerate([0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0]):
+    new_state_map = StencilGrid([18])
+    for index, new_state in enumerate([0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0]):
         new_state_map[index] = new_state
 
     #render(current_grid, "Original input")
