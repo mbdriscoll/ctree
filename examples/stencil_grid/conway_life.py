@@ -40,7 +40,7 @@ class IteratedConwayKernel(StencilKernel):
 
     def __init__(self, generations):
         self.generations = generations
-        super().__init__()
+        super(StencilKernel, self).__init__()
 
     def kernel(self, in_img, new_state_map, out_img):
         for generation in range(self.generations):
