@@ -89,7 +89,7 @@ class Objective(object):
 
 class MinimizeTime(Objective):
     def compare(self, result0, result1):
-        return cmp(result0.time, result1.time)
+        return result0.time < result1.time
 
 
 class BruteForceTuningDriver(TuningDriver):
@@ -117,7 +117,7 @@ class BruteForceTuningDriver(TuningDriver):
             yield cfg
 
         assert self._best_cfg != None, \
-            "No best configuration. Did you report()?"
+            "No best configuration. Did you call report()?"
 
         # return the best for the rest of time
         while True:
@@ -127,6 +127,6 @@ class BruteForceTuningDriver(TuningDriver):
         """
         Record the new result if it is better than the current best.
         """
-        if self._objective.compare(new_result, self._best_result) < 0:
+        if self._objective.compare(new_result, self._best_result):
             self._best_result = new_result
             self._best_cfg = self._last_cfg
