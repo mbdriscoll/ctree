@@ -141,7 +141,7 @@ class Define(Statement):
     def __init__(self, defname=None, calc=None):
         self.defname = defname
         self.calc = calc
-        super().__init__()
+        super(Define, self).__init__()
 
     def _requires_semicolon(self):
         return False
