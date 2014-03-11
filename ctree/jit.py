@@ -102,9 +102,6 @@ class LazySpecializedFunction(object):
             raise Exception("args_to_subconfig must return a hashable type")
         return subconfig
 
-    def _next_tuning_config(self):
-        return self.tuner.get_next_config()
-
     def __call__(self, *args, **kwargs):
         """
         Determines the program_configuration to be run. If it has yet to be
@@ -118,7 +115,7 @@ class LazySpecializedFunction(object):
                  [type(a) for a in args])
 
         args_subconfig = self._args_to_subconfig_safely(args)
-        tuner_subconfig = self._next_tuning_config()
+        tuner_subconfig = self.tuner.get_configs().next()
         program_config = (args_subconfig, tuner_subconfig)
 
         log.info("specializer returned subconfig for arguments: %s",

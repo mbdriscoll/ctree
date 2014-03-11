@@ -13,6 +13,7 @@ from opentuner.measurement import MeasurementInterface
 from opentuner.resultsdb.models import Result
 from opentuner.tuningrunmain import TuningRunMain
 from opentuner.search.manipulator import ConfigurationManipulator
+from opentuner.measurement.inputmanager import FixedInputManager
 
 
 class OpenTunerDriver(TuningDriver):
@@ -21,26 +22,25 @@ class OpenTunerDriver(TuningDriver):
     a stream of configurations, as well as an interface
     to report on the performance of each.
     """
-    def __init__(self, manipulator, opentuner_args=None):
+    def __init__(self, *ot_args, **ot_kwargs):
         """
         Creates communication queues and spawn a thread
         to run the tuning logic.
         """
-        assert isinstance(manipulator, ConfigurationManipulator)
         self._results = queue.Queue(1)
         self._configs = queue.Queue(1)
-        ot_args = opentuner_args if opentuner_args else []
-        self._thread = OpenTunerThread(manipulator, self._results, self._configs, ot_args)
+        self._thread = OpenTunerThread(self._results, self._configs, *ot_args, **ot_kwargs)
         self._thread.start()
 
-    def get_next_config(self):
+    def get_configs(self):
         """Get the next configuration to test."""
         timeout = CONFIG.getint("opentuner", "timeout")
         try:
-            return self._configs.get(True, timeout)
+            yield self._configs.get(True, timeout)
         except queue.Empty:
             log.warning("exhausted stream of tuning configurations")
-        return None
+        while True:
+            yield None
 
     def report(self, **kwargs):
         """Report the performance of the most recent configuration."""
@@ -56,15 +56,12 @@ class OpenTunerThread(threading.Thread):
     """
     Thread to drive OpenTuner.
     """
-    def __init__(self, manipulator, results_queue, configs_queue, opentuner_args=None):
+    def __init__(self, results_queue, configs_queue, *ot_args, **ot_kwargs):
         super(OpenTunerThread, self).__init__()
-        self._manipulator = manipulator
         self._results = results_queue
         self._configs = configs_queue
-        self._opentuner_args = opentuner_args if opentuner_args else []
-        assert isinstance(opentuner_args, list), \
-            "Expected a list of OpenTuner args, but got an '%s'." % \
-            type(opentuner_args)
+        self._ot_args = ot_args
+        self._ot_kwargs = ot_kwargs
         self._tuningrun = None
 
         # variables for Thread class
@@ -77,8 +74,9 @@ class OpenTunerThread(threading.Thread):
             self.name, threading.active_count())
         arg_parser = argparse.ArgumentParser(parents=opentuner.argparsers())
         config_args = CONFIG.get("opentuner", "args").split()
-        tuner_args = arg_parser.parse_args(config_args + self._opentuner_args)
-        interface = CtreeMeasurementInterface(self._manipulator, self._results, self._configs)
+        tuner_args = arg_parser.parse_args(config_args)
+        interface = CtreeMeasurementInterface(self._results, \
+            self._configs, *self._ot_args, **self._ot_kwargs)
         TuningRunMain(interface, tuner_args).main()
         log.info("tuning thread '%s' terminating.", self.name)
 
@@ -87,13 +85,13 @@ class CtreeMeasurementInterface(MeasurementInterface):
     """
     Ctree interface to opentuner.
     """
-    def __init__(self, manipulator, results_queue, configs_queue, *args, **kwargs):
+    def __init__(self, results_queue, configs_queue, *args, **kwargs):
         """
         Create a new measurement interface with knowledge of the
         queues to communicate with the ctree jit module.
         """
+        kwargs['input_manager'] = FixedInputManager()
         super(CtreeMeasurementInterface, self).__init__(*args, **kwargs)
-        self._manipulator = manipulator
         self._results = results_queue
         self._configs = configs_queue
 
