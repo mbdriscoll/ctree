@@ -34,9 +34,9 @@ def gaussian(stdev, length):
 def distance(x, y):
     return math.sqrt(sum([(x[i]-y[i])**2 for i in range(0, len(x))]))
 
-# pixels = map(ord, list(image_in.read(width * height))) # Read in grayscale values
-pixels = image_in.read(width * height)    # Read in grayscale values
-intensity = float(sum(pixels))/len(pixels)
+pixels = map(ord, list(image_in.read(width * height))) # Read in grayscale values
+# pixels = image_in.read(width * height)    # Read in grayscale values
+# intensity = float(sum(pixels))/len(pixels)
 
 kernel = Kernel()
 kernel.should_unroll = False
