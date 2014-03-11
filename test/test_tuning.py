@@ -30,6 +30,7 @@ except ImportError:
 else:
     HAVE_OPENTUNER = True
 
+
 class TestOpenTunerDriver(unittest.TestCase):
     @unittest.skipUnless(HAVE_OPENTUNER, "OpenTuner not in PYTHONPATH.")
     def test_import(self):
@@ -54,3 +55,6 @@ class TestOpenTunerDriver(unittest.TestCase):
             driver.report(time=val)
             unsearched.remove(val)
         self.assertEqual(len(unsearched), 180)
+
+    # keep it to one test now because we're having problems
+    # with multiple threads and the sqlite database.
