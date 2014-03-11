@@ -35,3 +35,7 @@ Change back to the ``ctree`` directory and run the test suite to make sure every
 To switch back to your default python installation, run::
 
         deactivate
+
+You can re-activate the virtualenv at any time using::
+
+        source venv-2.7/bin/activate
