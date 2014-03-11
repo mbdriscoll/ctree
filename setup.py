@@ -14,6 +14,7 @@ setup(
     'ctree.py',
     'ctree.sse',
     'ctree.templates',
+    'ctree.opentuner',
   ],
 
   package_data = {
