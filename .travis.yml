@@ -29,8 +29,7 @@ install:
   - LLVM_CONFIG_PATH=/usr/bin/llvm-config-$LLVM_VERSION python setup.py install
 
   # install opentuner
-  - cd ${HOME}
-  - git clone https://github.com/mbdriscoll/opentuner.git
+  - git clone https://github.com/mbdriscoll/opentuner.git ${HOME}/opentuner
   - cd ${HOME}/opentuner
   - sudo apt-get install `cat debian-packages-deps | tr '\n' ' '`
   - pip install -r python-packages
@@ -48,7 +47,7 @@ script:
 
   # run test suite again from build dir to get coverage info
   - cd ${TRAVIS_BUILD_DIR}
-  - nosetests --verbose --with-coverage --cover-package=ctree --cover-min-percentage=89
+  - nosetests --verbose --with-coverage --cover-package=ctree --cover-min-percentage=90
 
 
 after_success:
