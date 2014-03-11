@@ -8,11 +8,11 @@ Using VirtualEnv
 
 If you want to switch between multiple versions of Python, and/or keep ctree dependences out of your system site-packages, you can use virtualenv to create standalone python installations and switch between them easily.
 
-To create an environment, install ``virtualenv`` using ``pip``::
+To get started, install ``virtualenv`` using ``pip``::
 
         pip-2.7 install virtualenv
 
-Then, create a virtual environment. We have a ``.gitignore`` in place to ignore ``venv-*`` directories::
+Then, create a virtual environment. We have a ``.gitignore`` entry in place to ignore ``venv-*`` directories::
 
         cd $CTREE
         virtualenv-2.7 venv-2.7
