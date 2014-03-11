@@ -12,16 +12,15 @@ class TuningDriver(object):
     """
     __metaclass__ = abc.ABCMeta
 
-    @abc.abstractmethod
-    def __init__(self, manipulator):
+    def __init__(self):
         """
         Creates a tuner to search in the given space.
         """
-        pass
+        self.configs = self._get_configs()
 
     @abc.abstractmethod
-    def get_configs(self):
-        """A generator that yields a stream of configurations to test."""
+    def _get_configs(self):
+        """A generator that yields a stream of configurations."""
         pass
 
     @abc.abstractmethod
@@ -36,9 +35,9 @@ class NullTuningDriver(TuningDriver):
     """
     def __init__(self):
         """Do nothing."""
-        pass
+        super(NullTuningDriver, self).__init__()
 
-    def get_configs(self):
+    def _get_configs(self):
         """Yield the empty configuration."""
         while True:
             yield None
@@ -90,7 +89,7 @@ class Objective(object):
 
 class MinimizeTime(Objective):
     def compare(self, result0, result1):
-        return cmp(result0.time, result1.time)
+        return result0.time < result1.time
 
 
 class BruteForceTuningDriver(TuningDriver):
@@ -101,14 +100,15 @@ class BruteForceTuningDriver(TuningDriver):
     """
     def __init__(self, params, objective):
         """Initialize with the given objective."""
+        super(BruteForceTuningDriver, self).__init__()
         self._objective = objective
         self._best_result = Result()
         self._best_cfg = None
         self._last_cfg = None
         self._params = params
 
-    def get_configs(self):
-        """Yield the empty configuration."""
+    def _get_configs(self):
+        """A generator of all configurations."""
         # compute the cartesian product of the dimensions
         names, values = zip(*[(p.name, p.values()) for p in self._params])
         for cfg_values in itertools.product(*values):
@@ -117,7 +117,7 @@ class BruteForceTuningDriver(TuningDriver):
             yield cfg
 
         assert self._best_cfg != None, \
-            "No best configuration. Did you report()?"
+            "No best configuration. Did you call report()?"
 
         # return the best for the rest of time
         while True:
@@ -127,6 +127,6 @@ class BruteForceTuningDriver(TuningDriver):
         """
         Record the new result if it is better than the current best.
         """
-        if self._objective.compare(new_result, self._best_result) < 0:
+        if self._objective.compare(new_result, self._best_result):
             self._best_result = new_result
             self._best_cfg = self._last_cfg

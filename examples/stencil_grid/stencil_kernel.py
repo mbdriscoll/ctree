@@ -98,6 +98,10 @@ class StencilTransformer(NodeTransformer):
         self.output_grid = output_grid
         self.ghost_depth = output_grid.ghost_depth
         self.next_fresh_var = 0
+        self.output_index = None
+        self.neighbor_grid_name = None
+        self.kernel_target = None
+        self.offset_list = None
         self.var_list = []
         self.input_dict = {}
         super(StencilTransformer, self).__init__()
@@ -208,7 +212,7 @@ class StencilTransformer(NodeTransformer):
 
     def visit_Call(self, node):
         if node.func.id == 'distance':
-            zero_point = tuple([0 for x in range(len(self.offset_list))])
+            zero_point = tuple([0 for _ in range(len(self.offset_list))])
             return Constant(self.distance(zero_point, self.offset_list))
         elif node.func.id == 'int':
             return Cast(Int(), self.visit(node.args[0]))
