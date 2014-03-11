@@ -145,7 +145,7 @@ if __name__ == "__main__":
     # watt_reader.set_mode('E')
     for i in range(10):
         tup = watt_reader.fetch()
-        print tup
+        print (tup)
         time.sleep(5)
 
     watt_reader.stop()
