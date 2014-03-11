@@ -115,7 +115,7 @@ class LazySpecializedFunction(object):
                  [type(a) for a in args])
 
         args_subconfig = self._args_to_subconfig_safely(args)
-        tuner_subconfig = self.tuner.get_configs().next()
+        tuner_subconfig = self.tuner.configs.next()
         program_config = (args_subconfig, tuner_subconfig)
 
         log.info("specializer returned subconfig for arguments: %s",

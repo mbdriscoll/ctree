@@ -2,7 +2,7 @@ import unittest
 
 import os
 import shutil
-import itertools
+from itertools import islice
 
 class TestNullTuningDriver(unittest.TestCase):
     def test_import(self):
@@ -12,15 +12,14 @@ class TestNullTuningDriver(unittest.TestCase):
         from ctree.tune import NullTuningDriver
 
         driver = NullTuningDriver()
-        for i in range(4):
-            self.assertIsNone(driver.get_configs().next())
+        for cfg in islice(driver.configs, 4):
+            self.assertIsNone(cfg)
 
     def test_null_driver_report(self):
         from ctree.tune import NullTuningDriver
 
         driver = NullTuningDriver()
-        for i in range(4):
-            config = driver.get_configs().next()
+        for cfg in islice(driver.configs, 4):
             driver.report(time=0.4)
 
 
@@ -51,8 +50,7 @@ class TestOpenTunerDriver(unittest.TestCase):
         driver = OpenTunerDriver(manipulator=cfg, objective=MinimizeTime())
 
         unsearched = set(range(200))
-        for i in range(20):
-            cfg = driver.get_configs().next()
+        for cfg in islice(driver.configs, 20):
             val = cfg.data["foo"]
             driver.report(time=val)
             unsearched.remove(val)
@@ -79,7 +77,7 @@ class TestBruteForceTuningDriver(unittest.TestCase):
         driver = BruteForceTuningDriver(params, objective)
 
         unsearched = set(range(0, 100))
-        for config in itertools.islice(driver.get_configs(), 100):
+        for config in islice(driver.configs, 100):
             unsearched.remove(config["foo"])
             driver.report( Result(time=0.4) )
         self.assertSetEqual(unsearched, set())
@@ -99,8 +97,31 @@ class TestBruteForceTuningDriver(unittest.TestCase):
         driver = BruteForceTuningDriver(params, MinimizeTime())
 
         unsearched = set(range(0, 100))
-        for config in itertools.islice(driver.get_configs(), 100):
+        for config in islice(driver.configs, 100):
             entry = config["foo"] * 10 + config["bar"]
             unsearched.remove(entry)
             driver.report( Result(time=0.4) )
         self.assertSetEqual(unsearched, set())
+
+    def test_bruteforce_driver_2d_parabola(self):
+        from ctree.tune import (
+            BruteForceTuningDriver,
+            IntegerParameter,
+            MinimizeTime,
+            Result,
+        )
+
+        params = [
+            IntegerParameter("x", 0, 10),
+            IntegerParameter("y", 0, 10),
+        ]
+        driver = BruteForceTuningDriver(params, MinimizeTime())
+
+        for config in islice(driver.configs, 100):
+            # report height on inverted paraboloid with global min at (3,4)
+            x, y = config["x"], config["y"]
+            z = (x-3)**2 + (y-4)**2 + 1
+            driver.report( Result(time=z) )
+
+        for config in islice(driver.configs, 10):
+            self.assertEqual((config["x"], config["y"]), (3, 4))
