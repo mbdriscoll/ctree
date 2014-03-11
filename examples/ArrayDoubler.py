@@ -33,15 +33,6 @@ class OpTranslator(LazySpecializedFunction):
         A = args[0]
         return len(A), A.dtype, A.ndim, A.shape
 
-    def get_tuning_driver(self):
-        from ctree.opentuner.driver import IntegerParameter, \
-                                           ConfigurationManipulator, \
-                                           OpenTunerDriver
-
-        cfg = ConfigurationManipulator()
-        cfg.add_parameter( IntegerParameter("block_size", 1, 10) )
-        return OpenTunerDriver(cfg)
-
     def transform(self, py_ast, program_config):
         """
         Convert the Python AST to a C AST according to the directions

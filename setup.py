@@ -14,13 +14,14 @@ setup(
     'ctree.py',
     'ctree.sse',
     'ctree.templates',
+    'ctree.opentuner',
   ],
 
   package_data = {
     'ctree': ['defaults.cfg'],
   },
+
   install_requires=[
       'numpy',
   ]
-
 )
