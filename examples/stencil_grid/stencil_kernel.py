@@ -1,6 +1,6 @@
 """
-This version was taken from the stencil_specializer project and has all asp stuff removed
-in order to work on a direct c-tree llvm implementation
+This version was taken from the stencil_specializer project and has all asp
+stuff removed in order to work on a direct c-tree llvm implementation
 
 The main driver, intercepts the kernel() call and invokes the other components.
 
@@ -49,7 +49,7 @@ class StencilConvert(LazySpecializedFunction):
     def __init__(self, func, entry_point, input_grids, output_grid):
         self.input_grids = input_grids
         self.output_grid = output_grid
-        super().__init__(get_ast(func), entry_point)
+        super(StencilConvert, self).__init__(get_ast(func), entry_point)
 
     def args_to_subconfig(self, args):
         conf = ()
@@ -98,16 +98,25 @@ class StencilTransformer(NodeTransformer):
         self.output_grid = output_grid
         self.ghost_depth = output_grid.ghost_depth
         self.next_fresh_var = 0
+        self.output_index = None
+        self.neighbor_grid_name = None
+        self.kernel_target = None
+        self.offset_list = None
         self.var_list = []
         self.input_dict = {}
         super(StencilTransformer, self).__init__()
 
     def visit_FunctionDef(self, node):
         for index, arg in enumerate(node.args.args[1:]):
-            if index < len(self.input_grids):
-                self.input_dict[arg.arg] = self.input_grids[index]
+            # PYTHON3 vs PYTHON2
+            if hasattr(arg, 'arg'):
+                arg = arg.arg
             else:
-                self.output_grid_name = arg.arg
+                arg = arg.id
+            if index < len(self.input_grids):
+                self.input_dict[arg] = self.input_grids[index]
+            else:
+                self.output_grid_name = arg
         node.body = list(map(self.visit, node.body))
         return node
 
@@ -203,7 +212,7 @@ class StencilTransformer(NodeTransformer):
 
     def visit_Call(self, node):
         if node.func.id == 'distance':
-            zero_point = tuple([0 for x in range(len(self.offset_list))])
+            zero_point = tuple([0 for _ in range(len(self.offset_list))])
             return Constant(self.distance(zero_point, self.offset_list))
         elif node.func.id == 'int':
             return Cast(Int(), self.visit(node.args[0]))
@@ -221,6 +230,8 @@ class StencilTransformer(NodeTransformer):
         # TODO: Handle all types?
         if type(node.op) is ast.Add:
             return AddAssign(self.visit(node.target), self.visit(node.value))
+        if type(node.op) is ast.Sub:
+            return SubAssign(self.visit(node.target), self.visit(node.value))
 
     def visit_Assign(self, node):
         return Assign(self.visit(node.targets[0]), self.visit(node.value))
