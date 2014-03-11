@@ -21,7 +21,9 @@ before_install:
 install:
 
   # coverage and doc generator
-  - pip install numpy Sphinx coveralls coverage
+  - pip install numpy Sphinx coveralls coverage nose
+  - nosetests --version
+  - coverage --version
 
   # install llvmpy
   - git clone git://github.com/llvmpy/llvmpy.git ${HOME}/llvmpy
