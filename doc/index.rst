@@ -8,6 +8,7 @@ Getting Started
 
 * :doc:`Installation <install>`
 * :doc:`Tutorial <tutorial>`
+* :doc:`Development Tips<development>`
 * `Build status <https://travis-ci.org/ucb-sejits/ctree>`_
 * `Coverage report <https://coveralls.io/r/ucb-sejits/ctree>`_
 
