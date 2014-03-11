@@ -1,4 +1,4 @@
-.. development:
+.. devtips:
 
 Ctree Development Tips
 ======================
@@ -20,6 +20,14 @@ Then, create a virtual environment. We have a ``.gitignore`` entry in place to i
 Use ``activate`` to switch to the new installation::
 
         source venv-2.7/bin/activate
+
+Check out your new ``python`` and ``pip`` binaries::
+
+        zsh% which python
+        ./venv-2.7/bin/python
+
+        zsh% which pip
+        ./venv-2.7/bin/pip
 
 Install ``ctree`` dependencies using the current ``pip``::
 
