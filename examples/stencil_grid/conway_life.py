@@ -10,26 +10,13 @@ from examples.stencil_grid.stencil_kernel import StencilKernel
 from examples.stencil_grid.stencil_grid import StencilGrid
 
 
-def render(sk, msg="---"):
-    """
-    Simplistic render of a life board
-    """
-    print(msg)
-    for h in range(sk.shape[0]):
-        for w in range(sk.shape[1]):
-            if sk[h][w] > 0:
-                print('*', end='')
-            else:
-                print(' ', end='')
-        print('')
-
-
 class ConwayKernel(StencilKernel):
     """
     in_img is the life board at time t
     out_img is the life board at time t+1
     new_state_map defines the output state for a cell
-        first 9 indices are for dead cell, next 9 are for live cell
+        first 9 indices are for all possible neighbor sum around dead cell,
+        next 9 indices are for all possible neighbor sum around live cell
         value at index is the new cell state
     """
 
@@ -46,12 +33,14 @@ class IteratedConwayKernel(StencilKernel):
     in_img is the life board at time t
     out_img is the life board at time t+1
     new_state_map defines the output state for a cell
-        first 9 indices are for dead cell, next 9 are for live cell
+        first 9 indices are for all possible neighbor sum around dead cell,
+        next 9 indices are for all possible neighbor sum around live cell
         value at index is the new cell state
     """
 
     def __init__(self, generations):
         self.generations = generations
+        super().__init__()
 
     def kernel(self, in_img, new_state_map, out_img):
         for generation in range(self.generations):
@@ -67,7 +56,7 @@ class GameRunner(object):
         self.width = width
         self.height = height
 
-        self.kernel = ConwayKernel()
+        self.kernel = IteratedConwayKernel(77)
         self.kernel.pure_python = pure_python
         self.kernel.should_unroll = should_unroll
         # kernel.pure_python = True
@@ -103,6 +92,24 @@ class GameRunner(object):
     def run(self):
         self.run_game()
 
+    def render(self):
+        GameRunner.render_grid(self.current_grid)
+
+    @staticmethod
+    def render_grid(sk, msg="---"):
+        """
+        Simplistic render of a life board
+        """
+        print(msg)
+        for h in range(sk.shape[0]):
+            for w in range(sk.shape[1]):
+                if sk[h][w] > 0:
+                    print('*', end='')
+                else:
+                    print(' ', end='')
+            print('')
+
+
 
 if __name__ == '__main__':
     import sys
@@ -116,8 +123,8 @@ if __name__ == '__main__':
     game_runner = GameRunner(width, height)
 
     #game_runner()
-    game_runner.set_pure_python(True)
-    print("average time for specialized %s" % timeit.timeit(stmt=game_runner, number=10))
+    # game_runner.set_pure_python(True)
+    # print("average time for un-specialized %s" % timeit.timeit(stmt=game_runner, number=10))
     game_runner.set_pure_python(False)
-    print("average time for specialized %s" % timeit.timeit(stmt=game_runner, number=10))
+    print("average time for specialized %s" % timeit.timeit(stmt=game_runner, number=100))
 
