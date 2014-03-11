@@ -20,8 +20,8 @@ setup(
   package_data = {
     'ctree': ['defaults.cfg'],
   },
+
   install_requires=[
       'numpy',
   ]
-
 )

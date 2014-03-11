@@ -21,7 +21,7 @@ before_install:
 install:
 
   # coverage and doc generator
-  - pip install numpy Sphinx coveralls
+  - pip install numpy Sphinx coveralls coverage
 
   # install llvmpy
   - git clone git://github.com/llvmpy/llvmpy.git ${HOME}/llvmpy
@@ -47,7 +47,7 @@ script:
 
   # run test suite again from build dir to get coverage info
   - cd ${TRAVIS_BUILD_DIR}
-  - nosetests --verbose --with-coverage --cover-package=ctree --cover-min-percentage=90
+  - nosetests --verbose --with-coverage --cover-package=ctree --cover-min-percentage=90 --cover-erase
 
 
 after_success:
