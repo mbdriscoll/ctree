@@ -173,3 +173,91 @@ class TestBasicConversions(unittest.TestCase):
         py_ast = ast.arg("foo", None)
         c_ast = SymbolRef("foo")
         self._check(py_ast, c_ast)
+
+    def test_for_1_arg(self):
+        stop = ast.Num(10)
+        py_ast = ast.For(ast.Name("i", ast.Load()),
+            ast.Call(ast.Name("range", ast.Load()), [stop], [], None, None),
+            [ast.Name("foo", ast.Load())],
+            [],
+        )
+        i = SymbolRef("i", Long())
+        c_ast = For(
+            Assign(i, Constant(0)),
+            Lt(i.copy(), Constant(10)),
+            AddAssign(i.copy(), Constant(1)),
+            [SymbolRef("foo")],
+        )
+        self._check(py_ast, c_ast)
+
+    def test_for_2_args(self):
+        start = ast.Num(2)
+        stop = ast.Num(10)
+        py_ast = ast.For(ast.Name("i", ast.Load()),
+            ast.Call(ast.Name("range", ast.Load()), [start, stop], [], None, None),
+            [ast.Name("foo", ast.Load())],
+            [],
+        )
+        i = SymbolRef("i", Long())
+        c_ast = For(
+            Assign(i, Constant(2)),
+            Lt(i.copy(), Constant(10)),
+            AddAssign(i.copy(), Constant(1)),
+            [SymbolRef("foo")],
+        )
+        self._check(py_ast, c_ast)
+
+    def test_for_3_args(self):
+        start = ast.Num(2)
+        stop = ast.Num(10)
+        step = ast.Num(3)
+        py_ast = ast.For(ast.Name("i", ast.Load()),
+            ast.Call(ast.Name("range", ast.Load()), [start, stop, step], [], None, None),
+            [ast.Name("foo", ast.Load())],
+            [],
+        )
+        i = SymbolRef("i", Long())
+        c_ast = For(
+            Assign(i, Constant(2)),
+            Lt(i.copy(), Constant(10)),
+            AddAssign(i.copy(), Constant(3)),
+            [SymbolRef("foo")],
+        )
+        self._check(py_ast, c_ast)
+
+    def test_for_0_args(self):
+        py_ast = ast.For(ast.Name("i", ast.Load()),
+            ast.Call(ast.Name("range", ast.Load()), [], [], None, None),
+            [ast.Name("foo", ast.Load())],
+            [],
+        )
+        with self.assertRaises(Exception):
+          self._check(py_ast, None)
+
+    def test_for_4_args(self):
+        py_ast = ast.For(ast.Name("i", ast.Load()),
+            ast.Call(ast.Name("range", ast.Load()),
+                [Constant(1), Constant(2), Constant(3), Constant(4)], [], None, None),
+            [ast.Name("foo", ast.Load())],
+            [],
+        )
+        with self.assertRaises(Exception):
+          self._check(py_ast, None)
+
+    def test_for_expr_args(self):
+        start = ast.BinOp(ast.Num(2), ast.Add(), ast.Num(3))
+        stop = ast.BinOp(ast.Num(4), ast.Mult(), ast.Num(10))
+        step = ast.BinOp(ast.Num(3), ast.Mod(), ast.Num(5))
+        py_ast = ast.For(ast.Name("i", ast.Load()),
+            ast.Call(ast.Name("range", ast.Load()), [start, stop, step], [], None, None),
+            [ast.Name("foo", ast.Load())],
+            [],
+        )
+        i = SymbolRef("i", Long())
+        c_ast = For(
+            Assign(i, Add(Constant(2), Constant(3))),
+            Lt(i.copy(), Mul(Constant(4), Constant(10))),
+            AddAssign(i.copy(), Mod(Constant(3), Constant(5))),
+            [SymbolRef("foo")],
+        )
+        self._check(py_ast, c_ast)
