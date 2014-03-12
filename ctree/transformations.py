@@ -6,7 +6,8 @@ import ast
 
 from ctree.nodes import Project
 from ctree.c.nodes import Op, Constant, String, SymbolRef, BinaryOp, TernaryOp, Return
-from ctree.c.nodes import If, CFile, FunctionCall, FunctionDecl
+from ctree.c.nodes import If, CFile, FunctionCall, FunctionDecl, For, Assign, AugAssign
+from ctree.c.nodes import Lt, PostInc
 from ctree.visitors import NodeTransformer
 
 
@@ -53,6 +54,49 @@ class PyBasicConversions(NodeTransformer):
             return Return(self.visit(node.value))
         else:
             return Return()
+
+    def parse_range(self, node):
+        "returns a tuple for init, test and increment based on range"
+
+    def visit_For(self, node):
+        """restricted, for now, to range as iterator"""
+        if type(node.iter) is ast.Call and \
+           type(node.iter.func) is ast.Name and \
+           node.iter.func.id == 'range':
+            # parse the args
+            # parsed_args = map(lambda arg_node: self.visit(arg_node), node.iter.args)
+            # print(ast.dump(parsed_args))
+            if len(node.iter.args) == 1:
+                print("got for single valued range")
+                arg1 = self.visit(node.iter.args[0])
+                if type(arg1) is not Constant:
+                    raise Exception("only constant ints supported as range arguments")
+                target = SymbolRef(node.target.id)
+                for_loop = For(
+                    Assign(target,Constant(0)),
+                    Lt(target, arg1),
+                    PostInc(target),
+                    [self.visit(node.body[0])]
+                )
+                return for_loop
+            elif len(node.iter.args) == 2:
+                print("got for two valued range")
+                arg1 = self.visit(node.iter.args[0])
+                arg2 = self.visit(node.iter.args[1])
+                if type(arg1) is not Constant:
+                    raise Exception("only constant ints supported as range arguments")
+                target = SymbolRef(node.target.id)
+                for_loop = For(
+                    Assign(target,arg1),
+                    Lt(target, arg2),
+                    PostInc(target),
+                    [self.visit(node.body[0])]
+                )
+                return for_loop
+            else:
+                raise Exception("for loop can not have range with more than two args")
+        return node
+
 
     def visit_If(self, node):
         if isinstance(node, ast.If):
