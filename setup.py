@@ -15,7 +15,7 @@ setup(
     'ctree.sse',
     'ctree.templates',
     'ctree.opentuner',
-    'ctree.wattsup',
+    'ctree.metrics',
   ],
 
   package_data = {

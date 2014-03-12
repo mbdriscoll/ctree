@@ -7,7 +7,7 @@ import ast
 from ctree.nodes import Project
 from ctree.c.nodes import Op, Constant, String, SymbolRef, BinaryOp, TernaryOp, Return
 from ctree.c.nodes import If, CFile, FunctionCall, FunctionDecl, For, Assign, AugAssign
-from ctree.c.nodes import Lt, PostInc
+from ctree.c.nodes import Lt, PostInc, AddAssign
 from ctree.visitors import NodeTransformer
 
 
@@ -28,6 +28,7 @@ class PyBasicConversions(NodeTransformer):
     """
     PY_OP_TO_CTREE_OP = {
         ast.Add: Op.Add,
+        ast.Mod: Op.Mod,
         ast.Mult: Op.Mul,
         ast.Sub: Op.Sub,
         ast.Lt: Op.Lt,
@@ -55,48 +56,40 @@ class PyBasicConversions(NodeTransformer):
         else:
             return Return()
 
-    def parse_range(self, node):
-        "returns a tuple for init, test and increment based on range"
-
     def visit_For(self, node):
-        """restricted, for now, to range as iterator"""
-        if type(node.iter) is ast.Call and \
-           type(node.iter.func) is ast.Name and \
+        """restricted, for now, to range as iterator with long-type args"""
+        if isinstance(node, ast.For) and \
+           isinstance(node.iter, ast.Call) and \
+           isinstance(node.iter.func, ast.Name) and \
            node.iter.func.id == 'range':
-            # parse the args
-            # parsed_args = map(lambda arg_node: self.visit(arg_node), node.iter.args)
-            # print(ast.dump(parsed_args))
-            if len(node.iter.args) == 1:
-                print("got for single valued range")
-                arg1 = self.visit(node.iter.args[0])
-                if type(arg1) is not Constant:
-                    raise Exception("only constant ints supported as range arguments")
-                target = SymbolRef(node.target.id)
-                for_loop = For(
-                    Assign(target,Constant(0)),
-                    Lt(target, arg1),
-                    PostInc(target),
-                    [self.visit(node.body[0])]
-                )
-                return for_loop
-            elif len(node.iter.args) == 2:
-                print("got for two valued range")
-                arg1 = self.visit(node.iter.args[0])
-                arg2 = self.visit(node.iter.args[1])
-                if type(arg1) is not Constant:
-                    raise Exception("only constant ints supported as range arguments")
-                target = SymbolRef(node.target.id)
-                for_loop = For(
-                    Assign(target,arg1),
-                    Lt(target, arg2),
-                    PostInc(target),
-                    [self.visit(node.body[0])]
-                )
-                return for_loop
+            Range = node.iter
+            nArgs = len(Range.args)
+            if nArgs == 1:
+                stop = self.visit(Range.args[0])
+                start, step = Constant(0), Constant(1)
+            elif nArgs == 2:
+                start, stop = map(self.visit, Range.args)
+                step = Constant(1)
+            elif nArgs == 3:
+                start, stop, step = map(self.visit, Range.args)
             else:
-                raise Exception("for loop can not have range with more than two args")
-        return node
+                raise Exception("Cannot convert a for...range with %d args." % nArgs)
 
+            # TODO allow any expressions castable to Long type
+            from ctree.c.types import Long
+            assert stop.get_type()  == Long(), "Can only convert range's with stop values of Long type."
+            assert start.get_type() == Long(), "Can only convert range's with start values of Long type."
+            assert step.get_type()  == Long(), "Can only convert range's with step values of Long type."
+
+            target = SymbolRef(node.target.id, Long())
+            for_loop = For(
+                Assign(target, start),
+                Lt(target.copy(), stop),
+                AddAssign(target.copy(), step),
+                [self.visit(stmt) for stmt in node.body],
+            )
+            return for_loop
+        return node
 
     def visit_If(self, node):
         if isinstance(node, ast.If):
