@@ -31,14 +31,24 @@ class OpTranslator(LazySpecializedFunction):
         might be processed by the same generated code.
         """
         A = args[0]
-        return len(A), A.dtype, A.ndim, A.shape
+        return {
+            'A_len': len(A),
+            'A_dtype': A.dtype,
+            'A_ndim': A.ndim,
+            'A_shape': A.shape,
+        }
 
     def transform(self, py_ast, program_config):
         """
         Convert the Python AST to a C AST according to the directions
         given in program_config.
         """
-        len_A, A_dtype, A_ndim, A_shape = program_config[0]
+        arg_config, tuner_config = program_config
+        len_A   = arg_config['A_len']
+        A_dtype = arg_config['A_dtype']
+        A_ndim  = arg_config['A_ndim']
+        A_shape = arg_config['A_shape']
+
         inner_type = get_ctree_type(A_dtype)
         array_type = NdPointer(A_dtype, A_ndim, A_shape)
         apply_one_typesig = FuncType(inner_type, [inner_type])

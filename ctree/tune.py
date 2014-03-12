@@ -40,7 +40,7 @@ class NullTuningDriver(TuningDriver):
     def _get_configs(self):
         """Yield the empty configuration."""
         while True:
-            yield None
+            yield {}
 
     def report(self, *args, **kwargs):
         """Ignore reports."""

@@ -9,12 +9,12 @@ import unittest
 try:
   import examples.ArrayDoubler
 except ImportError:
-  CANNOT_IMPORT_EXAMPLES = True
+  HAVE_EXAMPLES = False
 else:
-  CANNOT_IMPORT_EXAMPLES = False
+  HAVE_EXAMPLES = True
 
-@unittest.skipIf(CANNOT_IMPORT_EXAMPLES, "$CTREE/examples not in PYTHONPATH")
-class TestVerifyParentPointers(unittest.TestCase):
+@unittest.skipUnless(HAVE_EXAMPLES, "$CTREE/examples not in PYTHONPATH")
+class TestAllExamples(unittest.TestCase):
     def test_AstToDot(self):
         from examples import AstToDot
         AstToDot.main()

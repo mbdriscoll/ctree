@@ -13,7 +13,7 @@ class TestNullTuningDriver(unittest.TestCase):
 
         driver = NullTuningDriver()
         for cfg in islice(driver.configs, 4):
-            self.assertIsNone(cfg)
+            self.assertDictEqual(cfg, {})
 
     def test_null_driver_report(self):
         from ctree.tune import NullTuningDriver

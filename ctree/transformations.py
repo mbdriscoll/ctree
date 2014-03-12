@@ -8,6 +8,7 @@ from ctree.nodes import Project
 from ctree.c.nodes import Op, Constant, String, SymbolRef, BinaryOp, TernaryOp, Return
 from ctree.c.nodes import If, CFile, FunctionCall, FunctionDecl, For, Assign, AugAssign
 from ctree.c.nodes import Lt, PostInc, AddAssign
+from ctree.c.types import Long
 from ctree.visitors import NodeTransformer
 
 
@@ -76,7 +77,6 @@ class PyBasicConversions(NodeTransformer):
                 raise Exception("Cannot convert a for...range with %d args." % nArgs)
 
             # TODO allow any expressions castable to Long type
-            from ctree.c.types import Long
             assert stop.get_type()  == Long(), "Can only convert range's with stop values of Long type."
             assert start.get_type() == Long(), "Can only convert range's with start values of Long type."
             assert step.get_type()  == Long(), "Can only convert range's with step values of Long type."

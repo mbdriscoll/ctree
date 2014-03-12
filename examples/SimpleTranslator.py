@@ -27,14 +27,14 @@ class BasicTranslator(LazySpecializedFunction):
         super(BasicTranslator, self).__init__(get_ast(func), func.__name__)
 
     def args_to_subconfig(self, args):
-        return get_ctree_type(args[0])
+        return {'arg_type': get_ctree_type(args[0])}
 
     def transform(self, tree, program_config):
         """Convert the Python AST to a C AST."""
         tree = PyBasicConversions().visit(tree)
 
         fib_fn = tree.find(FunctionDecl, name="fib")
-        fib_arg_type = program_config[0]
+        fib_arg_type = program_config[0]['arg_type']
         fib_type = FuncType(fib_arg_type, [fib_arg_type])
         fib_fn.set_typesig(fib_type)
 
