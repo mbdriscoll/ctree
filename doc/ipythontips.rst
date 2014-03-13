@@ -1,20 +1,20 @@
 .. ipython visualization:
 
-Using iPython for AST Visualization
+Using IPython for AST Visualization
 ===================================
 
-iPython provides a decent environment for visualizing the transformation of the abstract syntax trees
+IPython provides a decent environment for visualizing the transformation of the abstract syntax trees
 (AST) of the specializaed kernels.  Following these simple guidelines can make it easier to write and
 debug the multiple node transformation passes that are necessary to implement a specialized kernel
 
-Installing iPython
+Installing IPython
 ------------------
 
 ``ipython`` can be installed in several different ways depending on your platform:  See
 `installing ipython <http://ipython.org/install.html>`_.  Just using ``pip`` seems to work
 fine on OSX.
 
-Starting iPython
+Starting IPython
 ----------------
 
 In the shell::
