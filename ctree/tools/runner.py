@@ -13,12 +13,12 @@ __author__ = 'chick'
 
 def main(args):
     parser = argparse.ArgumentParser(prog="ctree", description="ctree is a python SEJITS framework")
-    parser.add_argument('-g', '--generate', help='generate a specializer project')
+    parser.add_argument('-sp', '--startproject', help='generate a specializer project')
     parser.add_argument('-v', '--verbose', help='show more debug than you like', action="store_true")
     args = parser.parse_args(args)
 
-    if args.generate:
-        specializer_name = args.generate
+    if args.startproject:
+        specializer_name = args.startproject
 
         print "create project specializer %s" % specializer_name
 
