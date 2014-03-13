@@ -34,15 +34,18 @@ from ctree.frontend import get_ast
 from ctree.visitors import NodeTransformer
 from ctree.c.nodes import *
 from ctree.omp.nodes import *
+from ctree.templates.nodes import StringTemplate
 
 
-# import logging
+import logging
 
 # logging.basicConfig(filename='tmp.txt',
 #                             filemode='w',
 #                             format='%(asctime)s,%(msecs)d %(name)s %(levelname)s %(message)s',
 #                             datefmt='%H:%M:%S',
 #                             level=20)
+
+logging.basicConfig(level=10)
 
 
 class StencilConvert(LazySpecializedFunction):
@@ -57,12 +60,27 @@ class StencilConvert(LazySpecializedFunction):
             conf += ((len(arg), arg.dtype, arg.ndim, arg.shape),)
         return conf
 
+    def get_tuning_driver(self):
+        from ctree.opentuner.driver import OpenTunerDriver
+        from opentuner.search.manipulator import ConfigurationManipulator
+        from opentuner.search.manipulator import IntegerParameter
+        from opentuner.search.objective import MinimizeTime
+
+        manip = ConfigurationManipulator()
+        manip.add_parameter(IntegerParameter("cache_block", 4, 8))
+        manip.add_parameter(IntegerParameter("unroll", 0, 4))
+
+        return OpenTunerDriver(manipulator=manip, objective=MinimizeTime())
+
     def transform(self, tree, program_config):
         """Convert the Python AST to a C AST."""
         param_types = []
         for arg in program_config[0]:
             param_types.append(NdPointer(arg[1], arg[2], arg[3]))
         kernel_sig = FuncType(Void(), param_types)
+
+        tune_cfg = program_config[1].data
+        cache_block_amt, unroll_amt = tune_cfg['cache_block'], tune_cfg['unroll']
 
         for transformer in [StencilTransformer(self.input_grids,
                                                self.output_grid),
@@ -196,9 +214,7 @@ class StencilTransformer(NodeTransformer):
                                     SymbolRef(self.output_index))
                 elif grid_name in self.input_dict:
                     grid = self.input_dict[grid_name]
-                    zero_point = tuple([0 for x in range(grid.dim)])
-                    pt = list(map(lambda x, y: Add(SymbolRef(x), SymbolRef(y)),
-                                  self.var_list, zero_point))
+                    pt = list(map(lambda x: SymbolRef(x), self.var_list))
                     index = self.gen_array_macro(grid_name, pt)
                     return ArrayRef(SymbolRef(grid_name), index)
             elif grid_name == self.neighbor_grid_name:
@@ -213,7 +229,7 @@ class StencilTransformer(NodeTransformer):
     def visit_Call(self, node):
         if node.func.id == 'distance':
             zero_point = tuple([0 for _ in range(len(self.offset_list))])
-            return Constant(self.distance(zero_point, self.offset_list))
+            return Constant(int(self.distance(zero_point, self.offset_list)))
         elif node.func.id == 'int':
             return Cast(Int(), self.visit(node.args[0]))
         node.args = list(map(self.visit, node.args))
@@ -228,10 +244,14 @@ class StencilTransformer(NodeTransformer):
 
     def visit_AugAssign(self, node):
         # TODO: Handle all types?
+        value = self.visit(node.value)
+        # HACK to get this to work, PyBasicConversions will skip this AugAssign node
+        # TODO Figure out why
+        value = PyBasicConversions().visit(value)
         if type(node.op) is ast.Add:
-            return AddAssign(self.visit(node.target), self.visit(node.value))
+            return AddAssign(self.visit(node.target), value)
         if type(node.op) is ast.Sub:
-            return SubAssign(self.visit(node.target), self.visit(node.value))
+            return SubAssign(self.visit(node.target), value)
 
     def visit_Assign(self, node):
         return Assign(self.visit(node.targets[0]), self.visit(node.value))
