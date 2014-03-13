@@ -186,7 +186,8 @@ class WattsUpReader(object):
         print("command must be one of (quit, reset, record, get_record, verbose, drain) or ")
         print("native device command string beginning with # ")
         print("empty command will repeat previous command")
-        print("'n")
+        print("commands can be abbreviated to first three letters")
+        print("\n")
 
     def interactive_mode(self):
         last_input = None
