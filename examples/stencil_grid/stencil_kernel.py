@@ -27,7 +27,7 @@ import ast
 # from examples.stencil_grid.stencil_convert import *
 from copy import deepcopy
 
-from ctree.transformations import PyBasicConversions, FixUpParentPointers
+from ctree.transformations import PyBasicConversions
 from ctree.jit import LazySpecializedFunction
 from ctree.c.types import *
 from ctree.frontend import get_ast
@@ -61,7 +61,7 @@ class StencilConvert(LazySpecializedFunction):
         return conf
 
     def get_tuning_driver(self):
-        from ctree.tune import BruteForceTuningDriver, IntegerParameter, MinimizeTime
+        from ctree.tune import *
         params = [IntegerParameter("cache_block", 4, 8),
                   IntegerParameter("unroll_factor", 1, 4)]
         return BruteForceTuningDriver(params, MinimizeTime())
@@ -79,8 +79,7 @@ class StencilConvert(LazySpecializedFunction):
 
         for transformer in [StencilTransformer(self.input_grids,
                                                self.output_grid),
-                           PyBasicConversions(),
-                           FixUpParentPointers()]:
+                            PyBasicConversions()]:
             tree = transformer.visit(tree)
         self.unroll_loops(tree, unroll_factor)
         # remove self param
@@ -311,12 +310,6 @@ class StencilTransformer(NodeTransformer):
 
     def visit_Assign(self, node):
         return Assign(self.visit(node.targets[0]), self.visit(node.value))
-
-
-class LoopUnroller(NodeTransformer):
-    def __init__(self, factor):
-        self.factor = factor
-        super(LoopUnroller, self).__init__()
 
 
 # may want to make this inherit from something else...
