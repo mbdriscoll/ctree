@@ -88,3 +88,15 @@ class Counter(object):
 
 STATS = Counter()
 atexit.register(STATS.report)
+
+import ast
+import inspect
+from ctree.visual.dot_manager import DotManager
+
+
+def get_ast(func):
+    if callable(func):
+        return ast.parse(inspect.getsource(func))
+
+
+def

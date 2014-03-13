@@ -29,7 +29,13 @@ interpreter for this page will be running just as if you had started the regular
 Let's Visualize
 ---------------
 
-In the first cell
+In the first cell::
+
+        import inspect, ast
+tree1 = ast.parse(inspect.getsource(func))
+from ctree.visual.dot_manager import DotManager
+
+
 
 
 
