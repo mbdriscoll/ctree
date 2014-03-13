@@ -115,7 +115,7 @@ class WattsUpReader(object):
                 print(device_output)
             if device_output.startswith("#d"):
                 if raw:
-                    return device_output.strip()
+                    return "%s,%s" % (device_output.strip(), base_time)
 
                 fields = device_output.split(',')
                 if self.verbose:
@@ -143,12 +143,12 @@ class WattsUpReader(object):
 
     def dump(self):
         while True:
-            result = self.fetch(time_out=1000)
+            result = self.fetch(base_time=time.time(), time_out=1000)
             print(result)
 
     def raw_dump(self):
         while True:
-            result = self.fetch(time_out=1000,raw=True)
+            result = self.fetch(base_time=time.time(), time_out=1000,raw=True)
             print(result)
 
     def start_recording(self):
@@ -274,10 +274,11 @@ if __name__ == "__main__":
 
     if args.interactive:
         watt_reader.interactive_mode()
+    if args.raw:
+        watt_reader.raw_dump()
     elif args.dump:
-        if args.raw:
-            watt_reader.raw_dump()
-        else:
-            watt_reader.dump()
+        watt_reader.dump()
+    else:
+        parser.print_usage()
 
     watt_reader.stop()

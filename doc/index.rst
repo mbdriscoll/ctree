@@ -9,6 +9,7 @@ Getting Started
 * :doc:`Installation <install>`
 * :doc:`Tutorial <tutorial>`
 * :doc:`Development Tips<devtips>`
+* :doc:`Using IPython for visualization<ipythontips>`
 * `Build status <https://travis-ci.org/ucb-sejits/ctree>`_
 * `Coverage report <https://coveralls.io/r/ucb-sejits/ctree>`_
 
