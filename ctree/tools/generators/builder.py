@@ -87,7 +87,7 @@ class Builder:
                         os.chmod(target_file, st.st_mode | stat.S_IEXEC | stat.S_IXOTH | stat.S_IXGRP)
             elif os.path.isdir(source_file):
                 indent_print("processing directory %s" % file)
-                destination = target_file if file != 'code' else os.path.join(target_dir, self.target_base)
+                destination = target_file if file != 'specializer_package' else os.path.join(target_dir, self.target_base)
 
                 self.build(source_file, destination, depth+1)
 

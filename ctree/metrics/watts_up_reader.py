@@ -106,7 +106,7 @@ class WattsUpReader(object):
     def fetch(self, base_time=None, time_out=0.3, raw=False):
         """read one data point from meter"""
 
-        rfds, wfds, efds = select.select( [self.serial_port], [], [], time_out)
+        rfds, wfds, efds = select.select([self.serial_port], [], [], time_out)
         if rfds:
             # device_output = self.serial_port.readline()..decode("utf-8")  #python3
             device_output = self.serial_port.readline()
@@ -148,7 +148,7 @@ class WattsUpReader(object):
 
     def raw_dump(self):
         while True:
-            result = self.fetch(base_time=time.time(), time_out=1000,raw=True)
+            result = self.fetch(base_time=time.time(), time_out=1000, raw=True)
             print(result)
 
     def start_recording(self):
@@ -239,9 +239,8 @@ class WattsUpReader(object):
             raise Exception("No potential usb based readers found, is it plugged in?")
         else:
             for device in possible_devices:
-                print( "Possible device %s" % device)
+                print("Possible device %s" % device)
             raise Exception("Multiple possible devices found, you must specify explicitly")
-        return ''
 
 
 if __name__ == "__main__":

@@ -21,3 +21,11 @@ def truncate(text):
         // %d lines suppressed, only %d allowed
         // consider adjusting config entry log.max_lines_per_source"""
                       % (n_lines, max_display_lines))
+
+
+def lower_case_underscore_to_camel_case(string):
+    """Convert string or unicode from lower-case underscore to camel-case"""
+    # use string's class to work on the string to keep its type
+    class_ = string.__class__
+    return class_.join('', map(class_.capitalize, string.split('_')))
+
