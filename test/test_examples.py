@@ -35,7 +35,7 @@ class TestAllExamples(unittest.TestCase):
         from examples import SimpleTranslator
         SimpleTranslator.main()
 
-    @unittest.skip("under development")
+    @unittest.skip("suppressed opentuner test")
     def test_TuningSpecializer(self):
         from examples import TuningSpecializer
         TuningSpecializer.main()

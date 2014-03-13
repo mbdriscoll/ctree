@@ -123,10 +123,11 @@ class BruteForceTuningDriver(TuningDriver):
         while True:
             yield self._best_cfg
 
-    def report(self, new_result):
+    def report(self, **kwargs):
         """
         Record the new result if it is better than the current best.
         """
+        new_result = Result(**kwargs)
         if self._objective.compare(new_result, self._best_result):
             self._best_result = new_result
             self._best_cfg = self._last_cfg

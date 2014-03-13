@@ -69,7 +69,6 @@ class TestBruteForceTuningDriver(unittest.TestCase):
             BruteForceTuningDriver,
             IntegerParameter,
             MinimizeTime,
-            Result,
         )
 
         objective = MinimizeTime()
@@ -79,7 +78,7 @@ class TestBruteForceTuningDriver(unittest.TestCase):
         unsearched = set(range(0, 100))
         for config in islice(driver.configs, 100):
             unsearched.remove(config["foo"])
-            driver.report( Result(time=0.4) )
+            driver.report(time=0.4)
         self.assertSetEqual(unsearched, set())
 
     def test_bruteforce_driver_2d(self):
@@ -87,7 +86,6 @@ class TestBruteForceTuningDriver(unittest.TestCase):
             BruteForceTuningDriver,
             IntegerParameter,
             MinimizeTime,
-            Result,
         )
 
         params = [
@@ -100,7 +98,7 @@ class TestBruteForceTuningDriver(unittest.TestCase):
         for config in islice(driver.configs, 100):
             entry = config["foo"] * 10 + config["bar"]
             unsearched.remove(entry)
-            driver.report( Result(time=0.4) )
+            driver.report(time=0.4)
         self.assertSetEqual(unsearched, set())
 
     def test_bruteforce_driver_2d_parabola(self):
@@ -108,7 +106,6 @@ class TestBruteForceTuningDriver(unittest.TestCase):
             BruteForceTuningDriver,
             IntegerParameter,
             MinimizeTime,
-            Result,
         )
 
         params = [
@@ -121,7 +118,7 @@ class TestBruteForceTuningDriver(unittest.TestCase):
             # report height on inverted paraboloid with global min at (3,4)
             x, y = config["x"], config["y"]
             z = (x-3)**2 + (y-4)**2 + 1
-            driver.report( Result(time=z) )
+            driver.report(time=z)
 
         for config in islice(driver.configs, 10):
             self.assertEqual((config["x"], config["y"]), (3, 4))

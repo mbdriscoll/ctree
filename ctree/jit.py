@@ -89,7 +89,7 @@ class LazySpecializedFunction(object):
         self.original_tree = py_ast
         self.entry_point_name = entry_point_name
         self.c_functions = {}  # config -> callable map
-        self.tuner = self.get_tuning_driver()
+        self._tuner = self.get_tuning_driver()
 
     @staticmethod
     def _hash_dict(o):
@@ -111,7 +111,7 @@ class LazySpecializedFunction(object):
                  [type(a) for a in args])
 
         args_subconfig = self.args_to_subconfig(args)
-        tuner_subconfig = next(self.tuner.configs)
+        tuner_subconfig = next(self._tuner.configs)
         program_config = (args_subconfig, tuner_subconfig)
 
         log.info("tuner returned subconfig: %s", tuner_subconfig)
@@ -143,6 +143,12 @@ class LazySpecializedFunction(object):
             )
 
         return self.c_functions[config_hash](*args)
+
+    def report(self, *args, **kwargs):
+        """
+        Records the performance of the most recent configuration.
+        """
+        return self._tuner.report(*args, **kwargs)
 
     # =====================================================
     # Methods to be overridden by the user
