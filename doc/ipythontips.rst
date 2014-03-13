@@ -29,7 +29,7 @@ interpreter for this page will be running just as if you had started the regular
 Let's Visualize
 ---------------
 
-In the first cell::
+In the first cell, lets import our tools and write a function who's AST we shall visualize::
 
         import ctree
 
