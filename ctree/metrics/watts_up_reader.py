@@ -1,4 +1,3 @@
-from __future__ import print_function
 """
 Reader that can sample data from a WattsUpMeter: https://www.wattsupmeters.com
 API documents are here: https://www.wattsupmeters.com/secure/downloads/CommunicationsProtocol090824.pdf
@@ -14,9 +13,10 @@ basic usage is as follows
     # do a bunch of stuff that uses power
     #
 
-    results = reader.stop_recording()
+    summary, detailed_results = reader.get_recording()
     #
-    # results is an array of Result named-tuples defined below
+    # summary is a Summary named-tuple
+    # detailed_results an array of Result named-tuples defined below
     #
 
 This also is runnable from the command line
@@ -27,8 +27,12 @@ which will put you in an interactive session, that allows testing
 of recording, a few other things and direct communication with the
 device
 
+the meter is finicky and may not be working if connection is made
+quickly after
 
 """
+from __future__ import print_function
+
 __author__ = 'Chick Markley'
 
 
@@ -36,6 +40,8 @@ import serial
 import time
 import select
 import collections
+import argparse
+import sys
 
 
 class WattsUpReader(object):
@@ -43,8 +49,11 @@ class WattsUpReader(object):
     INTERNAL_MODE = "I"
     FULL_HANDLING = 2
 
-    Result = collections.namedtuple("Result", ['time', 'watts', 'watthours', 'volts', 'milliamps'])
+    Result = collections.namedtuple("Result", ['time', 'watts', 'volts', 'milliamps'])
     Response = collections.namedtuple("Response", ['time', 'message'])
+    Summary = collections.namedtuple(
+        "Summary", ["joules", "millicoulomb", "samples", "sampling_interval", "start_time"]
+    )
 
     def __init__(self, port_name, verbose=False):
         self.port_name = port_name
@@ -54,9 +63,6 @@ class WattsUpReader(object):
         self.verbose = verbose
         self.t = []
         self.power = []
-        self.potential = []
-        self.current = []
-        self.serial_port.write(chr(0x18))
         self.returned_lines = 0
         # I don't think device support anything smaller
         self.record_interval = 1
@@ -64,14 +70,28 @@ class WattsUpReader(object):
     def reset(self):
         if self.serial_port:
             self.serial_port.close()
+        time.sleep(2)
 
         self.serial_port = serial.Serial(self.port_name, 115200)
+        if self.verbose:
+            print("serial port:")
+            print(self.serial_port)
+        self.serial_port.sendBreak()
+        self.serial_port.flushInput()
+        self.serial_port.flushOutput()
         self.serial_port.write(chr(0x18))
         self.serial_port.write("#R,W,0;")
+        self.serial_port.setDTR()
 
     def clear(self):
         self.serial_port.write("#R,W,0;")
         self.drain()
+
+    def set_verbose(self, new_value=None):
+        if new_value is None:
+            self.verbose = not self.verbose
+        else:
+            self.verbose = new_value
 
     def set_mode(self, runmode):
         """
@@ -79,14 +99,14 @@ class WattsUpReader(object):
         See API url above
 
         """
-        self.serial_port.write('#L,W,3,%s,,%d;' % (runmode, self.record_interval) )
+        self.serial_port.write('#L,W,3,%s,,%d;' % (runmode, self.record_interval))
         if runmode == WattsUpReader.INTERNAL_MODE:
-            self.serial_port.write('#O,W,1,%d' % WattsUpReader.FULLHANDLING)
+            self.serial_port.write('#O,W,1,%d' % WattsUpReader.FULL_HANDLING)
 
-    def fetch(self, base_time=None):
+    def fetch(self, base_time=None, time_out=0.3, raw=False):
         """read one data point from meter"""
 
-        rfds, wfds, efds = select.select( [self.serial_port], [], [], 0.3)
+        rfds, wfds, efds = select.select( [self.serial_port], [], [], time_out)
         if rfds:
             # device_output = self.serial_port.readline()..decode("utf-8")  #python3
             device_output = self.serial_port.readline()
@@ -94,6 +114,9 @@ class WattsUpReader(object):
             if self.verbose:
                 print(device_output)
             if device_output.startswith("#d"):
+                if raw:
+                    return device_output.strip()
+
                 fields = device_output.split(',')
                 if self.verbose:
                     for index, field in enumerate(fields):
@@ -101,10 +124,9 @@ class WattsUpReader(object):
                 watts = float(fields[3]) / 10
                 volts = float(fields[4]) / 10
                 milliamps = float(fields[5]) / 1000
-                watt_hours = float(fields[6]) / 10
                 if not base_time:
                     base_time = time.time()
-                return WattsUpReader.Result(base_time, watts, watt_hours, volts, milliamps)
+                return WattsUpReader.Result(base_time, watts, volts, milliamps)
             elif len(device_output) > 0:
                 return WattsUpReader.Response(time.time(), device_output)
         return None
@@ -119,30 +141,52 @@ class WattsUpReader(object):
             if not result:
                 return
 
+    def dump(self):
+        while True:
+            result = self.fetch(time_out=1000)
+            print(result)
+
+    def raw_dump(self):
+        while True:
+            result = self.fetch(time_out=1000,raw=True)
+            print(result)
+
     def start_recording(self):
         self.drain()
         self.serial_port.write("#L,W,3,I,0,%d" % self.record_interval)
         self.last_time = time.time()
 
-    def done_recording(self):
+    def get_recording(self):
         def pull():
             results = []
             estimated_record_time = self.last_time
+            watt_seconds = 0.0
+            samples = 0
+            millicoulombs = 0.0
+
             while True:
                 result = self.fetch(estimated_record_time)
                 if not result:
-                    return results
+                    summary = WattsUpReader.Summary(
+                        watt_seconds, millicoulombs, samples, self.record_interval, self.last_time
+                    )
+                    return summary, results
                 if type(result) is WattsUpReader.Result:
                     results.append(result)
+                    watt_seconds += result.watts
+                    millicoulombs += result.milliamps
+                    samples += 1
                     estimated_record_time += self.record_interval
         all_results = pull()
+        self.last_time = time.time()
         return all_results
 
     @staticmethod
     def usage():
-        print(" must be one of (quit, reset, record, done, verbose, drain) or ")
+        print("command must be one of (quit, reset, record, get_record, verbose, drain) or ")
         print("native device command string beginning with # ")
         print("empty command will repeat previous command")
+        print("'n")
 
     def interactive_mode(self):
         last_input = None
@@ -151,7 +195,7 @@ class WattsUpReader(object):
             print("Command: ", end="")
             user_input = sys.stdin.readline()
             # print("got input %s" % user_input)
-            if user_input == '':
+            if user_input.strip() == '':
                 user_input = last_input
 
             if user_input.startswith('q') or user_input.startswith('Q'):
@@ -162,11 +206,12 @@ class WattsUpReader(object):
                 self.drain()
             elif user_input.lower().startswith('rec'):
                 self.start_recording()
-            elif user_input.lower().startswith('don'):
-                results = self.done_recording()
-                for index, result in enumerate(results):
+            elif user_input.lower().startswith('get'):
+                summary, detailed_results = self.get_recording()
+                for index, result in enumerate(detailed_results):
                     print("%d ----" % index, end='')
                     print(result)
+                print(summary)
             elif user_input.lower().startswith('ver'):
                 self.verbose = not self.verbose
             elif user_input.startswith("#"):
@@ -177,23 +222,61 @@ class WattsUpReader(object):
             else:
                 print("unknown command: %s" % user_input)
                 WattsUpReader.usage()
+            last_input = user_input
 
     def stop(self):
         self.serial_port.close()
 
+    @staticmethod
+    def guess_port():
+        import subprocess
+
+        possible_devices = subprocess.check_output("ls /dev/tty*usb*", shell=True).strip().split('\n')
+        if len(possible_devices) == 1:
+            return possible_devices[0]
+        elif not possible_devices:
+            raise Exception("No potential usb based readers found, is it plugged in?")
+        else:
+            for device in possible_devices:
+                print( "Possible device %s" % device)
+            raise Exception("Multiple possible devices found, you must specify explicitly")
+        return ''
+
 
 if __name__ == "__main__":
-    import sys
     # default port name is based on right hand side usb on macbookpro
-    usb_port_name = "/dev/tty.usbserial-A600KI7M" if len(sys.argv) < 2 else sys.argv[1]
+    # usb_port_name = "/dev/tty.usbserial-A600KI7M" if len(sys.argv) < 2 else sys.argv[1]
+    parser = argparse.ArgumentParser(description="interface to WattsUpPro usb power meter")
+    parser.add_argument(
+        '-i', '--interactive', help='interactive mode, allows direct communcation with device', action="store_true"
+    )
+    parser.add_argument('-p', '--port', help='full /dev/ path to the usb device, if missing a good quess will be made')
+    parser.add_argument('-d', '--dump', help='meter data to stdout, default is prettified', action="store_true")
+    parser.add_argument('-r', '--raw', help='modify dump to return raw device output', action="store_true")
+    parser.add_argument('-c', '--clear', help='clear any saved lines in device', action="store_true")
+    parser.add_argument('-v', '--verbose', help='show more debug than you like', action="store_true")
+
+    args = parser.parse_args()
+
+    if not args.port:
+        usb_port_name = WattsUpReader.guess_port()
+        print("Using port %s" % usb_port_name)
+    else:
+        usb_port_name = args.port
+
     watt_reader = WattsUpReader(usb_port_name, verbose=False)
 
-    watt_reader.interactive_mode()
+    if args.verbose:
+        watt_reader.set_verbose(True)
+    if args.clear:
+        watt_reader.drain()
 
-    # watt_reader.set_mode('E')
-    # for i in range(4):
-    #     result = watt_reader.fetch()
-    #     print(result)
-    #     time.sleep(5)
+    if args.interactive:
+        watt_reader.interactive_mode()
+    elif args.dump:
+        if args.raw:
+            watt_reader.raw_dump()
+        else:
+            watt_reader.dump()
 
     watt_reader.stop()
