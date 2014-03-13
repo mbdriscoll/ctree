@@ -95,8 +95,15 @@ from ctree.visual.dot_manager import DotManager
 
 
 def get_ast(func):
+    """convenience method for displaying a callable objects ast"""
     if callable(func):
         return ast.parse(inspect.getsource(func))
 
 
-def
+def ipython_show_ast(tree):
+    """
+    convenience method to display an AST in ipython
+    converts tree in place to a dot format
+    then renders that into a png file
+    """
+    return DotManager.dot_ast_to_image(tree)

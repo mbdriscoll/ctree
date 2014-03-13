@@ -31,40 +31,29 @@ Let's Visualize
 
 In the first cell::
 
-        import inspect, ast
-tree1 = ast.parse(inspect.getsource(func))
-from ctree.visual.dot_manager import DotManager
+        import ctree
+
+        def f(a):
+            for x in range(10):
+                a[x] += x
+
+        tree1 = ctree.get_ast(f)
+        ctree.ipython_show_ast(tree1)
+
+Hit the play button, the tree should render and a new cell should be created below the tree image.
+
+.. image:: images/ipython_example_tree_1.png
+
+In the next cell let's transform that tree using the basic py conversions::
 
 
+        from ctree.transformations import PyBasicConversions
 
+        t = PyBasicConversions()
+        tree2 = t.visit(tree1)
+        ctree.ipython_show_ast(tree2)
 
+Once again hit the play button and the transformed tree will appear
 
+.. image:: images/ipython_example_tree_2.png
 
-        source venv-2.7/bin/activate
-
-Check out your new ``python`` and ``pip`` binaries::
-
-        zsh% which python
-        ./venv-2.7/bin/python
-
-        zsh% which pip
-        ./venv-2.7/bin/pip
-
-Install ``ctree`` dependencies using the current ``pip``::
-
-        pip install nose Sphinx numpy coverage
-        cd $LLVMPY
-        LLVM_CONFIG_PATH=... python setup.py install
-
-Change back to the ``ctree`` directory and run the test suite to make sure everything is okay::
-
-        cd $CTREE
-        nosetests
-
-To switch back to your default python installation, run::
-
-        deactivate
-
-You can re-activate the virtualenv at any time using::
-
-        source venv-2.7/bin/activate
