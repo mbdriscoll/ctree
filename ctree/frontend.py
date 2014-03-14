@@ -1,4 +1,4 @@
-"helper for getting properly formatted ast from arbitrary python object"
+"""helper for getting properly formatted ast from arbitrary python object"""
 import ast
 import inspect
 import textwrap

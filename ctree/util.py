@@ -28,4 +28,3 @@ def lower_case_underscore_to_camel_case(string):
     # use string's class to work on the string to keep its type
     class_ = string.__class__
     return class_.join('', map(class_.capitalize, string.split('_')))
-

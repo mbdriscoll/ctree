@@ -1,11 +1,10 @@
-"just in time utilities"
+"""just in time utilities"""
 import copy
 import shutil
 import tempfile
 
 import ctree
 from ctree.nodes import Project
-from ctree.dotgen import to_dot
 from ctree.analyses import VerifyOnlyCtreeNodes
 
 import llvm.core as ll

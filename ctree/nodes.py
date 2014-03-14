@@ -6,7 +6,6 @@ import logging
 
 log = logging.getLogger(__name__)
 
-import os
 import ast
 
 from ctree.codegen import CodeGenVisitor
@@ -235,4 +234,3 @@ class CommonDotGen(DotGenVisitor):
 
     def label_GeneratedPathRef(self, node):
         return "target: %s" % node.target.get_filename()
-

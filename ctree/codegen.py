@@ -16,11 +16,11 @@ class CodeGenVisitor(NodeVisitor):
     # common support methods
 
     def _tab(self):
-        "return correct spaces if tab found"
+        """return correct spaces if tab found"""
         return "    " * self._indent
 
     def _genblock(self, forest, insert_curly_brackets=True, increase_indent=True):
-        "generate block of code adding semi colons as necessary"
+        """generate block of code adding semi colons as necessary"""
         if increase_indent:
             self._indent += 1
         body = ""
@@ -39,6 +39,5 @@ class CodeGenVisitor(NodeVisitor):
         return "(%s)" if self._requires_parentheses(node) else "%s"
 
     def _requires_parentheses(self, _):
-        "TODO: figure out why this is always true"
+        """TODO: figure out why this is always true"""
         return True
-
