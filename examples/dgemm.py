@@ -42,14 +42,14 @@ class DgemmTranslator(LazySpecializedFunction):
         from ctree.opentuner.driver import OpenTunerDriver
         from opentuner.search.manipulator import ConfigurationManipulator
         from opentuner.search.manipulator import IntegerParameter
+        from opentuner.search.manipulator import PowerOfTwoParameter
         from opentuner.search.objective import MinimizeTime
 
         manip = ConfigurationManipulator()
-        manip.add_parameter(IntegerParameter("rx", 1, 1))
-        manip.add_parameter(IntegerParameter("ry", 8, 8))
-        manip.add_parameter(IntegerParameter("cx", 65, 65))
-        manip.add_parameter(IntegerParameter("cy", 64, 64))
-        manip.add_parameter(IntegerParameter("unroll", 8, 8))
+        manip.add_parameter(PowerOfTwoParameter("rx", 1, 4))
+        manip.add_parameter(PowerOfTwoParameter("ry", 1, 4))
+        manip.add_parameter(IntegerParameter("cx", 8, 32))
+        manip.add_parameter(IntegerParameter("cy", 8, 32))
 
         return OpenTunerDriver(manipulator=manip, objective=MinimizeTime())
 
@@ -59,7 +59,7 @@ class DgemmTranslator(LazySpecializedFunction):
         that classifies them. Arguments with identical subconfigs
         might be processed by the same generated code.
         """
-        C, A, B = args
+        C, A, B, duration = args
         n = len(A)
         assert C.shape == A.shape == B.shape == (n,n)
         assert A.dtype == B.dtype == C.dtype
@@ -128,14 +128,14 @@ class DgemmTranslator(LazySpecializedFunction):
         """
         arg_config, tuner_config = program_config
         n, dtype  = arg_config['n'], arg_config['dtype']
-        rx, ry = tuner_config['rx'], tuner_config['ry']
-        cx, cy = tuner_config['cx'], tuner_config['cy']
-        unroll = tuner_config['unroll']
+        rx, ry = tuner_config['rx']*4, tuner_config['ry']*4
+        cx, cy = tuner_config['cx']*4, tuner_config['cy']*4
+        unroll = tuner_config['ry']*4
 
         elem_type = get_ctree_type(dtype)
         array_type = NdPointer(dtype, 2, (n,n))
 
-        dgemm_typesig = FuncType(Void(), [array_type, array_type, array_type])
+        dgemm_typesig = FuncType(Void(), [array_type, array_type, array_type, Ptr(Double())])
 
         A = SymbolRef("A", array_type)
         B = SymbolRef("B", array_type)
@@ -216,7 +216,7 @@ class DgemmTranslator(LazySpecializedFunction):
         dgemm =  StringTemplate("""
         int align( int x, int y ) { return x <= y ? x : (x/y)*y; }
 
-        void dgemm($C_decl, $A_decl, $B_decl) {
+        void dgemm($C_decl, $A_decl, $B_decl, double *duration) {
             for( int i = 0; i < $lda; ) {
                 int I = align( min( $lda-i, $CY ), $RY );
                 for( int j = 0; j < $lda; ) {
@@ -233,6 +233,9 @@ class DgemmTranslator(LazySpecializedFunction):
                 }
                 i += I;
             }
+
+            // report time back for tuner
+            *duration = 1337.0;
         }
         """, copy.deepcopy(template_args))
 
@@ -254,7 +257,11 @@ class SquareDgemm(object):
 
     def __call__(self, C, A, B):
         """C = A * B"""
-        return self.c_dgemm(C, A, B)
+        from ctypes import c_double, byref
+
+        duration = c_double()
+        self.c_dgemm(C, A, B, byref(duration))
+        self.c_dgemm.report(time=duration.value)
 
 
 def main():
@@ -265,9 +272,10 @@ def main():
     B = np.random.rand(n, n)
     C_expected = np.dot(A.T, B.T)
 
-    C_actual = np.zeros((n, n))
-    c_dgemm(C_actual, A, B)
-    np.testing.assert_almost_equal(C_actual.T, C_expected)
+    for i in range(1000):
+      C_actual = np.zeros((n, n))
+      c_dgemm(C_actual, A, B)
+      np.testing.assert_almost_equal(C_actual.T, C_expected)
 
     print("Success.")
 
