@@ -45,11 +45,11 @@ class DgemmTranslator(LazySpecializedFunction):
         from opentuner.search.objective import MinimizeTime
 
         manip = ConfigurationManipulator()
-        manip.add_parameter(IntegerParameter("rx", 1, 16))
-        manip.add_parameter(IntegerParameter("ry", 1, 16))
-        manip.add_parameter(IntegerParameter("cx", 16, 2048))
-        manip.add_parameter(IntegerParameter("cy", 16, 2048))
-        manip.add_parameter(IntegerParameter("unroll", 1, 16))
+        manip.add_parameter(IntegerParameter("rx", 1, 1))
+        manip.add_parameter(IntegerParameter("ry", 8, 8))
+        manip.add_parameter(IntegerParameter("cx", 65, 65))
+        manip.add_parameter(IntegerParameter("cy", 64, 64))
+        manip.add_parameter(IntegerParameter("unroll", 8, 8))
 
         return OpenTunerDriver(manipulator=manip, objective=MinimizeTime())
 
@@ -85,7 +85,7 @@ class DgemmTranslator(LazySpecializedFunction):
         for j in range(ry/4):
             stmt = Assign(SymbolRef("a%d"%j),
                           mm256_load_pd( Add(SymbolRef("A"),
-                                             Constant(j*4+i*cy)) ))
+                                             Constant(j+4+i*cy)) ))
             stmts.append(stmt)
 
         for j in range(rx):
@@ -104,12 +104,12 @@ class DgemmTranslator(LazySpecializedFunction):
 
     def _gen_k_rank1_updates(self, rx, ry, cx, cy, unroll, lda):
         stmts = [Comment("do K rank-1 updates")]
-        for i in range(0, ry/4):
+        for i in range(ry/4):
             stmts.append(SymbolRef("a%d" % i, m256d()))
         stmts.append(SymbolRef("b", m256d()))
 
-        whyle = While(Lt(SymbolRef("K"), Constant(unroll)), [
-            self._gen_rank1_update(i, rx, ry, cx, cy, lda) for i in range(0, ry)
+        whyle = While(GtE(SymbolRef("K"), Constant(unroll)), [
+            self._gen_rank1_update(i, rx, ry, cx, cy, lda) for i in range(unroll)
         ])
         stmts.append(whyle)
         return Block(stmts)
@@ -185,8 +185,8 @@ class DgemmTranslator(LazySpecializedFunction):
 
             //  make a local aligned copy of A's block
             for( int j = 0; j < K; j++ )
-            for( int i = 0; i < M; i++ )
-            a[i+j*$CY] = A[i+j*$lda];
+                for( int i = 0; i < M; i++ )
+                    a[i+j*$CY] = A[i+j*$lda];
 
             //  multiply using the copy
             for( int j = 0; j < N; j += $RX )
@@ -252,7 +252,7 @@ class SquareDgemm(object):
 
 
 def main():
-    n = 16
+    n = 4
     c_dgemm = SquareDgemm()
 
     A = np.random.rand(n, n)
