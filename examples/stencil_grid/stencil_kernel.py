@@ -31,7 +31,7 @@ from ctree.transformations import PyBasicConversions
 from ctree.jit import LazySpecializedFunction
 from ctree.c.types import *
 from ctree.frontend import get_ast
-from ctree.visitors import NodeTransformer
+from ctree.visitors import NodeTransformer, NodeVisitor
 from ctree.c.nodes import *
 from ctree.omp.nodes import *
 from ctree.templates.nodes import StringTemplate
@@ -45,7 +45,7 @@ import logging
 #                             datefmt='%H:%M:%S',
 #                             level=20)
 
-logging.basicConfig(level=10)
+logging.basicConfig(level=20)
 
 
 class StencilConvert(LazySpecializedFunction):
@@ -61,16 +61,10 @@ class StencilConvert(LazySpecializedFunction):
         return conf
 
     def get_tuning_driver(self):
-        from ctree.opentuner.driver import OpenTunerDriver
-        from opentuner.search.manipulator import ConfigurationManipulator
-        from opentuner.search.manipulator import IntegerParameter
-        from opentuner.search.objective import MinimizeTime
-
-        manip = ConfigurationManipulator()
-        manip.add_parameter(IntegerParameter("cache_block", 4, 8))
-        manip.add_parameter(IntegerParameter("unroll", 0, 4))
-
-        return OpenTunerDriver(manipulator=manip, objective=MinimizeTime())
+        from ctree.tune import *
+        params = [IntegerParameter("cache_block", 4, 8),
+                  IntegerParameter("unroll_factor", 1, 4)]
+        return BruteForceTuningDriver(params, MinimizeTime())
 
     def transform(self, tree, program_config):
         """Convert the Python AST to a C AST."""
@@ -79,13 +73,15 @@ class StencilConvert(LazySpecializedFunction):
             param_types.append(NdPointer(arg[1], arg[2], arg[3]))
         kernel_sig = FuncType(Void(), param_types)
 
-        tune_cfg = program_config[1].data
-        cache_block_amt, unroll_amt = tune_cfg['cache_block'], tune_cfg['unroll']
+        tune_cfg = program_config[1]
+        cache_block_amt = 2**tune_cfg['cache_block']
+        unroll_factor = 2**tune_cfg['unroll_factor']
 
         for transformer in [StencilTransformer(self.input_grids,
                                                self.output_grid),
                             PyBasicConversions()]:
             tree = transformer.visit(tree)
+        self.unroll_loops(tree, unroll_factor)
         # remove self param
         # TODO: Better way to do this?
         params = tree.find(FunctionDecl, name="kernel").params
@@ -107,6 +103,65 @@ class StencilConvert(LazySpecializedFunction):
                 calc += "+((_d%s) * %s)" % (str(x), dim)
             calc += ")"
             first_for.insert_before(Define(defname+params, calc))
+
+    def unroll_loops(self, tree, factor):
+        # Grab first for loop
+        first_For = tree.find(For)
+        node = FindInnerMostLoop().find(first_For)
+
+        # Determine the leftover iteratiosn after unrolling
+        initial = node.init.right.value
+        end = node.test.right.value
+        leftover_begin = int((end - initial + 1) / factor) * factor + initial
+
+        new_end = leftover_begin - 1
+        new_incr = AddAssign(SymbolRef(node.incr.arg.name), factor)
+        new_body = node.body[:]
+        for x in range(1, factor):
+            new_extension = deepcopy(node.body)
+            new_extension = map(UnrollReplacer(node.init.left.name,
+                                               x).visit, new_extension)
+            new_body.extend(new_extension)
+
+        leftover_For = For(Assign(node.init.left,
+                                  Constant(leftover_begin)),
+                           node.test,
+                           node.incr,
+                           node.body)
+        node.test = LtE(node.init.left.name, new_end)
+        node.incr = new_incr
+        node.body = new_body
+
+        if not leftover_begin >= end:
+            node.body.append(leftover_For)
+
+
+class FindInnerMostLoop(NodeVisitor):
+    def __init__(self):
+        self.inner_most = None
+
+    def find(self, node):
+        self.visit(node)
+        return self.inner_most
+
+    def visit_For(self, node):
+        self.inner_most = node
+        map(self.visit, node.body)
+
+
+class UnrollReplacer(NodeTransformer):
+    def __init__(self, loopvar, incr):
+        self.loopvar = loopvar
+        self.incr = incr
+        self.in_new_scope = False
+        self.inside_for = False
+        super(UnrollReplacer, self).__init__()
+
+    def visit_SymbolRef(self, node):
+        if node.name == self.loopvar:
+            return Add(node, Constant(self.incr))
+        return SymbolRef(node.name)
+
 
 
 class StencilTransformer(NodeTransformer):
