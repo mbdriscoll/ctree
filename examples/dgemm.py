@@ -11,7 +11,9 @@ import numpy as np
 
 from ctree.frontend import get_ast
 from ctree.c.nodes import *
+from ctree.cpp.nodes import Comment
 from ctree.c.types import *
+from ctree.sse.macros import *
 from ctree.templates.nodes import StringTemplate
 from ctree.dotgen import to_dot
 from ctree.transformations import *
@@ -51,6 +53,18 @@ class DgemmTranslator(LazySpecializedFunction):
             'n': n,
             'dtype': A.dtype,
         }
+
+    def _gen_load_c_block(self, rx, ry, lda):
+        """
+        Return a subtree that loads a block of 'c'.
+        """
+        stmts = [Comment("Load a block of c")]
+        for j in range(0, rx):
+            for i in range(0, ry/4):
+                stmt = Assign(ArrayRef(ArrayRef(SymbolRef("c"), Constant(i)), Constant(j)),
+                              mm256_loadu_pd(Add(SymbolRef("C"), Constant(i*4+j+lda))))
+                stmts.append(stmt)
+        return Block(stmts)
 
     def transform(self, py_ast, program_config):
         """
@@ -97,6 +111,26 @@ class DgemmTranslator(LazySpecializedFunction):
         #define min(x,y) (((x)<(y))?(x):(y))
         """, copy.deepcopy(template_args))
 
+        reg_template_args = {
+            'load_c_block': self._gen_load_c_block(rx, ry, n),
+            'k_rank1_updates': Constant(1),
+        }
+        reg_template_args.update(copy.deepcopy(template_args))
+
+        register_dgemm = StringTemplate("""
+        void register_dgemm( $A_decl, $B_decl, $C_decl, int K )  {
+            __m256d c[$RY/4][$RX];
+
+            $load_c_block
+
+            $k_rank1_updates
+
+            A += $UNROLL*$CY;
+            B += $UNROLL;
+            K -= $UNROLL;
+        }
+        """, reg_template_args)
+
         fast_dgemm = StringTemplate("""
         void fast_dgemm( int M, int N, int K, $A_decl, $B_decl, $C_decl ) {
             static double a[$CX*$CY] __attribute__ ((aligned (16)));
@@ -109,7 +143,7 @@ class DgemmTranslator(LazySpecializedFunction):
             //  multiply using the copy
             for( int j = 0; j < N; j += $RX )
                 for( int i = 0; i < M; i += $RY )
-                    register_dgemm( a + i, B + j*$lda, C + i + j*$lda, $lda, K );
+                    register_dgemm( a + i, B + j*$lda, C + i + j*$lda, K );
         }""", template_args)
 
         fringe_dgemm = StringTemplate("""
@@ -147,6 +181,7 @@ class DgemmTranslator(LazySpecializedFunction):
 
         tree = CFile("generated", [
             preamble,
+            register_dgemm,
             fast_dgemm,
             fringe_dgemm,
             dgemm,
