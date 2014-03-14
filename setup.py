@@ -12,7 +12,7 @@ setup(
     'ctree.ocl',
     'ctree.omp',
     'ctree.py',
-    'ctree.sse',
+    'ctree.simd',
     'ctree.templates',
     'ctree.opentuner',
     'ctree.metrics',

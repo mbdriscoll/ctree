@@ -13,7 +13,8 @@ from ctree.frontend import get_ast
 from ctree.c.nodes import *
 from ctree.cpp.nodes import Comment
 from ctree.c.types import *
-from ctree.sse.macros import *
+from ctree.simd.macros import *
+from ctree.simd.types import *
 from ctree.templates.nodes import StringTemplate
 from ctree.dotgen import to_dot
 from ctree.transformations import *
@@ -66,6 +67,40 @@ class DgemmTranslator(LazySpecializedFunction):
                 stmts.append(stmt)
         return Block(stmts)
 
+    def _gen_rank1_update(self, i, rx, ry, cx, cy, lda):
+        stmts = []
+        for j in range(ry/4):
+            stmt = Assign(SymbolRef("a%d"%j),
+                          mm256_load_pd( Add(SymbolRef("A"),
+                                             Constant(j*4+i*cy)) ))
+            stmts.append(stmt)
+
+        for j in range(rx):
+            stmt = Assign(SymbolRef("b"),
+                          mm256_set1_pd(ArrayRef(SymbolRef("B"),
+                                                 Constant(i+j*lda))))
+            stmts.append(stmt)
+
+            for k in range(ry/4):
+                stmt = Assign(ArrayRef(ArrayRef(SymbolRef("c"), Constant(k)), Constant(j)),
+                              mm256_add_pd( ArrayRef(ArrayRef(SymbolRef("c"), Constant(k)), Constant(j)),
+                                            mm256_mul_pd(SymbolRef("a%d"%k), SymbolRef("b")) ))
+                stmts.append(stmt)
+
+        return Block(stmts)
+
+    def _gen_k_rank1_updates(self, rx, ry, cx, cy, unroll, lda):
+        stmts = [Comment("do K rank-1 updates")]
+        for i in range(0, ry/4):
+            stmts.append(SymbolRef("a%d" % i, m256d()))
+        stmts.append(SymbolRef("b", m256d()))
+
+        whyle = While(Lt(SymbolRef("K"), Constant(unroll)), [
+            self._gen_rank1_update(i, rx, ry, cx, cy, lda) for i in range(0, ry)
+        ])
+        stmts.append(whyle)
+        return Block(stmts)
+
     def transform(self, py_ast, program_config):
         """
         Convert the Python AST to a C AST according to the directions
@@ -113,7 +148,7 @@ class DgemmTranslator(LazySpecializedFunction):
 
         reg_template_args = {
             'load_c_block': self._gen_load_c_block(rx, ry, n),
-            'k_rank1_updates': Constant(1),
+            'k_rank1_updates': self._gen_k_rank1_updates(rx, ry, cx, cy, unroll, n),
         }
         reg_template_args.update(copy.deepcopy(template_args))
 

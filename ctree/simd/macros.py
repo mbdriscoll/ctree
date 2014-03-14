@@ -14,6 +14,6 @@ def _make_call(name, nArgs):
 mm256_storeu_pd = _make_call("_mm256_storeu_pd", 2)
 mm256_loadu_pd  = _make_call("_mm256_loadu_pd", 1)
 mm256_load_pd   = _make_call("_mm256_load_pd", 1)
-mm256_set1_pd   = _make_call("_mm256_set1_pd", 4)
+mm256_set1_pd   = _make_call("_mm256_set1_pd", 1)
 mm256_add_pd    = _make_call("_mm256_add_pd", 2)
 mm256_mul_pd    = _make_call("_mm256_mul_pd", 2)

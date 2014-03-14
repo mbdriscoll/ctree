@@ -1,11 +1,11 @@
 """
-DOT generation for SSE.
+DOT generation for SIMD.
 """
 
 from ctree.dotgen import DotGenVisitor
 
 
-class SseDotGen(DotGenVisitor):
+class SimdDotGen(DotGenVisitor):
     """
     Visitor to generator DOT.
     """
