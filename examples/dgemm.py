@@ -21,6 +21,19 @@ from ctree.transformations import *
 from ctree.jit import LazySpecializedFunction
 from ctree.types import get_ctree_type
 
+def MultiArrayRef(name, *idxs):
+    """
+    Given a string and a list of ints, produce the chain of
+    array-ref expressions:
+
+    >>> MultiArrayRef('foo', 1, 2, 3).codegen()
+    'foo[1][2][3]'
+    """
+    tree = ArrayRef(SymbolRef(name), idxs[0])
+    for idx in idxs[1:]:
+        tree = ArrayRef(tree, Constant(idx))
+    return tree
+
 class DgemmTranslator(LazySpecializedFunction):
     def __init__(self):
         super(DgemmTranslator, self).__init__(None, "dgemm")
@@ -60,10 +73,10 @@ class DgemmTranslator(LazySpecializedFunction):
         Return a subtree that loads a block of 'c'.
         """
         stmts = [Comment("Load a block of c")]
-        for j in range(0, rx):
-            for i in range(0, ry/4):
-                stmt = Assign(ArrayRef(ArrayRef(SymbolRef("c"), Constant(i)), Constant(j)),
-                              mm256_loadu_pd(Add(SymbolRef("C"), Constant(i*4+j+lda))))
+        for j in range(rx):
+            for i in range(ry/4):
+                stmt = Assign(MultiArrayRef("c", i, j),
+                              mm256_loadu_pd(Add(SymbolRef("C"), Constant(i*4+j*lda))))
                 stmts.append(stmt)
         return Block(stmts)
 
@@ -82,8 +95,8 @@ class DgemmTranslator(LazySpecializedFunction):
             stmts.append(stmt)
 
             for k in range(ry/4):
-                stmt = Assign(ArrayRef(ArrayRef(SymbolRef("c"), Constant(k)), Constant(j)),
-                              mm256_add_pd( ArrayRef(ArrayRef(SymbolRef("c"), Constant(k)), Constant(j)),
+                stmt = Assign(MultiArrayRef("c", k, j),
+                              mm256_add_pd( MultiArrayRef("c", k, j),
                                             mm256_mul_pd(SymbolRef("a%d"%k), SymbolRef("b")) ))
                 stmts.append(stmt)
 
@@ -244,7 +257,7 @@ def main():
 
     A = np.random.rand(n, n)
     B = np.random.rand(n, n)
-    C_actual = np.random.rand(n, n)
+    C_actual = np.zeros((n, n))
     C_expected = A * B
 
     c_dgemm(C_actual, A, B)
