@@ -6,6 +6,7 @@ import logging
 
 logging.basicConfig(level=20)
 
+import copy
 import numpy as np
 
 from ctree.frontend import get_ast
@@ -58,10 +59,9 @@ class DgemmTranslator(LazySpecializedFunction):
         """
         arg_config, tuner_config = program_config
         n, dtype  = arg_config['n'], arg_config['dtype']
-        rx, ry = tuner_config.data['rx'], tuner_config.data['ry']
-        cx, cy = tuner_config.data['cx'], tuner_config.data['cy']
-        unroll = tuner_config.data['unroll']
-        # TODO: tuner_config should just be a dictionary, not needing .data
+        rx, ry = tuner_config['rx'], tuner_config['ry']
+        cx, cy = tuner_config['cx'], tuner_config['cy']
+        unroll = tuner_config['unroll']
 
         elem_type = get_ctree_type(dtype)
         array_type = NdPointer(dtype, 2, (n,n))
@@ -95,17 +95,32 @@ class DgemmTranslator(LazySpecializedFunction):
         preamble =  StringTemplate("""
         #include <immintrin.h>
         #define min(x,y) (((x)<(y))?(x):(y))
-        """, {})
+        """, copy.deepcopy(template_args))
+
+        fast_dgemm = StringTemplate("""
+        void fast_dgemm( int M, int N, int K, $A_decl, $B_decl, $C_decl ) {
+            static double a[$CX*$CY] __attribute__ ((aligned (16)));
+
+            //  make a local aligned copy of A's block
+            for( int j = 0; j < K; j++ )
+            for( int i = 0; i < M; i++ )
+            a[i+j*$CY] = A[i+j*$lda];
+
+            //  multiply using the copy
+            for( int j = 0; j < N; j += $RX )
+                for( int i = 0; i < M; i += $RY )
+                    register_dgemm( a + i, B + j*$lda, C + i + j*$lda, $lda, K );
+        }""", template_args)
 
         fringe_dgemm = StringTemplate("""
-        void fringe_dgemm( int lda, int M, int N, int K, double *A, double *B, double *C )
+        void fringe_dgemm( int M, int N, int K, double *A, double *B, double *C )
         {
             for( int j = 0; j < N; j++ )
                for( int i = 0; i < M; i++ )
                     for( int k = 0; k < K; k++ )
-                         C[i+j*lda] += A[i+k*lda] * B[k+j*lda];
+                         C[i+j*$lda] += A[i+k*$lda] * B[k+j*$lda];
         }
-        """, {})
+        """, copy.deepcopy(template_args))
 
         dgemm =  StringTemplate("""
         int align( int x, int y ) { return x <= y ? x : (x/y)*y; }
@@ -118,9 +133,9 @@ class DgemmTranslator(LazySpecializedFunction):
                     for( int k = 0; k < $lda; ) {
                         int K = align( min( $lda-k, $CX ), $UNROLL );
                         if( (I%$RY) == 0 && (J%$RX) == 0 && (K%$UNROLL) == 0 )
-                            fast_dgemm ( $lda, I, J, K, $A + i + k*$lda, $B + k + j*$lda, $C + i + j*$lda );
+                            fast_dgemm ( I, J, K, $A + i + k*$lda, $B + k + j*$lda, $C + i + j*$lda );
                         else
-                            fringe_dgemm( $lda, I, J, K, $A + i + k*$lda, $B + k + j*$lda, $C + i + j*$lda );
+                            fringe_dgemm( I, J, K, $A + i + k*$lda, $B + k + j*$lda, $C + i + j*$lda );
                         k += K;
                     }
                     j += J;
@@ -128,13 +143,17 @@ class DgemmTranslator(LazySpecializedFunction):
                 i += I;
             }
         }
-        """, template_args)
+        """, copy.deepcopy(template_args))
 
         tree = CFile("generated", [
             preamble,
+            fast_dgemm,
             fringe_dgemm,
             dgemm,
         ])
+
+        with open("graph.dot", 'w') as f:
+            f.write( to_dot(tree) )
 
         return Project([tree]), dgemm_typesig.as_ctype()
 

@@ -62,7 +62,7 @@ class StringTemplate(TemplateNode):
     """
     A template node that wraps Python's string.Template.
     """
-    def __init__(self, template_txt, child_dict):
+    def __init__(self, template_txt="", child_dict={}):
         """
         Create a new template node.
 
@@ -76,7 +76,7 @@ class FileTemplate(TemplateNode):
     """
     A template node that wraps Python's string.Template.
     """
-    def __init__(self, template_path, child_dict):
+    def __init__(self, template_path=".", child_dict={}):
         """
         Create a new template node.
 

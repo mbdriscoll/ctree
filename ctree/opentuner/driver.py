@@ -31,20 +31,13 @@ class OpenTunerDriver(TuningDriver):
         self._results = queue.Queue(1)
         self._configs = queue.Queue(1)
         self._thread = OpenTunerThread(self, *ot_args, **ot_kwargs)
-        self._best = None
         self._thread.start()
 
     def _get_configs(self):
         """Get the next configuration to test."""
         timeout = CONFIG.getint("opentuner", "timeout")
-        while self._best == None:
-            try:
-                yield self._configs.get(True, timeout)
-            except queue.Empty:
-                log.warning("exhausted stream of tuning configurations")
-                break
         while True:
-            yield self._best
+            yield self._configs.get(True, timeout).data
 
     def report(self, **kwargs):
         """Report the performance of the most recent configuration."""
