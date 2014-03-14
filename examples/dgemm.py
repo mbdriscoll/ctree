@@ -21,6 +21,21 @@ class DgemmTranslator(LazySpecializedFunction):
     def __init__(self):
         super(DgemmTranslator, self).__init__(None, "dgemm")
 
+    def get_tuning_driver(self):
+        from ctree.opentuner.driver import OpenTunerDriver
+        from opentuner.search.manipulator import ConfigurationManipulator
+        from opentuner.search.manipulator import IntegerParameter
+        from opentuner.search.objective import MinimizeTime
+
+        manip = ConfigurationManipulator()
+        manip.add_parameter(IntegerParameter("rx", 1, 16))
+        manip.add_parameter(IntegerParameter("ry", 1, 16))
+        manip.add_parameter(IntegerParameter("cx", 16, 2048))
+        manip.add_parameter(IntegerParameter("cy", 16, 2048))
+        manip.add_parameter(IntegerParameter("unroll", 1, 16))
+
+        return OpenTunerDriver(manipulator=manip, objective=MinimizeTime())
+
     def args_to_subconfig(self, args):
         """
         Analyze arguments and return a 'subconfig', a hashable object
@@ -43,6 +58,10 @@ class DgemmTranslator(LazySpecializedFunction):
         """
         arg_config, tuner_config = program_config
         n, dtype  = arg_config['n'], arg_config['dtype']
+        rx, ry = tuner_config.data['rx'], tuner_config.data['ry']
+        cx, cy = tuner_config.data['cx'], tuner_config.data['cy']
+        unroll = tuner_config.data['unroll']
+        # TODO: tuner_config should just be a dictionary, not needing .data
 
         elem_type = get_ctree_type(dtype)
         array_type = NdPointer(dtype, 2, (n,n))
@@ -53,17 +72,68 @@ class DgemmTranslator(LazySpecializedFunction):
         B = SymbolRef("B", array_type)
         C = SymbolRef("C", array_type)
 
+        N = Constant(n)
+        RX, RY = Constant(rx), Constant(ry)
+        CX, CY = Constant(cx), Constant(cy)
+        UNROLL = Constant(unroll)
+
         template_args = {
             "A_decl": A.copy(declare=True),
             "B_decl": B.copy(declare=True),
             "C_decl": C.copy(declare=True),
+            "A": A.copy(),
+            "B": B.copy(),
+            "C": C.copy(),
+            "RX": RX,
+            "RY": RY,
+            "CX": CX,
+            "CY": CY,
+            "UNROLL": UNROLL,
+            "lda": N,
         }
 
-        tree = CFile("generated", [
-            StringTemplate("""\
-            void dgemm($C_decl, $A_decl, $B_decl) {
+        preamble =  StringTemplate("""
+        #include <immintrin.h>
+        #define min(x,y) (((x)<(y))?(x):(y))
+        """, {})
+
+        fringe_dgemm = StringTemplate("""
+        void fringe_dgemm( int lda, int M, int N, int K, double *A, double *B, double *C )
+        {
+            for( int j = 0; j < N; j++ )
+               for( int i = 0; i < M; i++ )
+                    for( int k = 0; k < K; k++ )
+                         C[i+j*lda] += A[i+k*lda] * B[k+j*lda];
+        }
+        """, {})
+
+        dgemm =  StringTemplate("""
+        int align( int x, int y ) { return x <= y ? x : (x/y)*y; }
+
+        void dgemm($C_decl, $A_decl, $B_decl) {
+            for( int i = 0; i < $lda; ) {
+                int I = align( min( $lda-i, $CY ), $RY );
+                for( int j = 0; j < $lda; ) {
+                    int J = align( $lda-j, $RX );
+                    for( int k = 0; k < $lda; ) {
+                        int K = align( min( $lda-k, $CX ), $UNROLL );
+                        if( (I%$RY) == 0 && (J%$RX) == 0 && (K%$UNROLL) == 0 )
+                            fast_dgemm ( $lda, I, J, K, $A + i + k*$lda, $B + k + j*$lda, $C + i + j*$lda );
+                        else
+                            fringe_dgemm( $lda, I, J, K, $A + i + k*$lda, $B + k + j*$lda, $C + i + j*$lda );
+                        k += K;
+                    }
+                    j += J;
+                }
+                i += I;
             }
-            """, template_args),
+        }
+        """, template_args)
+
+        tree = CFile("generated", [
+            preamble,
+            fringe_dgemm,
+            dgemm,
         ])
 
         return Project([tree]), dgemm_typesig.as_ctype()
