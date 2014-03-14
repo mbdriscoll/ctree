@@ -1,5 +1,5 @@
 """
-Computes matrix-matrix products (dgemms) via specialization.
+Computes matrix-matrix products via specialization.
 """
 
 import logging
@@ -80,12 +80,24 @@ class DgemmTranslator(LazySpecializedFunction):
                 stmts.append(stmt)
         return Block(stmts)
 
+    def _gen_store_c_block(self, rx, ry, lda):
+        """
+        Return a subtree that loads a block of 'c'.
+        """
+        stmts = [Comment("Store the c block")]
+        for j in range(rx):
+            for i in range(ry/4):
+                stmt = mm256_storeu_pd(Add(SymbolRef("C"), Constant(i*4+j*lda)),
+                                      MultiArrayRef("c", i, j))
+                stmts.append(stmt)
+        return Block(stmts)
+
     def _gen_rank1_update(self, i, rx, ry, cx, cy, lda):
         stmts = []
         for j in range(ry/4):
             stmt = Assign(SymbolRef("a%d"%j),
                           mm256_load_pd( Add(SymbolRef("A"),
-                                             Constant(j+4+i*cy)) ))
+                                             Constant(j*4+i*cy)) ))
             stmts.append(stmt)
 
         for j in range(rx):
@@ -99,7 +111,6 @@ class DgemmTranslator(LazySpecializedFunction):
                               mm256_add_pd( MultiArrayRef("c", k, j),
                                             mm256_mul_pd(SymbolRef("a%d"%k), SymbolRef("b")) ))
                 stmts.append(stmt)
-
         return Block(stmts)
 
     def _gen_k_rank1_updates(self, rx, ry, cx, cy, unroll, lda):
@@ -107,11 +118,7 @@ class DgemmTranslator(LazySpecializedFunction):
         for i in range(ry/4):
             stmts.append(SymbolRef("a%d" % i, m256d()))
         stmts.append(SymbolRef("b", m256d()))
-
-        whyle = While(GtE(SymbolRef("K"), Constant(unroll)), [
-            self._gen_rank1_update(i, rx, ry, cx, cy, lda) for i in range(unroll)
-        ])
-        stmts.append(whyle)
+        stmts.extend(self._gen_rank1_update(i, rx, ry, cx, cy, lda) for i in range(unroll))
         return Block(stmts)
 
     def transform(self, py_ast, program_config):
@@ -143,9 +150,6 @@ class DgemmTranslator(LazySpecializedFunction):
             "A_decl": A.copy(declare=True),
             "B_decl": B.copy(declare=True),
             "C_decl": C.copy(declare=True),
-            "A": A.copy(),
-            "B": B.copy(),
-            "C": C.copy(),
             "RX": RX,
             "RY": RY,
             "CX": CX,
@@ -161,6 +165,7 @@ class DgemmTranslator(LazySpecializedFunction):
 
         reg_template_args = {
             'load_c_block': self._gen_load_c_block(rx, ry, n),
+            'store_c_block': self._gen_store_c_block(rx, ry, n),
             'k_rank1_updates': self._gen_k_rank1_updates(rx, ry, cx, cy, unroll, n),
         }
         reg_template_args.update(copy.deepcopy(template_args))
@@ -171,11 +176,15 @@ class DgemmTranslator(LazySpecializedFunction):
 
             $load_c_block
 
-            $k_rank1_updates
+            while ( K >= $UNROLL ) {
+              $k_rank1_updates
 
-            A += $UNROLL*$CY;
-            B += $UNROLL;
-            K -= $UNROLL;
+              A += $UNROLL*$CY;
+              B += $UNROLL;
+              K -= $UNROLL;
+            }
+
+            $store_c_block
         }
         """, reg_template_args)
 
@@ -195,7 +204,7 @@ class DgemmTranslator(LazySpecializedFunction):
         }""", template_args)
 
         fringe_dgemm = StringTemplate("""
-        void fringe_dgemm( int M, int N, int K, double *A, double *B, double *C )
+        void fringe_dgemm( int M, int N, int K, $A_decl, $B_decl, $C_decl )
         {
             for( int j = 0; j < N; j++ )
                for( int i = 0; i < M; i++ )
@@ -215,9 +224,9 @@ class DgemmTranslator(LazySpecializedFunction):
                     for( int k = 0; k < $lda; ) {
                         int K = align( min( $lda-k, $CX ), $UNROLL );
                         if( (I%$RY) == 0 && (J%$RX) == 0 && (K%$UNROLL) == 0 )
-                            fast_dgemm ( I, J, K, $A + i + k*$lda, $B + k + j*$lda, $C + i + j*$lda );
+                            fast_dgemm ( I, J, K, A + i + k*$lda, B + k + j*$lda, C + i + j*$lda );
                         else
-                            fringe_dgemm( I, J, K, $A + i + k*$lda, $B + k + j*$lda, $C + i + j*$lda );
+                            fringe_dgemm( I, J, K, A + i + k*$lda, B + k + j*$lda, C + i + j*$lda );
                         k += K;
                     }
                     j += J;
@@ -235,9 +244,6 @@ class DgemmTranslator(LazySpecializedFunction):
             dgemm,
         ])
 
-        with open("graph.dot", 'w') as f:
-            f.write( to_dot(tree) )
-
         return Project([tree]), dgemm_typesig.as_ctype()
 
 
@@ -252,17 +258,17 @@ class SquareDgemm(object):
 
 
 def main():
-    n = 4
+    n = 1024
     c_dgemm = SquareDgemm()
 
     A = np.random.rand(n, n)
     B = np.random.rand(n, n)
+    C_expected = np.dot(A.T, B.T)
+
     C_actual = np.zeros((n, n))
-    C_expected = A * B
-
     c_dgemm(C_actual, A, B)
+    np.testing.assert_almost_equal(C_actual.T, C_expected)
 
-    np.testing.assert_array_equal(C_actual, C_expected)
     print("Success.")
 
 
