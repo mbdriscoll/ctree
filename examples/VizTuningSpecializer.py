@@ -52,7 +52,7 @@ class GetHeight(LazySpecializedFunction):
         Convert the Python AST to a C AST according to the directions
         given in program_config.
         """
-        tune_cfg = program_config[1].data
+        tune_cfg = program_config[1]
         x, y = tune_cfg['x'], tune_cfg['y']
 
         import ctree.c.nodes as c
@@ -215,7 +215,7 @@ def display():
     glMaterialfv(GL_FRONT_AND_BACK,GL_DIFFUSE,color)
     for frame, p in points:
       with xform(translate=p, light=True):
-        green = frame / 1000.0
+        green = frame / 500.0
         glColor(1-green,green,0)
         glutSolidSphere(1.5, 10, 10)
   glutSwapBuffers()

@@ -4,7 +4,7 @@ Computes matrix-matrix products via specialization.
 
 import logging
 
-logging.basicConfig(level=20)
+logging.basicConfig(level=60)
 
 import copy
 import numpy as np
@@ -46,8 +46,8 @@ class DgemmTranslator(LazySpecializedFunction):
         from opentuner.search.objective import MinimizeTime
 
         manip = ConfigurationManipulator()
-        manip.add_parameter(PowerOfTwoParameter("rx", 1, 4))
-        manip.add_parameter(PowerOfTwoParameter("ry", 1, 4))
+        manip.add_parameter(PowerOfTwoParameter("rx", 1, 8))
+        manip.add_parameter(PowerOfTwoParameter("ry", 1, 8))
         manip.add_parameter(IntegerParameter("cx", 8, 32))
         manip.add_parameter(IntegerParameter("cy", 8, 32))
 
@@ -213,10 +213,23 @@ class DgemmTranslator(LazySpecializedFunction):
         }
         """, copy.deepcopy(template_args))
 
+        wall_time = StringTemplate("""
+        #include <sys/time.h>
+
+        double wall_time () {
+          struct timeval t;
+          gettimeofday (&t, NULL);
+          return 1.*t.tv_sec + 1.e-6*t.tv_usec;
+        }
+
+        """, {})
+
         dgemm =  StringTemplate("""
         int align( int x, int y ) { return x <= y ? x : (x/y)*y; }
 
         void dgemm($C_decl, $A_decl, $B_decl, double *duration) {
+            double start_time = wall_time();
+
             for( int i = 0; i < $lda; ) {
                 int I = align( min( $lda-i, $CY ), $RY );
                 for( int j = 0; j < $lda; ) {
@@ -235,12 +248,13 @@ class DgemmTranslator(LazySpecializedFunction):
             }
 
             // report time back for tuner
-            *duration = 1337.0;
+            *duration = wall_time() - start_time;
         }
         """, copy.deepcopy(template_args))
 
         tree = CFile("generated", [
             preamble,
+            wall_time,
             register_dgemm,
             fast_dgemm,
             fringe_dgemm,
@@ -258,10 +272,16 @@ class SquareDgemm(object):
     def __call__(self, C, A, B):
         """C = A * B"""
         from ctypes import c_double, byref
+        #from ctree.metrics.watts_up_reader import WattsUpReader
 
         duration = c_double()
+        #meter = WattsUpReader()
+        #meter.start_recording()
         self.c_dgemm(C, A, B, byref(duration))
+        #energy_report = meter.get_recording()
+        #self.c_dgemm.report(time=duration.value, energy=energy_report.joules)
         self.c_dgemm.report(time=duration.value)
+        return duration.value
 
 
 def main():
@@ -274,10 +294,13 @@ def main():
 
     for i in range(1000):
       C_actual = np.zeros((n, n))
-      c_dgemm(C_actual, A, B)
+      duration = c_dgemm(C_actual, A, B)
       np.testing.assert_almost_equal(C_actual.T, C_expected)
 
-    print("Success.")
+      ticks = min(100, int(duration * 100.0))
+      print ("trial %03d took %f sec: %s" % (i, duration, '#' * ticks))
+
+    print("Done.")
 
 
 if __name__ == '__main__':
