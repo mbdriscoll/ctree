@@ -7,9 +7,6 @@ class DotManager(object):
 
     @staticmethod
     def dot_ast_to_image(ast_node):
-        import io
-        from IPython.display import Image
-
         from  ctree.dotgen import to_dot
 
         dot_text = to_dot(ast_node)
@@ -18,10 +15,13 @@ class DotManager(object):
 
     @staticmethod
     def dot_text_to_image(text):
-        from IPython.display import Image
+        try:
+            from IPython.display import Image
 
-        dot_output = DotManager.run_dot(text)
-        return Image(dot_output, embed=True)
+            dot_output = DotManager.run_dot(text)
+            return Image(dot_output, embed=True)
+        except:
+            return None
 
     @staticmethod
     def run_dot(code, options=None, output_format='png'):

@@ -106,7 +106,7 @@ class WattsUpReader(object):
     def fetch(self, base_time=None, time_out=0.3, raw=False):
         """read one data point from meter"""
 
-        rfds, wfds, efds = select.select( [self.serial_port], [], [], time_out)
+        rfds, wfds, efds = select.select([self.serial_port], [], [], time_out)
         if rfds:
             # device_output = self.serial_port.readline()..decode("utf-8")  #python3
             device_output = self.serial_port.readline()
@@ -115,7 +115,7 @@ class WattsUpReader(object):
                 print(device_output)
             if device_output.startswith("#d"):
                 if raw:
-                    return device_output.strip()
+                    return "%s,%s" % (device_output.strip(), base_time)
 
                 fields = device_output.split(',')
                 if self.verbose:
@@ -143,12 +143,12 @@ class WattsUpReader(object):
 
     def dump(self):
         while True:
-            result = self.fetch(time_out=1000)
+            result = self.fetch(base_time=time.time(), time_out=1000)
             print(result)
 
     def raw_dump(self):
         while True:
-            result = self.fetch(time_out=1000,raw=True)
+            result = self.fetch(base_time=time.time(), time_out=1000, raw=True)
             print(result)
 
     def start_recording(self):
@@ -186,7 +186,8 @@ class WattsUpReader(object):
         print("command must be one of (quit, reset, record, get_record, verbose, drain) or ")
         print("native device command string beginning with # ")
         print("empty command will repeat previous command")
-        print("'n")
+        print("commands can be abbreviated to first three letters")
+        print("\n")
 
     def interactive_mode(self):
         last_input = None
@@ -238,9 +239,8 @@ class WattsUpReader(object):
             raise Exception("No potential usb based readers found, is it plugged in?")
         else:
             for device in possible_devices:
-                print( "Possible device %s" % device)
+                print("Possible device %s" % device)
             raise Exception("Multiple possible devices found, you must specify explicitly")
-        return ''
 
 
 if __name__ == "__main__":
@@ -273,10 +273,11 @@ if __name__ == "__main__":
 
     if args.interactive:
         watt_reader.interactive_mode()
+    if args.raw:
+        watt_reader.raw_dump()
     elif args.dump:
-        if args.raw:
-            watt_reader.raw_dump()
-        else:
-            watt_reader.dump()
+        watt_reader.dump()
+    else:
+        parser.print_usage()
 
     watt_reader.stop()
