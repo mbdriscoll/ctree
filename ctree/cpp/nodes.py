@@ -28,3 +28,11 @@ class CppInclude(CppNode):
     def __init__(self, target="", angled_brackets=True):
         self.target = target
         self.angled_brackets = angled_brackets
+
+
+class Comment(CppNode):
+    """Represents // foo"""
+
+    def __init__(self, text=""):
+        assert "\n" not in text, "Comment only supports single-line comments."
+        self.text = text

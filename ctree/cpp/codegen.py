@@ -15,3 +15,6 @@ class CppCodeGen(CodeGenVisitor):
             return "#include <%s>" % node.target
         else:
             return '#include "%s"' % node.target
+
+    def visit_Comment(self, node):
+        return "// %s" % node.text

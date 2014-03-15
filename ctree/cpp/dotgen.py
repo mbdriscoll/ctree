@@ -15,3 +15,6 @@ class CppDotGen(DotGenVisitor):
             return "target: <%s>" % node.target
         else:
             return 'target: "%s"' % node.target
+
+    def label_Comment(self, node):
+        return node.text.replace('"', r"\"")
