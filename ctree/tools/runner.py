@@ -11,7 +11,12 @@ from ctree.tools.generators import builder as Builder
 __author__ = 'chick'
 
 
-def main(args):
+def main(*args):
+    """run ctree utility stuff, currently only the project generator"""
+
+    if sys.argv:
+        args = sys.argv[1:]
+
     parser = argparse.ArgumentParser(prog="ctree", description="ctree is a python SEJITS framework")
     parser.add_argument('-sp', '--startproject', help='generate a specializer project')
     parser.add_argument('-v', '--verbose', help='show more debug than you like', action="store_true")

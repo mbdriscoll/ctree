@@ -1,4 +1,5 @@
-from distutils.core import setup
+#from distutils.core import setup
+from setuptools import setup
 
 setup(
     name='ctree',
@@ -16,6 +17,8 @@ setup(
         'ctree.templates',
         'ctree.opentuner',
         'ctree.metrics',
+        'ctree.tools',
+        'ctree.tools.generators',
         'ctree.visual',
     ],
 
