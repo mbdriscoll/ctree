@@ -16,6 +16,7 @@ setup(
         'ctree.templates',
         'ctree.opentuner',
         'ctree.metrics',
+        'ctree.visual',
     ],
 
     package_data={
