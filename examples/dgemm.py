@@ -46,10 +46,10 @@ class DgemmTranslator(LazySpecializedFunction):
         from opentuner.search.objective import MinimizeTime
 
         manip = ConfigurationManipulator()
-        manip.add_parameter(PowerOfTwoParameter("rx", 1, 8))
-        manip.add_parameter(PowerOfTwoParameter("ry", 1, 8))
-        manip.add_parameter(IntegerParameter("cx", 8, 32))
-        manip.add_parameter(IntegerParameter("cy", 8, 32))
+        manip.add_parameter(PowerOfTwoParameter("rx", 1, 16))
+        manip.add_parameter(PowerOfTwoParameter("ry", 1, 16))
+        manip.add_parameter(IntegerParameter("cx", 8, 64))
+        manip.add_parameter(IntegerParameter("cy", 8, 64))
 
         return OpenTunerDriver(manipulator=manip, objective=MinimizeTime())
 
