@@ -30,23 +30,31 @@ class OpenTunerDriver(TuningDriver):
         super(OpenTunerDriver, self).__init__()
         self._results = queue.Queue(1)
         self._configs = queue.Queue(1)
+        self._best_config = None
         self._thread = OpenTunerThread(self, *ot_args, **ot_kwargs)
         self._thread.start()
+        self._converged = False
 
     def _get_configs(self):
         """Get the next configuration to test."""
         timeout = CONFIG.getint("opentuner", "timeout")
         while True:
-            yield self._configs.get(True, timeout).data
+            try:
+                yield self._configs.get(True, timeout)
+            except queue.Empty:
+                break
+
+        log.info("exhausted stream of configurations.")
+        assert self._best_config != None, "No best configuration reported."
+        self._converged = True
+        while True:
+            yield self._best_config
 
     def report(self, **kwargs):
         """Report the performance of the most recent configuration."""
-        timeout = CONFIG.getint("opentuner", "timeout")
-        result = Result(**kwargs)
-        try:
-            self._results.put(result, True, timeout)
-        except queue.Full:
-            log.warning("exhausted stream of tuning configurations")
+        if not self._converged:
+            result = Result(**kwargs)
+            self._results.put_nowait(result)
 
 
 class OpenTunerThread(threading.Thread):
@@ -55,7 +63,7 @@ class OpenTunerThread(threading.Thread):
     """
     def __init__(self, driver, *ot_args, **ot_kwargs):
         super(OpenTunerThread, self).__init__()
-        self._driver = driver
+        self._ctree_driver = driver
         self._ot_args = ot_args
         self._ot_kwargs = ot_kwargs
         self._tuningrun = None
@@ -71,7 +79,7 @@ class OpenTunerThread(threading.Thread):
         arg_parser = argparse.ArgumentParser(parents=opentuner.argparsers())
         config_args = CONFIG.get("opentuner", "args").split()
         tuner_args = arg_parser.parse_args(config_args)
-        interface = CtreeMeasurementInterface(self._driver, *self._ot_args, **self._ot_kwargs)
+        interface = CtreeMeasurementInterface(self._ctree_driver, *self._ot_args, **self._ot_kwargs)
         TuningRunMain(interface, tuner_args).main()
         log.info("tuning thread '%s' terminating.", self.name)
 
@@ -87,8 +95,7 @@ class CtreeMeasurementInterface(MeasurementInterface):
         """
         kwargs['input_manager'] = FixedInputManager()
         super(CtreeMeasurementInterface, self).__init__(*args, **kwargs)
-        self._results = driver._results
-        self._configs = driver._configs
+        self._ctree_driver = driver
 
     def manipulator(self):
         """
@@ -103,11 +110,10 @@ class CtreeMeasurementInterface(MeasurementInterface):
         its performance. With threading, we place the config in the
         output queue, then wait for a Result in the input queue.
         """
-        timeout = CONFIG.getint("opentuner", "timeout")
-        self._configs.put(desired_result.configuration, True, timeout)
-        return self._results.get(True, timeout)
+        self._ctree_driver._configs.put(desired_result.configuration.data, True)
+        return self._ctree_driver._results.get(True)
 
     def save_final_config(self, configuration):
         """Report best configuration."""
         log.info("best configuration found to be: %s", configuration)
-        driver.best = configuration
+        self._ctree_driver._best_config = configuration.data

@@ -9,7 +9,6 @@ logging.basicConfig(level=60)
 import copy
 import numpy as np
 
-from ctree.frontend import get_ast
 from ctree.c.nodes import *
 from ctree.cpp.nodes import Comment
 from ctree.c.types import *
@@ -36,6 +35,7 @@ def MultiArrayRef(name, *idxs):
 
 class DgemmTranslator(LazySpecializedFunction):
     def __init__(self):
+        self._current_config = None
         super(DgemmTranslator, self).__init__(None, "dgemm")
 
     def get_tuning_driver(self):
@@ -46,10 +46,11 @@ class DgemmTranslator(LazySpecializedFunction):
         from opentuner.search.objective import MinimizeTime
 
         manip = ConfigurationManipulator()
-        manip.add_parameter(PowerOfTwoParameter("rx", 1, 16))
-        manip.add_parameter(PowerOfTwoParameter("ry", 1, 16))
-        manip.add_parameter(IntegerParameter("cx", 8, 64))
-        manip.add_parameter(IntegerParameter("cy", 8, 64))
+        manip.add_parameter(PowerOfTwoParameter("rx", 1, 8))
+        manip.add_parameter(PowerOfTwoParameter("ry", 1, 8))
+        manip.add_parameter(IntegerParameter("cx", 8, 32))
+        manip.add_parameter(IntegerParameter("cy", 8, 32))
+        manip.add_parameter(IntegerParameter("t", 1, 8))
 
         return OpenTunerDriver(manipulator=manip, objective=MinimizeTime())
 
@@ -126,6 +127,8 @@ class DgemmTranslator(LazySpecializedFunction):
         Convert the Python AST to a C AST according to the directions
         given in program_config.
         """
+        self._current_config = program_config
+
         arg_config, tuner_config = program_config
         n, dtype  = arg_config['n'], arg_config['dtype']
         rx, ry = tuner_config['rx']*4, tuner_config['ry']*4
@@ -269,11 +272,12 @@ class SquareDgemm(object):
         """Instantiate translator."""
         self.c_dgemm = DgemmTranslator()
 
-    def __call__(self, C, A, B):
+    def __call__(self, A, B):
         """C = A * B"""
         from ctypes import c_double, byref
         #from ctree.metrics.watts_up_reader import WattsUpReader
 
+        C = np.zeros(shape=A.shape, dtype=A.dtype)
         duration = c_double()
         #meter = WattsUpReader()
         #meter.start_recording()
@@ -281,24 +285,25 @@ class SquareDgemm(object):
         #energy_report = meter.get_recording()
         #self.c_dgemm.report(time=duration.value, energy=energy_report.joules)
         self.c_dgemm.report(time=duration.value)
-        return duration.value
+        return C, duration.value, self.c_dgemm._current_config
 
 
 def main():
-    n = 1024
-    c_dgemm = SquareDgemm()
+    n = 600
+    c_dot = SquareDgemm()
 
     A = np.random.rand(n, n)
     B = np.random.rand(n, n)
     C_expected = np.dot(A.T, B.T)
 
-    for i in range(1000):
-      C_actual = np.zeros((n, n))
-      duration = c_dgemm(C_actual, A, B)
+    for i in range(100):
+      C_actual, duration, config = c_dot(A, B)
       np.testing.assert_almost_equal(C_actual.T, C_expected)
 
-      ticks = min(100, int(duration * 100.0))
-      print ("trial %03d took %f sec: %s" % (i, duration, '#' * ticks))
+      ticks = min(100, int(duration * 200.0))
+      print ("trial %03d %s took %f sec: %s" % (i, str(config[1]).ljust(46), duration, '#' * ticks))
+
+      del C_actual
 
     print("Done.")
 
