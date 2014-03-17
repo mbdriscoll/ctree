@@ -51,7 +51,7 @@ class TestOpenTunerDriver(unittest.TestCase):
 
         unsearched = set(range(200))
         for cfg in islice(driver.configs, 20):
-            val = cfg.data["foo"]
+            val = cfg["foo"]
             driver.report(time=val)
             unsearched.remove(val)
         self.assertEqual(len(unsearched), 180)
