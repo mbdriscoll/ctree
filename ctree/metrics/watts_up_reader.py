@@ -80,6 +80,7 @@ class WattsUpReader(object):
         self.serial_port.flushInput()
         self.serial_port.flushOutput()
         self.serial_port.write(chr(0x18))
+        self.serial_port.write("#O,W,1,%d")
         self.serial_port.write("#R,W,0;")
         self.serial_port.setDTR()
 
