@@ -37,6 +37,7 @@ __author__ = 'Chick Markley'
 
 
 import serial
+import readline
 import time
 import select
 import collections
@@ -64,7 +65,7 @@ class WattsUpReader(object):
         self.t = []
         self.power = []
         self.returned_lines = 0
-        # I don't think device support anything smaller
+        # I don't think device supports anything smaller
         self.record_interval = 1
 
         self.start_recording()
@@ -81,12 +82,10 @@ class WattsUpReader(object):
         self.serial_port.sendBreak()
         self.serial_port.flushInput()
         self.serial_port.flushOutput()
-        self.serial_port.write(chr(0x18))
-        self.serial_port.write("#O,W,1,%d")
-        self.serial_port.write("#R,W,0;")
-        time.sleep(1)
-        self.serial_port.write("#L,W,3,I,0,%d" % self.record_interval)
         self.serial_port.setDTR()
+        self.serial_port.write(chr(0x18))
+        time.sleep(1)
+        self.send_command("#V,W,0;", timeout=10, tries=1)
 
     def clear(self):
         self.serial_port.write("#R,W,0;")
@@ -156,24 +155,35 @@ class WattsUpReader(object):
             result = self.fetch(base_time=time.time(), time_out=1000, raw=True)
             print(result)
 
-    def start_recording(self):
-        self.drain()
+    def send_command(self, command, timeout=3, tries=3):
+        if not command.startswith("#"):
+            print( "Error: no initial # for command %s", command)
+            return
+        if not command.strip().endswith(";"):
+            print( "Error: no trailing ; for command %s", command)
+            return
 
-        for tries in range(3):
-            command = "#L,W,3,E,,%d;" % self.record_interval
+        for tries in range(tries):
             if self.verbose:
                 print("sending command %s" % command)
             self.serial_port.write(command)
 
-            answer = self.fetch(time_out=3)
+            answer = self.fetch(time_out=timeout)
             if answer:
                 if self.verbose:
-                    print("answer %s" %answer)
+                    print("answer %s",end="")
+                    print(answer)
                 self.last_time = time.time()
                 return
             else:
                 if self.verbose:
-                    print("timed out on record command")
+                    print("timed out sending command %s" % command)
+
+    def start_recording(self):
+        self.drain()
+
+        command = "#L,W,3,E,,%d;" % self.record_interval
+        self.send_command(command)
 
     def get_recording(self):
         def pull():
@@ -216,14 +226,19 @@ class WattsUpReader(object):
         print("\n")
 
     def interactive_mode(self):
+        readline.parse_and_bind('tab: complete')
+        readline.parse_and_bind('set editing-mode vi')
+
         last_input = None
         WattsUpReader.usage()
         while True:
-            print("Command: ", end="")
-            user_input = sys.stdin.readline()
+            # print("Command: ", end="")
+            # user_input = sys.stdin.readline()
+
+            user_input = raw_input("Command (quit to exit): ")
             # print("got input %s" % user_input)
-            if user_input.strip() == '':
-                user_input = last_input
+            # if user_input.strip() == '':
+            #     user_input = last_input
 
             if user_input.startswith('q') or user_input.startswith('Q'):
                 return
@@ -258,15 +273,22 @@ class WattsUpReader(object):
     def guess_port():
         import subprocess
 
-        possible_devices = subprocess.check_output("ls /dev/tty*usb*", shell=True).strip().split('\n')
-        if len(possible_devices) == 1:
-            return possible_devices[0]
-        elif not possible_devices:
-            raise Exception("No potential usb based readers found, is it plugged in?")
-        else:
-            for device in possible_devices:
-                print("Possible device %s" % device)
-            raise Exception("Multiple possible devices found, you must specify explicitly")
+        for tty_search_command in ["ls /dev/tty*usb*","ls /dev/tty*USB*"]:
+            try:
+                possible_devices = subprocess.check_output(tty_search_command, shell=True).strip().split('\n')
+            except:
+                possible_devices = []
+
+            if len(possible_devices) == 1:
+                return possible_devices[0]
+            else:
+                for device in possible_devices:
+                    print("Possible device %s" % device)
+                print("Multiple possible devices found, you must specify explicitly")
+                exit(1)
+
+        print("No potential usb based readers found, is it plugged in?")
+        exit(1)
 
 
 if __name__ == "__main__":
