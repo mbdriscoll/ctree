@@ -67,10 +67,12 @@ class WattsUpReader(object):
         # I don't think device support anything smaller
         self.record_interval = 1
 
+        self.start_recording()
+
     def reset(self):
         if self.serial_port:
             self.serial_port.close()
-        time.sleep(2)
+        time.sleep(1)
 
         self.serial_port = serial.Serial(self.port_name, 115200)
         if self.verbose:
@@ -82,6 +84,8 @@ class WattsUpReader(object):
         self.serial_port.write(chr(0x18))
         self.serial_port.write("#O,W,1,%d")
         self.serial_port.write("#R,W,0;")
+        time.sleep(1)
+        self.serial_port.write("#L,W,3,I,0,%d" % self.record_interval)
         self.serial_port.setDTR()
 
     def clear(self):
@@ -154,8 +158,22 @@ class WattsUpReader(object):
 
     def start_recording(self):
         self.drain()
-        self.serial_port.write("#L,W,3,I,0,%d" % self.record_interval)
-        self.last_time = time.time()
+
+        for tries in range(3):
+            command = "#L,W,3,E,,%d;" % self.record_interval
+            if self.verbose:
+                print("sending command %s" % command)
+            self.serial_port.write(command)
+
+            answer = self.fetch(time_out=3)
+            if answer:
+                if self.verbose:
+                    print("answer %s" %answer)
+                self.last_time = time.time()
+                return
+            else:
+                if self.verbose:
+                    print("timed out on record command")
 
     def get_recording(self):
         def pull():
@@ -181,6 +199,13 @@ class WattsUpReader(object):
         all_results = pull()
         self.last_time = time.time()
         return all_results
+
+    def command(self, string):
+        self.serial_port.write(string)
+        save_verbose, self.verbose = self.verbose, True
+        time.sleep(1)
+        self.drain()
+        self.verbose = save_verbose
 
     @staticmethod
     def usage():
