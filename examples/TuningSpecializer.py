@@ -52,7 +52,7 @@ class GetHeight(LazySpecializedFunction):
         Convert the Python AST to a C AST according to the directions
         given in program_config.
         """
-        tune_cfg = program_config[1].data
+        tune_cfg = program_config[1]
         x, y = tune_cfg['x'], tune_cfg['y']
 
         template_args = {
@@ -98,7 +98,7 @@ def main():
     while True:
         z = get_min_height()
         if z < best_z:
-            print("New best on call #%3d: get_height() -> %f" % (i, z))
+            print("New best on call #%3d: get_height() -> %e" % (i, z))
             best_z = z
         if abs(z - 1.0) < 1e-6:
             print("Found global minimum in %d calls." % i)

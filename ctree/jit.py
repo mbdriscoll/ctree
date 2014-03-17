@@ -113,9 +113,8 @@ class LazySpecializedFunction(object):
         tuner_subconfig = next(self._tuner.configs)
         program_config = (args_subconfig, tuner_subconfig)
 
-        log.info("tuner returned subconfig: %s", tuner_subconfig)
-        log.info("specializer returned subconfig for arguments: %s",
-                 (args_subconfig,))
+        log.info("tuner subconfig: %s", tuner_subconfig)
+        log.info("arguments subconfig: %s", args_subconfig)
 
         config_hash = hash((self._hash_dict(args_subconfig),
                             self._hash_dict(tuner_subconfig)))
