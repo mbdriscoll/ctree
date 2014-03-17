@@ -56,7 +56,10 @@ class WattsUpReader(object):
         "Summary", ["joules", "millicoulomb", "samples", "sampling_interval", "start_time"]
     )
 
-    def __init__(self, port_name, verbose=False):
+    def __init__(self, port_name=None, verbose=False):
+        if port_name == None:
+            from ctree import CONFIG
+            port_name = CONFIG.get('wattsup', 'port')
         self.port_name = port_name
         self.serial_port = serial.Serial(self.port_name, 115200)
 

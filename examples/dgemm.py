@@ -19,6 +19,7 @@ from ctree.dotgen import to_dot
 from ctree.transformations import *
 from ctree.jit import LazySpecializedFunction
 from ctree.types import get_ctree_type
+from ctree.metrics.watts_up_reader import WattsUpReader
 
 def MultiArrayRef(name, *idxs):
     """
@@ -43,7 +44,7 @@ class DgemmTranslator(LazySpecializedFunction):
         from opentuner.search.manipulator import ConfigurationManipulator
         from opentuner.search.manipulator import IntegerParameter
         from opentuner.search.manipulator import PowerOfTwoParameter
-        from opentuner.search.objective import MinimizeTime
+        from opentuner.search.objective import MinimizeTime, MinimizeEnergy
 
         manip = ConfigurationManipulator()
         manip.add_parameter(PowerOfTwoParameter("rx", 1, 8))
@@ -279,17 +280,16 @@ class SquareDgemm(object):
 
         C = np.zeros(shape=A.shape, dtype=A.dtype)
         duration = c_double()
-        #meter = WattsUpReader()
-        #meter.start_recording()
+        meter = WattsUpReader()
+        meter.start_recording()
         self.c_dgemm(C, A, B, byref(duration))
-        #energy_report = meter.get_recording()
-        #self.c_dgemm.report(time=duration.value, energy=energy_report.joules)
-        self.c_dgemm.report(time=duration.value)
-        return C, duration.value, self.c_dgemm._current_config
+        energy_summary, _ = meter.get_recording()
+        self.c_dgemm.report(time=duration.value, energy=energy_summary.joules)
+        return C, duration.value, energy_summary.joules, self.c_dgemm._current_config
 
 
 def main():
-    n = 600
+    n = 2048
     c_dot = SquareDgemm()
 
     A = np.random.rand(n, n)
@@ -297,11 +297,11 @@ def main():
     C_expected = np.dot(A.T, B.T)
 
     for i in range(100):
-      C_actual, duration, config = c_dot(A, B)
+      C_actual, duration, joules, config = c_dot(A, B)
       np.testing.assert_almost_equal(C_actual.T, C_expected)
 
-      ticks = min(100, int(duration * 200.0))
-      print ("trial %03d %s took %f sec: %s" % (i, str(config[1]).ljust(46), duration, '#' * ticks))
+      ticks = min(40, int(joules / 10.0))
+      print ("trial %s %s took %f sec, used %s joules: %s" % (str(i).rjust(3), str(config[1]).ljust(46), duration, str(joules).rjust(5), '#' * ticks))
 
       del C_actual
 

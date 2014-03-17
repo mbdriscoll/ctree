@@ -98,7 +98,7 @@ def main():
     while True:
         z = get_min_height()
         if z < best_z:
-            print("New best on call #%3d: get_height() -> %e" % (i, z))
+            print("New best on call #%3d: error -> %e" % (i, z-1.0))
             best_z = z
         if abs(z - 1.0) < 1e-6:
             print("Found global minimum in %d calls." % i)
