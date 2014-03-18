@@ -28,7 +28,9 @@ setup(
 
     install_requires=[
         'numpy',
+        'mako',
         'pyserial',
+        'readline',
     ],
 
     entry_points={
