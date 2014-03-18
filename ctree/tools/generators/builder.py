@@ -25,7 +25,7 @@ class Builder:
         if kwargs[Builder.verbose_key]:
             self.verbose = kwargs[Builder.verbose_key]
 
-    def build(self,template_dir,target_dir,depth=0):
+    def build(self, template_dir, target_dir, depth=0):
         """
         walks the template_dir
         each directory founds is created in associated target_dir
@@ -58,7 +58,7 @@ class Builder:
             os.makedirs(target_dir)
         except OSError as exception:
             print "Unable to create %s error (%d) %s" % \
-                (template_dir,exception.errno,exception.strerror)
+                (target_dir,exception.errno,exception.strerror)
             exit(1)
 
         if target_dir[-4:] == '/bin':
@@ -90,7 +90,3 @@ class Builder:
                 destination = target_file if file != 'specializer_package' else os.path.join(target_dir, self.target_base)
 
                 self.build(source_file, destination, depth+1)
-
-
-
-

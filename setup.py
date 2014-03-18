@@ -1,6 +1,42 @@
 #from distutils.core import setup
 from setuptools import setup
 
+
+def make_data_file_list(target, source):
+    import os
+
+    def visit(destination_directory, source_directory):
+        # print destination_directory + " " + source_directory
+        files = os.listdir(source_directory)
+        data_file_list = []
+        todo = []
+        for file_name in files:
+            # print type(file_name)
+            source_file = os.path.join(source_directory, file_name)
+            # print "source_file " + source_file
+            next_destination_directory = os.path.join(destination_directory,file_name)
+
+            if file_name.startswith("__"):
+                pass
+            elif os.path.isdir(source_file):
+                data_file_list.append((next_destination_directory,[]))
+                todo.append((next_destination_directory,source_file))
+            elif os.path.isfile(source_file):
+                data_file_list.append((destination_directory,[source_file]))
+
+        for next_target, next_source in todo:
+            data_file_list += visit(next_target, next_source)
+
+        return data_file_list
+
+
+    return visit(target, source)
+
+data_file_list = make_data_file_list("ctree/tools/generators/templates","ctree/tools/generators/templates")
+# import pprint
+# pprint.pprint(data_file_list)
+
+
 setup(
     name='ctree',
     version='0.95a',
@@ -32,6 +68,8 @@ setup(
         'pyserial',
         'readline',
     ],
+
+    data_files=data_file_list,
 
     entry_points={
         'console_scripts': ['ctree = ctree.tools.runner:main'],
