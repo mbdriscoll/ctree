@@ -16,7 +16,7 @@ def make_data_file_list(target, source):
             # print "source_file " + source_file
             next_destination_directory = os.path.join(destination_directory,file_name)
 
-            if file_name.startswith("__"):
+            if file_name.startswith("__") and file_name != '__init__.py':
                 pass
             elif os.path.isdir(source_file):
                 data_file_list.append((next_destination_directory,[]))
@@ -28,7 +28,6 @@ def make_data_file_list(target, source):
             data_file_list += visit(next_target, next_source)
 
         return data_file_list
-
 
     return visit(target, source)
 
@@ -66,7 +65,7 @@ setup(
         'numpy',
         'mako',
         'pyserial',
-        'readline',
+        # 'readline',
     ],
 
     data_files=data_file_list,

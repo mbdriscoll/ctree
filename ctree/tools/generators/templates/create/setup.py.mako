@@ -4,11 +4,11 @@ setup(
     name='${specializer_name}',
     version='0.95a',
 
-    packages = [
+    packages=[
         '${specializer_name}',
     ],
 
-    package_data = {
+    package_data={
         '${specializer_name}': ['defaults.cfg'],
     },
 
