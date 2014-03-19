@@ -26,6 +26,8 @@ import ast
 # from examples.stencil_grid.stencil_optimize_cpp import *
 # from examples.stencil_grid.stencil_convert import *
 from copy import deepcopy
+import logging
+logging.basicConfig(level=20)
 
 from ctree.transformations import PyBasicConversions
 from ctree.jit import LazySpecializedFunction
@@ -34,18 +36,14 @@ from ctree.frontend import get_ast
 from ctree.visitors import NodeTransformer, NodeVisitor
 from ctree.c.nodes import *
 from ctree.omp.nodes import *
-from ctree.templates.nodes import StringTemplate
 
 
-import logging
 
 # logging.basicConfig(filename='tmp.txt',
 #                             filemode='w',
 #                             format='%(asctime)s,%(msecs)d %(name)s %(levelname)s %(message)s',
 #                             datefmt='%H:%M:%S',
 #                             level=20)
-
-logging.basicConfig(level=20)
 
 
 class StencilConvert(LazySpecializedFunction):
@@ -61,10 +59,16 @@ class StencilConvert(LazySpecializedFunction):
         return conf
 
     def get_tuning_driver(self):
-        from ctree.tune import *
-        params = [IntegerParameter("cache_block", 4, 8),
+        from ctree.tune import (
+            BruteForceTuningDriver,
+            IntegerParameter,
+            MinimizeTime
+        )
+
+        params = [IntegerParameter("block_factor", 4, 8),
                   IntegerParameter("unroll_factor", 1, 4)]
         return BruteForceTuningDriver(params, MinimizeTime())
+
 
     def transform(self, tree, program_config):
         """Convert the Python AST to a C AST."""
@@ -74,14 +78,17 @@ class StencilConvert(LazySpecializedFunction):
         kernel_sig = FuncType(Void(), param_types)
 
         tune_cfg = program_config[1]
-        cache_block_amt = 2**tune_cfg['cache_block']
+        # block_factor = 2**tune_cfg['block_factor']
         unroll_factor = 2**tune_cfg['unroll_factor']
 
         for transformer in [StencilTransformer(self.input_grids,
                                                self.output_grid),
                             PyBasicConversions()]:
             tree = transformer.visit(tree)
-        self.unroll_loops(tree, unroll_factor)
+        first_For = tree.find(For)
+        inner_For = FindInnerMostLoop().find(first_For)
+        # self.block(inner_For, first_For, block_factor)
+        self.unroll(inner_For, unroll_factor)
         # remove self param
         # TODO: Better way to do this?
         params = tree.find(FunctionDecl, name="kernel").params
@@ -104,36 +111,35 @@ class StencilConvert(LazySpecializedFunction):
             calc += ")"
             first_for.insert_before(Define(defname+params, calc))
 
-    def unroll_loops(self, tree, factor):
-        # Grab first for loop
-        first_For = tree.find(For)
-        node = FindInnerMostLoop().find(first_For)
-
-        # Determine the leftover iteratiosn after unrolling
-        initial = node.init.right.value
-        end = node.test.right.value
+    def unroll(self, for_node, factor):
+        # Determine the leftover iterations after unrolling
+        initial = for_node.init.right.value
+        end = for_node.test.right.value
         leftover_begin = int((end - initial + 1) / factor) * factor + initial
 
         new_end = leftover_begin - 1
-        new_incr = AddAssign(SymbolRef(node.incr.arg.name), factor)
-        new_body = node.body[:]
+        new_incr = AddAssign(SymbolRef(for_node.incr.arg.name), factor)
+        new_body = for_node.body[:]
         for x in range(1, factor):
-            new_extension = deepcopy(node.body)
-            new_extension = map(UnrollReplacer(node.init.left.name,
+            new_extension = deepcopy(for_node.body)
+            new_extension = map(UnrollReplacer(for_node.init.left.name,
                                                x).visit, new_extension)
             new_body.extend(new_extension)
 
-        leftover_For = For(Assign(node.init.left,
+        leftover_For = For(Assign(for_node.init.left,
                                   Constant(leftover_begin)),
-                           node.test,
-                           node.incr,
-                           node.body)
-        node.test = LtE(node.init.left.name, new_end)
-        node.incr = new_incr
-        node.body = new_body
+                           for_node.test,
+                           for_node.incr,
+                           for_node.body)
+        for_node.test = LtE(for_node.init.left.name, new_end)
+        for_node.incr = new_incr
+        for_node.body = new_body
 
         if not leftover_begin >= end:
-            node.body.append(leftover_For)
+            for_node.body.append(leftover_For)
+
+    #def block(self, tree, factor):
+
 
 
 class FindInnerMostLoop(NodeVisitor):
@@ -161,7 +167,6 @@ class UnrollReplacer(NodeTransformer):
         if node.name == self.loopvar:
             return Add(node, Constant(self.incr))
         return SymbolRef(node.name)
-
 
 
 class StencilTransformer(NodeTransformer):
@@ -309,7 +314,9 @@ class StencilTransformer(NodeTransformer):
             return SubAssign(self.visit(node.target), value)
 
     def visit_Assign(self, node):
-        return Assign(self.visit(node.targets[0]), self.visit(node.value))
+        target = PyBasicConversions().visit(self.visit(node.targets[0]))
+        value = PyBasicConversions().visit(self.visit(node.value))
+        return Assign(target, value)
 
 
 # may want to make this inherit from something else...
@@ -350,5 +357,24 @@ class StencilKernel(object):
         if self.pure_python:
             return self.pure_python_kernel(*args)
 
-        model = StencilConvert(self.model, "kernel", args[0:-1], args[-1])
-        return model(*[arg.data for arg in args])
+        if not self.specialized_sizes or\
+                self.specialized_sizes != [y.shape for y in args]:
+            self.specialized = StencilConvert(self.model, "kernel",
+                                              args[0:-1], args[-1])
+            self.specialized_sizes = [arg.shape for arg in args]
+
+        with Timer() as t:
+            self.specialized(*[arg.data for arg in args])
+        self.specialized.report(time=t)
+
+import time
+
+
+class Timer:
+    def __enter__(self):
+        self.start = time.clock()
+        return self
+
+    def __exit__(self, *args):
+        self.end = time.clock()
+        self.interval = self.end - self.start
