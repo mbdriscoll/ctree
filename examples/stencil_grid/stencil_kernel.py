@@ -47,9 +47,10 @@ from ctree.omp.nodes import *
 
 
 class StencilConvert(LazySpecializedFunction):
-    def __init__(self, func, entry_point, input_grids, output_grid):
+    def __init__(self, func, entry_point, input_grids, output_grid, constants):
         self.input_grids = input_grids
         self.output_grid = output_grid
+        self.constants = constants
         super(StencilConvert, self).__init__(get_ast(func), entry_point)
 
     def args_to_subconfig(self, args):
@@ -82,7 +83,9 @@ class StencilConvert(LazySpecializedFunction):
         unroll_factor = 2**tune_cfg['unroll_factor']
 
         for transformer in [StencilTransformer(self.input_grids,
-                                               self.output_grid),
+                                               self.output_grid,
+                                               self.constants
+                                               ),
                             PyBasicConversions()]:
             tree = transformer.visit(tree)
         first_For = tree.find(For)
@@ -170,7 +173,7 @@ class UnrollReplacer(NodeTransformer):
 
 
 class StencilTransformer(NodeTransformer):
-    def __init__(self, input_grids, output_grid):
+    def __init__(self, input_grids, output_grid, constants):
         # TODO: Give these wrapper classes?
         self.input_grids = input_grids
         self.output_grid = output_grid
@@ -182,6 +185,7 @@ class StencilTransformer(NodeTransformer):
         self.offset_list = None
         self.var_list = []
         self.input_dict = {}
+        self.constants = constants
         super(StencilTransformer, self).__init__()
 
     def visit_FunctionDef(self, node):
@@ -318,6 +322,11 @@ class StencilTransformer(NodeTransformer):
         value = PyBasicConversions().visit(self.visit(node.value))
         return Assign(target, value)
 
+    def visit_Name(self, node):
+        if node.id in self.constants.keys():
+            return Constant(self.constants[node.id])
+        return node
+
 
 # may want to make this inherit from something else...
 class StencilKernel(object):
@@ -352,6 +361,7 @@ class StencilKernel(object):
 
         self.specialized_sizes = None
         self.with_cilk = with_cilk
+        self.constants = {}
 
     def shadow_kernel(self, *args):
         if self.pure_python:
@@ -359,8 +369,8 @@ class StencilKernel(object):
 
         if not self.specialized_sizes or\
                 self.specialized_sizes != [y.shape for y in args]:
-            self.specialized = StencilConvert(self.model, "kernel",
-                                              args[0:-1], args[-1])
+            self.specialized = StencilConvert(
+                self.model, "kernel", args[0:-1], args[-1], self.constants)
             self.specialized_sizes = [arg.shape for arg in args]
 
         with Timer() as t:
