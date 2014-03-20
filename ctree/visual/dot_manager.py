@@ -14,6 +14,19 @@ class DotManager(object):
         return DotManager.dot_text_to_image(dot_text)
 
     @staticmethod
+    def dot_ast_to_browser(ast_node, file_name):
+        from  ctree.dotgen import to_dot
+
+        dot_text = to_dot(ast_node)
+        dot_output = DotManager.run_dot(dot_text)
+
+        with open(file_name, "wb") as f:
+            f.write(dot_output)
+
+        import subprocess
+        subprocess.check_output(["open", file_name])
+
+    @staticmethod
     def dot_text_to_image(text):
         try:
             from IPython.display import Image
@@ -24,7 +37,7 @@ class DotManager(object):
             return None
 
     @staticmethod
-    def run_dot(code, options=None, output_format='png'):
+    def run_dot(code, options=None, output_format='png', file_name=None):
         # mostly copied from sphinx.ext.graphviz.render_dot
         import os
         from subprocess import Popen, PIPE
@@ -33,6 +46,9 @@ class DotManager(object):
         if not options:
             options = []
         dot_args = ['dot'] + options + ['-T', output_format]
+        if file_name:
+            dot_args += ['>',file_name]
+
         if os.name == 'nt':
             # Avoid opening shell window.
             # * https://github.com/tkf/ipython-hierarchymagic/issues/1
