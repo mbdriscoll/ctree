@@ -51,9 +51,8 @@ class DgemmTranslator(LazySpecializedFunction):
         manip.add_parameter(PowerOfTwoParameter("ry", 1, 8))
         manip.add_parameter(IntegerParameter("cx", 8, 32))
         manip.add_parameter(IntegerParameter("cy", 8, 32))
-        manip.add_parameter(IntegerParameter("t", 1, 8))
 
-        return OpenTunerDriver(manipulator=manip, objective=MinimizeTime())
+        return OpenTunerDriver(manipulator=manip, objective=MinimizeEnergy())
 
     def args_to_subconfig(self, args):
         """
@@ -306,7 +305,7 @@ def main():
 
       ticks = min(40, int(joules / 10.0))
       print ("trial %s %s took %f sec, used %s joules: %s %s" % \
-          (str(i).rjust(3), str(config[1]).ljust(46), seconds, str(joules).rjust(5), ('#' * ticks).ljust(40), best_indicator))
+          (str(i).rjust(3), str(config[1]).ljust(38), seconds, str(joules).rjust(5), ('#' * ticks).ljust(40), best_indicator))
 
       del C_actual
 
