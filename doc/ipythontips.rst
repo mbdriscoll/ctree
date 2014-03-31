@@ -38,7 +38,7 @@ In the first cell, lets import our tools and write a function who's AST we shall
                 a[x] += x
 
         tree1 = ctree.get_ast(f)
-        ctree.ipython_show_ast(tree1)
+        ctree.visual.dot_manager.DotManager.dot_ast_to_image(tree1)
 
 Hit the play button, the tree should render and a new cell should be created below the tree image.
 
@@ -51,7 +51,7 @@ In the next cell let's transform that tree using the basic py conversions::
 
         t = PyBasicConversions()
         tree2 = t.visit(tree1)
-        ctree.ipython_show_ast(tree2)
+        ctree.visual.dot_manager.DotManager.dot_ast_to_image(tree2)
 
 Once again hit the play button and the transformed tree will appear
 
