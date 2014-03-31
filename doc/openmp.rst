@@ -10,9 +10,9 @@ Installing OpenMP/Clang
 ------------------
 
 These instructions are a combination of instructions found from
-`http://clang-omp.github.io/<http://clang-omp.github.io/>`,
-`http://llvm.org/docs/GettingStarted.html<http://llvm.org/docs/GettingStarted.html>`
-and `https://www.openmprtl.org/<https://www.openmprtl.org/>`.
+`http://clang-omp.github.io/`,
+`http://llvm.org/docs/GettingStarted.html`
+and `https://www.openmprtl.org/`.
 
 First, get the source code::
 
@@ -38,9 +38,9 @@ replace LD_LIBRARY_PATH with DYLD_LIBRARY_PATH.::
         LD_LIBRARY_PATH=/install/prefix/lib:<OpenMP library path>:$LD_LIBRARY_PATH
 
 Download and install the Intel OpenMP Runtime Library from
-`https://www.openmprtl.org/<https://www.openmprtl.org/>`, or by installing the
+`https://www.openmprtl.org/`, or by installing the
 `Intel
-Compilers<http://software.intel.com/en-us/intel-compilershttp://software.intel.com/en-us/intel-compilers>`.
+Compilers<http://software.intel.com/en-us/intel-compilershttp://software.intel.com/en-us/intel-compilers>`_.
 You can use the evaluation version of the Intel compilers which will install
 the OpenMP runtime library.  After 30 days the compilers will cease to work but
 the runtime library will still be usable.
