@@ -89,6 +89,7 @@ class PyBasicConversions(NodeTransformer):
                 [self.visit(stmt) for stmt in node.body],
             )
             return for_loop
+        node.body = list(map(self.visit, node.body))
         return node
 
     def visit_If(self, node):
