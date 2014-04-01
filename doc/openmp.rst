@@ -39,7 +39,7 @@ replace LD_LIBRARY_PATH with DYLD_LIBRARY_PATH.::
 
 Download and install the Intel OpenMP Runtime Library from
 `https://www.openmprtl.org/`, or by installing the
-`Intel Compilers 
+`Intel Compilers
 <http://software.intel.com/en-us/intel-compilershttp://software.intel.com/en-us/intel-compilers>`_.
 You can use the evaluation version of the Intel compilers which will install
 the OpenMP runtime library.  After 30 days the compilers will cease to work but

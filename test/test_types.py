@@ -90,3 +90,36 @@ class TestTypeFetcher(unittest.TestCase):
     def test_bad_obj_coversion(self):
         with self.assertRaises(Exception):
             get_ctree_type(self.Nothing())
+
+
+class TestOverrideException(unittest.TestCase):
+    class BadType(CtreeType):
+        pass
+
+    def test_no_codegen(self):
+        with self.assertRaises(Exception):
+            BadType().codegen()
+
+    def test_no_as_ctypes(self):
+        with self.assertRaises(Exception):
+            BadType().as_ctypes()
+
+    class GoodType(CtreeType):
+
+        def codegen(self):
+            pass
+
+        def as_ctype(self):
+            pass
+
+    def test_with_codegen(self):
+        try:
+            GoodType().codegen()
+        except e:
+            self.fail("codegen should not raise exception.")
+
+    def test_with_as_ctypes(self):
+        try:
+            GoodType().as_ctypes()
+        except e:
+            self.fail("as_ctypes should not raise exception.")
