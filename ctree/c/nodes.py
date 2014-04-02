@@ -136,11 +136,12 @@ class For(Statement):
 
 # TODO: Decide on naming scheme for define statements
 class Define(Statement):
-    _fields = ['defname', 'calc']
+    _fields = ['name', 'params', 'body']
 
-    def __init__(self, defname=None, calc=None):
-        self.defname = defname
-        self.calc = calc
+    def __init__(self, name=None, params=None, body=None):
+        self.name = name
+        self.params = params
+        self.body = body
         super(Define, self).__init__()
 
     def _requires_semicolon(self):
