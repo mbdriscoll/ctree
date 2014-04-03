@@ -136,7 +136,6 @@ class For(Statement):
 
 # TODO: Decide on naming scheme for define statements
 class Define(Statement):
-    _fields = ['name', 'params', 'body']
 
     def __init__(self, name=None, params=None, body=None):
         self.name = name
