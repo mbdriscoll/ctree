@@ -7,7 +7,7 @@ import ast
 from ctree.nodes import Project
 from ctree.c.nodes import Op, Constant, String, SymbolRef, BinaryOp, TernaryOp, Return
 from ctree.c.nodes import If, CFile, FunctionCall, FunctionDecl, For, Assign, AugAssign
-from ctree.c.nodes import Lt, PostInc, AddAssign
+from ctree.c.nodes import Lt, PostInc, AddAssign, SubAssign, MulAssign, DivAssign
 from ctree.c.types import Long
 from ctree.visitors import NodeTransformer
 
@@ -89,6 +89,7 @@ class PyBasicConversions(NodeTransformer):
                 [self.visit(stmt) for stmt in node.body],
             )
             return for_loop
+        node.body = list(map(self.visit, node.body))
         return node
 
     def visit_If(self, node):
@@ -132,6 +133,21 @@ class PyBasicConversions(NodeTransformer):
 
     def visit_arg(self, node):
         return SymbolRef(node.arg, node.annotation)
+
+    def visit_AugAssign(self, node):
+        op = type(node.op)
+        target = self.visit(node.target)
+        value = self.visit(node.value)
+        if op is ast.Add:
+            return AddAssign(target, value)
+        elif op is ast.Sub:
+            return SubAssign(target, value)
+        elif op is ast.Mult:
+            return MulAssign(target, value)
+        elif op is ast.Div:
+            return DivAssign(target, value)
+        # Error?
+        return node
 
 
 class FixUpParentPointers(NodeTransformer):
