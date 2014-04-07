@@ -89,8 +89,8 @@ class CCodeGen(CodeGenVisitor):
         if node._global:
             s += "__global "
         if node._local:
-            s += "__local"
-        if node._constant:
+            s += "__local "
+        if node._const:
             s += "const "
         if node.type:
             s += "%s " % node.type
