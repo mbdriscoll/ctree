@@ -61,7 +61,7 @@ class _ConcreteSpecializedFunction(object):
     A function backed by generated code.
     """
 
-    def __init__(self, project, entry_point_name, entry_point_typesig):
+    def __init__(self, project, entry_point_name, entry_point_typesig, extra_args):
         assert isinstance(project, Project), \
             "Expected a Project but it got a %s." % type(project)
         assert project.parent is None, \
@@ -70,12 +70,13 @@ class _ConcreteSpecializedFunction(object):
         log.debug("full LLVM program is: <<<\n%s\n>>>" % self.module.ll_module)
         self.fn = self.module.get_callable(entry_point_name,
                                            entry_point_typesig)
+        self._extra_args = extra_args
 
     def __call__(self, *args, **kwargs):
         assert not kwargs, \
             "Passing kwargs to SpecializedFunction.__call__ isn't supported."
 
-        return self.fn(*args, **kwargs)
+        return self.fn(*(args + self._extra_args), **kwargs)
 
 
 class LazySpecializedFunction(object):
@@ -87,7 +88,7 @@ class LazySpecializedFunction(object):
     def __init__(self, py_ast, entry_point_name):
         self.original_tree = py_ast
         self.entry_point_name = entry_point_name
-        self.c_functions = {}  # config -> callable map
+        self.concrete_functions = {}  # config -> callable map
         self._tuner = self.get_tuning_driver()
 
     @staticmethod
@@ -119,13 +120,13 @@ class LazySpecializedFunction(object):
         config_hash = hash((self._hash_dict(args_subconfig),
                             self._hash_dict(tuner_subconfig)))
 
-        if config_hash in self.c_functions:
+        if config_hash in self.concrete_functions:
             ctree.STATS.log("specialized function cache hit")
             log.info("specialized function cache hit!")
         else:
             ctree.STATS.log("specialized function cache miss")
             log.info("specialized function cache miss.")
-            c_ast, entry_point_typesig = self.transform(
+            c_ast, entry_point_typesig, extra_args = self.transform(
                 copy.deepcopy(self.original_tree),
                 program_config
             )
@@ -134,13 +135,14 @@ class LazySpecializedFunction(object):
                             a Project instance, instead got %s." % repr(c_ast)
 
             VerifyOnlyCtreeNodes().visit(c_ast)
-            self.c_functions[config_hash] = _ConcreteSpecializedFunction(
+            self.concrete_functions[config_hash] = _ConcreteSpecializedFunction(
                 c_ast,
                 self.entry_point_name,
-                entry_point_typesig
+                entry_point_typesig,
+                extra_args,
             )
 
-        return self.c_functions[config_hash](*args)
+        return self.concrete_functions[config_hash](*args)
 
     def report(self, *args, **kwargs):
         """
