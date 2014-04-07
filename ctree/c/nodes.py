@@ -191,7 +191,8 @@ class SymbolRef(Literal):
     """Cite me."""
     _next_id = 0
 
-    def __init__(self, name=None, sym_type=None, _global=False):
+    def __init__(self, name=None, sym_type=None, _global=False,
+                 _local=False, _constant=False):
         """
         Create a new symbol with the given name. If a declaration
         type is specified, the symbol is considered a declaration
@@ -200,10 +201,20 @@ class SymbolRef(Literal):
         self.name = name
         self.type = sym_type
         self._global = False
+        self._local = False
+        self._constant = False
         super(SymbolRef, self).__init__()
 
     def set_global(self, value=True):
         self._global = value
+        return self
+
+    def set_local(self, value=True):
+        self._local = value
+        return self
+
+    def set_constant(self, value=True):
+        self._constant = value
         return self
 
     @classmethod
