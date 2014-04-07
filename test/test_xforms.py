@@ -261,3 +261,26 @@ class TestBasicConversions(unittest.TestCase):
             [SymbolRef("foo")],
         )
         self._check(py_ast, c_ast)
+
+    def test_AddAssign(self):
+        py_ast = ast.AugAssign(ast.Name('i', ast.Load()), ast.Add(), ast.Num(3))
+        c_ast = AddAssign(SymbolRef('i'), Constant(3))
+        self._check(py_ast, c_ast)
+
+    def test_SubAssign(self):
+        py_ast = ast.AugAssign(ast.Name('i', ast.Load()),
+                               ast.Sub(), ast.Num(3))
+        c_ast = SubAssign(SymbolRef('i'), Constant(3))
+        self._check(py_ast, c_ast)
+
+    def test_MulAssign(self):
+        py_ast = ast.AugAssign(ast.Name('i', ast.Load()),
+                               ast.Mult(), ast.Num(3))
+        c_ast = MulAssign(SymbolRef('i'), Constant(3))
+        self._check(py_ast, c_ast)
+
+    def test_DivAssign(self):
+        py_ast = ast.AugAssign(ast.Name('i', ast.Load()),
+                               ast.Div(), ast.Num(3))
+        c_ast = DivAssign(SymbolRef('i'), Constant(3))
+        self._check(py_ast, c_ast)
