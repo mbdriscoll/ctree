@@ -14,7 +14,6 @@ class TestSymbols(unittest.TestCase):
 
     def test_init_const(self):
         ref = SymbolRef("foo", _const=True)
-        print(ref)
         assert str(ref) == "const foo"
 
     def test_set_local(self):
