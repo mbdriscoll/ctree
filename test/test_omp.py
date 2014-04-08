@@ -1,6 +1,7 @@
 import unittest
 
 from ctree.omp.nodes import *
+from ctree.omp.macros import *
 from ctree.c.nodes import *
 
 
@@ -36,3 +37,7 @@ class TestOmpCodegen(unittest.TestCase):
     #pragma omp parallel
     x = 3;
 }""")
+
+    def test_get_wtime(self):
+        node = omp_get_wtime()
+        self.assertEqual(str(node), "omp_get_wtime()")

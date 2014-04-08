@@ -61,11 +61,14 @@ class _ConcreteSpecializedFunction(object):
     A function backed by generated code.
     """
 
-    def __init__(self, project, entry_point_name, entry_point_typesig, extra_args):
+    def __init__(self, entry_point_name, project, entry_point_typesig, extra_args=tuple()):
         assert isinstance(project, Project), \
             "Expected a Project but it got a %s." % type(project)
         assert project.parent is None, \
             "Expected null project.parent, but got: %s." % type(project.parent)
+
+        VerifyOnlyCtreeNodes().visit(project)
+
         self.module = project.codegen()
         log.debug("full LLVM program is: <<<\n%s\n>>>" % self.module.ll_module)
         self.fn = self.module.get_callable(entry_point_name,
@@ -126,20 +129,14 @@ class LazySpecializedFunction(object):
         else:
             ctree.STATS.log("specialized function cache miss")
             log.info("specialized function cache miss.")
-            c_ast, entry_point_typesig, extra_args = self.transform(
+            translator_result = self.transform(
                 copy.deepcopy(self.original_tree),
                 program_config
             )
 
-            assert isinstance(c_ast, Project), "Expected transform() to return\
-                            a Project instance, instead got %s." % repr(c_ast)
-
-            VerifyOnlyCtreeNodes().visit(c_ast)
             self.concrete_functions[config_hash] = _ConcreteSpecializedFunction(
-                c_ast,
                 self.entry_point_name,
-                entry_point_typesig,
-                extra_args,
+                *translator_result
             )
 
         return self.concrete_functions[config_hash](*args)
