@@ -38,3 +38,12 @@ def flatten(obj_or_list):
                 yield elem
     else:
         yield obj_or_list
+
+def enumerate_flatten(obj_or_list):
+    """Iterator for all objects arbitrarily nested in lists."""
+    if isinstance(obj_or_list, list):
+        for n, gen in enumerate(map(enumerate_flatten, obj_or_list)):
+            for k, elem in gen:
+                yield (n,)+k, elem
+    else:
+        yield (), obj_or_list

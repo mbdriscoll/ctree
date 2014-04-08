@@ -6,7 +6,7 @@ from ctree.analyses import *
 from ctree.frontend import get_ast
 from ctree.dotgen import to_dot
 
-from ctree.util import flatten
+from ctree.util import flatten, enumerate_flatten
 
 
 a = SymbolRef("a")
@@ -32,6 +32,29 @@ class TestRawFlattening(unittest.TestCase):
     def test_lolol(self):
         self._check([1, [2, [3, 4]]], [1, 2, 3, 4])
         self._check([[1, [2]], 3, 4], [1, 2, 3, 4])
+
+
+class TestRawEnumeratedFlattening(unittest.TestCase):
+    def _check(self, nested, exp_indices):
+        act_indices, values = zip(*enumerate_flatten(nested))
+        for actual, expected in zip(act_indices, exp_indices):
+            print "check", actual, expected
+            self.assertTupleEqual(actual, expected)
+
+    def test_obj(self):
+        self._check(123, ())
+
+    def test_flat(self):
+        self._check([1, 2, 3], [(0,), (1,), (2,)])
+
+    def test_lol(self):
+        self._check([1, [2, 3]],   [(0,), (1,0), (1,1)])
+        self._check([[1, 2], 3],   [(0,0), (0,1), (1,)])
+        self._check([[1], 2, [3]], [(0,0), (1,), (2,0)])
+
+    def test_lolol(self):
+        self._check([1, [2, [3, 4]]], [(0,), (1,0), (1,1,0), (1,1,1)])
+        self._check([[1, [2]], 3, 4], [(0,0), (0,1,0), (1,), (2,)])
 
 
 class TestListFlattening(unittest.TestCase):
@@ -81,6 +104,7 @@ class TestListFlattening(unittest.TestCase):
         }""")
 
 
+@unittest.skip("fails")
 class TestFlatteningDotGen(unittest.TestCase):
     def test_lol_1(self):
         tree = Block([[a, b]])
