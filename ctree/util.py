@@ -28,3 +28,13 @@ def lower_case_underscore_to_camel_case(string):
     # use string's class to work on the string to keep its type
     class_ = string.__class__
     return class_.join('', map(class_.capitalize, string.split('_')))
+
+
+def flatten(obj_or_list):
+    """Iterator for all objects arbitrarily nested in lists."""
+    if isinstance(obj_or_list, list):
+        for gen in map(flatten, obj_or_list):
+            for elem in gen:
+                yield elem
+    else:
+        yield obj_or_list

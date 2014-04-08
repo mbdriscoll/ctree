@@ -12,6 +12,14 @@ from ctree.codegen import CodeGenVisitor
 from ctree.dotgen import DotGenVisitor
 
 
+def flatten(obj):
+    if isinstance(obj, list):
+        for elem in obj:
+            yield flatten(elem)
+    else:
+        yield obj
+
+
 class CtreeNode(ast.AST):
     """Base class for all AST nodes in ctree."""
     _fields = []

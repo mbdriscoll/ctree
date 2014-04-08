@@ -1,4 +1,5 @@
 from ctree.nodes import CtreeNode
+from ctree.util import flatten
 
 class TemplateNode(CtreeNode):
     """Base class for all template nodes."""
@@ -41,7 +42,9 @@ class TemplateNode(CtreeNode):
             assert isinstance(val, dict)
             super(TemplateNode, self).__setattr__(name, val)
             for name, child in val.items():
-                child.parent = self
+                for grandchild in flatten(child):
+                    grandchild.parent = self
+
         elif hasattr(self, "_children") and name in self._children:
             # insert into _children dictionary and set parent pointers
             self._children[name] = val
