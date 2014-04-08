@@ -62,7 +62,6 @@ class Double(CType):
 class LongDouble(CType):
     _ctype = ctypes.c_longdouble
 
-
 class Ptr(CType):
     """
     Pointer type.
@@ -100,6 +99,12 @@ class NdPointer(CType):
 
     def as_ctype(self):
         return self.ptr
+
+    @staticmethod
+    def to(ndarray):
+        """Factory routine for creating an NdPointer to an existing array."""
+        return NdPointer(ndarray.dtype, ndarray.ndim,
+                         ndarray.shape, ndarray.flags)
 
 
 class FILE(CType):
