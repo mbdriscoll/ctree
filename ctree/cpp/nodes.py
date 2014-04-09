@@ -36,3 +36,11 @@ class Comment(CppNode):
     def __init__(self, text=""):
         assert "\n" not in text, "Comment only supports single-line comments."
         self.text = text
+
+class CppDefine(CppNode):
+
+    def __init__(self, name=None, params=None, body=None):
+        self.name = name
+        self.params = params
+        self.body = body
+        super(CppDefine, self).__init__()

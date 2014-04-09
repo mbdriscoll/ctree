@@ -134,18 +134,8 @@ class For(Statement):
         super(For, self).__init__()
 
 
-# TODO: Decide on naming scheme for define statements
-# XXX: put in ctree.cpp.nodes
-class Define(Statement):
-
-    def __init__(self, name=None, params=None, body=None):
-        self.name = name
-        self.params = params
-        self.body = body
-        super(Define, self).__init__()
-
-    def _requires_semicolon(self):
-        return False
+# class Define(Statement):
+# mbd: deprecated. see ctree.cpp.nodes.CppDefine
 
 
 class FunctionCall(Expression):

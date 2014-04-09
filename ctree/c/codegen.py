@@ -178,7 +178,3 @@ class CCodeGen(CodeGenVisitor):
 
     def visit_FILE(self, node):
         return "FILE"
-
-    def visit_Define(self, node):
-        params = ", ".join(map(str, node.params))
-        return "#define %s(%s) %s" % (node.name, params, node.body)
