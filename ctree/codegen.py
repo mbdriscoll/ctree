@@ -25,7 +25,6 @@ class CodeGenVisitor(NodeVisitor):
             self._indent += 1
         body = ""
         for tree in flatten(forest):
-            print tree
             semicolon_opt = ";" if tree._requires_semicolon() else ""
             body += self._tab() + tree.codegen(self._indent) + semicolon_opt + "\n"
         if increase_indent:

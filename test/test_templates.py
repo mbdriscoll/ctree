@@ -59,6 +59,35 @@ class TestStringTemplates(unittest.TestCase):
         while(1)
             printf("hello");""")
 
+    def test_child_single_list(self):
+        d = {
+            'stmts': [Constant(1)]
+        }
+        t = """$stmts"""
+        tree = StringTemplate(t, d)
+        self._check(tree, "1")
+
+
+    def test_child_flat_list(self):
+        d = {
+            'stmts': [Constant(1), Constant(2)]
+        }
+        t = """$stmts"""
+        tree = StringTemplate(t, d)
+        self._check(tree, """\
+        1;
+        2;""")
+
+    def test_child_nested_list(self):
+        d = {
+            'stmts': [[Constant(1)], Constant(2)]
+        }
+        t = """$stmts"""
+        tree = StringTemplate(t, d)
+        self._check(tree, """\
+        1;
+        2;""")
+
     def test_template_with_transformer(self):
         from ctree.visitors import NodeTransformer
         from ctree.c.nodes import String, SymbolRef

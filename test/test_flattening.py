@@ -38,7 +38,6 @@ class TestRawEnumeratedFlattening(unittest.TestCase):
     def _check(self, nested, exp_indices):
         act_indices, values = zip(*enumerate_flatten(nested))
         for actual, expected in zip(act_indices, exp_indices):
-            print "check", actual, expected
             self.assertTupleEqual(actual, expected)
 
     def test_obj(self):

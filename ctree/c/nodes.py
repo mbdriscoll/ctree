@@ -135,6 +135,7 @@ class For(Statement):
 
 
 # TODO: Decide on naming scheme for define statements
+# XXX: put in ctree.cpp.nodes
 class Define(Statement):
 
     def __init__(self, name=None, params=None, body=None):
@@ -223,7 +224,6 @@ class SymbolRef(Literal):
 
     def get_ctype(self):
         return self.type.as_ctype()
-
 
 class FunctionDecl(Statement):
     """Cite me."""
