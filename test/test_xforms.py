@@ -93,8 +93,6 @@ class TestStripDocstrings(unittest.TestCase):
 
     def _check(self, tree):
         for node in ast.walk(tree):
-            if isinstance(node, ast.Str):
-                print(node.s)
             self.assertNotIsInstance(node, ast.Str)
 
     def test_func_docstring(self):

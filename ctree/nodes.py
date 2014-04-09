@@ -10,14 +10,7 @@ import ast
 
 from ctree.codegen import CodeGenVisitor
 from ctree.dotgen import DotGenVisitor
-
-
-def flatten(obj):
-    if isinstance(obj, list):
-        for elem in obj:
-            yield flatten(elem)
-    else:
-        yield obj
+from ctree.util import flatten
 
 
 class CtreeNode(ast.AST):
@@ -32,12 +25,9 @@ class CtreeNode(ast.AST):
     def __setattr__(self, name, value):
         """Set attribute and preserve parent pointers."""
         if name != "parent":
-            if isinstance(value, CtreeNode):
-                value.parent = self
-            elif isinstance(value, list):
-                for grandchild in value:
-                    if isinstance(grandchild, CtreeNode):
-                        grandchild.parent = self
+            for child in flatten(value):
+                if isinstance(child, CtreeNode):
+                    child.parent = self
         super(CtreeNode, self).__setattr__(name, value)
 
     def __str__(self):

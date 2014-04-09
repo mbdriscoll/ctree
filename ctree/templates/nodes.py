@@ -41,9 +41,9 @@ class TemplateNode(CtreeNode):
             # set parent pointers in child_dict
             assert isinstance(val, dict)
             super(TemplateNode, self).__setattr__(name, val)
-            for name, child in val.items():
-                for grandchild in flatten(child):
-                    grandchild.parent = self
+            for name, value in val.items():
+                for child in flatten(value):
+                    child.parent = self
 
         elif hasattr(self, "_children") and name in self._children:
             # insert into _children dictionary and set parent pointers
