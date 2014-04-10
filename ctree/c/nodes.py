@@ -335,6 +335,14 @@ class Cast(Expression):
         super(Cast, self).__init__()
 
 
+class ArrayDef(Expression):
+    """doc"""
+
+    def __init__(self, body=None):
+        self.body = body if body else []
+        super(ArrayDef, self).__init__()
+
+
 @singleton
 class Op:
     class _Op(object):
