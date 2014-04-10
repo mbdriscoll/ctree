@@ -6,6 +6,7 @@ import tempfile
 import ctree
 from ctree.nodes import Project
 from ctree.analyses import VerifyOnlyCtreeNodes
+from ctree.util import highlight
 
 import llvm.core as ll
 
@@ -70,7 +71,8 @@ class _ConcreteSpecializedFunction(object):
         VerifyOnlyCtreeNodes().visit(project)
 
         self.module = project.codegen()
-        log.debug("full LLVM program is: <<<\n%s\n>>>" % self.module.ll_module)
+        highlighted = highlight(str(self.module.ll_module), 'llvm')
+        log.debug("full LLVM program is: <<<\n%s\n>>>" % highlighted)
         self.fn = self.module.get_callable(entry_point_name,
                                            entry_point_typesig)
         self._extra_args = extra_args
