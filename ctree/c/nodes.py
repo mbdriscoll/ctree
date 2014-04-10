@@ -337,6 +337,7 @@ class Cast(Expression):
 
 class ArrayDef(Expression):
     """doc"""
+    _fields = ['body']
 
     def __init__(self, body=None):
         self.body = body if body else []
