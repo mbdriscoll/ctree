@@ -51,9 +51,8 @@ class DgemmTranslator(LazySpecializedFunction):
         manip.add_parameter(PowerOfTwoParameter("ry", 1, 8))
         manip.add_parameter(IntegerParameter("cx", 8, 32))
         manip.add_parameter(IntegerParameter("cy", 8, 32))
-        manip.add_parameter(IntegerParameter("t", 1, 8))
 
-        return OpenTunerDriver(manipulator=manip, objective=MinimizeTime())
+        return OpenTunerDriver(manipulator=manip, objective=MinimizeEnergy())
 
     def args_to_subconfig(self, args):
         """
@@ -276,16 +275,16 @@ class SquareDgemm(object):
     def __call__(self, A, B):
         """C = A * B"""
         from ctypes import c_double, byref
-        #from ctree.metrics.watts_up_reader import WattsUpReader
 
         C = np.zeros(shape=A.shape, dtype=A.dtype)
         duration = c_double()
         meter = WattsUpReader()
         meter.start_recording()
         self.c_dgemm(C, A, B, byref(duration))
-        energy_summary, _ = meter.get_recording()
-        self.c_dgemm.report(time=duration.value, energy=energy_summary.joules)
-        return C, duration.value, energy_summary.joules, self.c_dgemm._current_config
+        joules = meter.get_recording()[0].joules
+        seconds = duration.value
+        self.c_dgemm.report(time=seconds, energy=joules)
+        return C, seconds, joules, self.c_dgemm._current_config
 
 
 def main():
@@ -296,12 +295,17 @@ def main():
     B = np.random.rand(n, n)
     C_expected = np.dot(A.T, B.T)
 
-    for i in range(100):
-      C_actual, duration, joules, config = c_dot(A, B)
+    best_joules = float('inf')
+    for i in range(1000):
+      C_actual, seconds, joules, config = c_dot(A, B)
       np.testing.assert_almost_equal(C_actual.T, C_expected)
 
+      best_indicator = "*** new best ***" if joules < best_joules else ""
+      best_joules = min(best_joules, joules)
+
       ticks = min(40, int(joules / 10.0))
-      print ("trial %s %s took %f sec, used %s joules: %s" % (str(i).rjust(3), str(config[1]).ljust(46), duration, str(joules).rjust(5), '#' * ticks))
+      print ("trial %s %s took %f sec, used %s joules: %s %s" % \
+          (str(i).rjust(3), str(config[1]).ljust(38), seconds, str(joules).rjust(5), ('#' * ticks).ljust(40), best_indicator))
 
       del C_actual
 

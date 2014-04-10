@@ -10,7 +10,7 @@ import logging
 log = logging.getLogger(__name__)
 
 from ctree.nodes import CtreeNode, File
-from ctree.util import singleton
+from ctree.util import singleton, highlight
 
 
 class CNode(CtreeNode):
@@ -47,7 +47,10 @@ class CFile(CNode, File):
         ll_bc_file = os.path.join(compilation_dir, self.get_bc_filename())
         log.info("file for generated C: %s", c_src_file)
         log.info("file for generated LLVM: %s", ll_bc_file)
-        log.info("generated C program: (((\n%s\n)))", truncate(program_text))
+
+        # syntax-highlight and print C program
+        highlighted = highlight(program_text, 'c')
+        log.info("generated C program: (((\n%s\n)))", highlighted)
 
         # write program text to C file
         with open(c_src_file, 'w') as c_file:
@@ -65,7 +68,10 @@ class CFile(CNode, File):
 
         with open(ll_bc_file, 'rb') as bc:
             ll_module = llvm.core.Module.from_bitcode(bc)
-        log.debug("generated LLVM Program: (((\n%s\n)))", ll_module)
+
+        # syntax-highlight and print LLVM program
+        highlighted = highlight(str(ll_module), 'llvm')
+        log.debug("generated LLVM Program: (((\n%s\n)))", highlighted)
 
         return ll_module
 
@@ -191,7 +197,8 @@ class SymbolRef(Literal):
     """Cite me."""
     _next_id = 0
 
-    def __init__(self, name=None, sym_type=None, _global=False):
+    def __init__(self, name=None, sym_type=None, _global=False,
+                 _local=False, _const=False):
         """
         Create a new symbol with the given name. If a declaration
         type is specified, the symbol is considered a declaration
@@ -199,11 +206,21 @@ class SymbolRef(Literal):
         """
         self.name = name
         self.type = sym_type
-        self._global = False
+        self._global = _global
+        self._local = _local
+        self._const = _const
         super(SymbolRef, self).__init__()
 
     def set_global(self, value=True):
         self._global = value
+        return self
+
+    def set_local(self, value=True):
+        self._local = value
+        return self
+
+    def set_const(self, value=True):
+        self._const = value
         return self
 
     @classmethod
