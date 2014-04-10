@@ -28,3 +28,23 @@ def lower_case_underscore_to_camel_case(string):
     # use string's class to work on the string to keep its type
     class_ = string.__class__
     return class_.join('', map(class_.capitalize, string.split('_')))
+
+
+def highlight(code, language='c'):
+    """Syntax-highlight code using pygments, if installed."""
+    try:
+        from pygments.formatters.terminal256 import Terminal256Formatter
+        from pygments.lexers.compiled import CLexer
+        from pygments.lexers.asm import LlvmLexer
+        from pygments import highlight
+    except ImportError:
+        log.info("install pygments for syntax-highlighted output.")
+        return code
+
+    if   language.lower() == 'llvm': lexer = LlvmLexer()
+    elif language.lower() == 'c':    lexer = CLexer()
+    else:
+        raise ValueError("Unrecognized highlight language: %s" % language)
+
+    style = ctree.CONFIG.get('log', 'pygments_style')
+    return highlight(code, lexer, Terminal256Formatter(style=style))
