@@ -1,4 +1,6 @@
-__author__ = 'Chick Markley'
+import logging
+
+log = logging.getLogger(__name__)
 
 from textwrap import dedent
 
@@ -39,6 +41,7 @@ def flatten(obj_or_list):
     else:
         yield obj_or_list
 
+
 def enumerate_flatten(obj_or_list):
     """Iterator for all objects arbitrarily nested in lists."""
     if isinstance(obj_or_list, list):
@@ -47,3 +50,23 @@ def enumerate_flatten(obj_or_list):
                 yield (n,)+k, elem
     else:
         yield (), obj_or_list
+
+
+def highlight(code, language='c'):
+    """Syntax-highlight code using pygments, if installed."""
+    try:
+        from pygments.formatters.terminal256 import Terminal256Formatter
+        from pygments.lexers.compiled import CLexer
+        from pygments.lexers.asm import LlvmLexer
+        from pygments import highlight
+    except ImportError:
+        log.info("install pygments for syntax-highlighted output.")
+        return code
+
+    if   language.lower() == 'llvm': lexer = LlvmLexer()
+    elif language.lower() == 'c':    lexer = CLexer()
+    else:
+        raise ValueError("Unrecognized highlight language: %s" % language)
+
+    style = ctree.CONFIG.get('log', 'pygments_style')
+    return highlight(code, lexer, Terminal256Formatter(style=style))
