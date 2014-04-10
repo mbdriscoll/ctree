@@ -4,6 +4,7 @@ validation of ast trees
 from ctree.visitors import NodeVisitor
 from ctree.nodes import CtreeNode, ast
 from ctree.c.nodes import SymbolRef
+from ctree.util import flatten
 
 
 class DeclFinder(NodeVisitor):
@@ -56,14 +57,11 @@ class VerifyParentPointers(NodeVisitor):
         """throw if child.parent is not the actual parent"""
         if child.parent != parent:
             raise AstValidationError("Expect parent of %s to be %s, but got %s instead." %
-                                     (child, parent, child.parent))
+                                     (type(child), type(parent), type(child.parent)))
 
     def generic_visit(self, node):
-        for _, child in ast.iter_fields(node):
-            if type(child) is list:
-                for grandchild in child:
-                    self._check(grandchild, node)
-                    self.visit(grandchild)
-            elif isinstance(child, ast.AST):
-                self._check(child, node)
-                self.visit(child)
+        for _, value in ast.iter_fields(node):
+            for child in flatten(value):
+                if isinstance(child, ast.AST):
+                    self._check(child, node)
+                    self.visit(child)

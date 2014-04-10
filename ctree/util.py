@@ -32,6 +32,26 @@ def lower_case_underscore_to_camel_case(string):
     return class_.join('', map(class_.capitalize, string.split('_')))
 
 
+def flatten(obj_or_list):
+    """Iterator for all objects arbitrarily nested in lists."""
+    if isinstance(obj_or_list, list):
+        for gen in map(flatten, obj_or_list):
+            for elem in gen:
+                yield elem
+    else:
+        yield obj_or_list
+
+
+def enumerate_flatten(obj_or_list):
+    """Iterator for all objects arbitrarily nested in lists."""
+    if isinstance(obj_or_list, list):
+        for n, gen in enumerate(map(enumerate_flatten, obj_or_list)):
+            for k, elem in gen:
+                yield (n,)+k, elem
+    else:
+        yield (), obj_or_list
+
+
 def highlight(code, language='c'):
     """Syntax-highlight code using pygments, if installed."""
     try:
