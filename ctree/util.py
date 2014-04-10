@@ -1,4 +1,6 @@
-__author__ = 'Chick Markley'
+import logging
+
+log = logging.getLogger(__name__)
 
 from textwrap import dedent
 
