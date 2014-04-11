@@ -174,7 +174,8 @@ class Project(CommonNode):
 
         resolver = ResolveGeneratedPathRefs(module.compilation_dir)
         self.files = [resolver.visit(f) for f in self.files]
-        log.info("automatically resolved %d GeneratedPathRef node(s).", resolver.count)
+        if resolver.count:
+            log.info("automatically resolved %d GeneratedPathRef node(s).", resolver.count)
 
         # transform all files into llvm modules and link them into the master module
         for f in self.files:
