@@ -122,3 +122,23 @@ class TestBruteForceTuningDriver(unittest.TestCase):
 
         for config in islice(driver.configs, 10):
             self.assertEqual((config["x"], config["y"]), (3, 4))
+
+    def test_bruteforce_driver_other_params(self):
+        from ctree.tune import (
+            BruteForceTuningDriver,
+            IntegerParameter,
+            BooleanParameter,
+            EnumParameter,
+            MinimizeTime,
+        )
+
+        params = [
+            IntegerParameter("foo", 0, 10),
+            BooleanParameter("bar"),
+            EnumParameter("baz", ['monty', 'python', 'rocks']),
+        ]
+        driver = BruteForceTuningDriver(params, MinimizeTime())
+
+        nConfigs = 10*2*3
+        configs = list(islice(driver.configs, nConfigs))
+        self.assertEqual(len(configs), nConfigs)

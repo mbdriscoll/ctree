@@ -1,5 +1,6 @@
 """
-Parses the python AST below, transforms it to C, JITs it, and runs it.
+Code generator for the expression A*(B+C), where A, B, and C are vectors
+and all operations are element-wise.
 """
 
 import logging
@@ -24,8 +25,13 @@ class OpTranslator(LazySpecializedFunction):
         from ctree.tune import BruteForceTuningDriver
         from ctree.tune import MinimizeTime
         from ctree.tune import IntegerParameter
+        from ctree.tune import BooleanParameter
 
-        params = [ IntegerParameter("mode", 1, 3) ]
+        params = [
+            IntegerParameter("mode", 1, 3),
+            BooleanParameter("apply_distributive_law"),
+        ]
+
         objective = MinimizeTime()
         return BruteForceTuningDriver(params, objective)
 

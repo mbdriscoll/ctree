@@ -66,6 +66,28 @@ class IntegerParameter(Parameter):
         return self._values
 
 
+class BooleanParameter(Parameter):
+    """A boolean parameter."""
+    def __init__(self, name):
+        """Create a bool parameter."""
+        super(BooleanParameter, self).__init__(name)
+        self._values = [True, False]
+
+    def values(self):
+        return self._values
+
+
+class EnumParameter(Parameter):
+    """A enum parameter."""
+    def __init__(self, name, values):
+        """Create an enum parameter."""
+        super(EnumParameter, self).__init__(name)
+        self._values = values
+
+    def values(self):
+        return self._values
+
+
 class Result(object):
     """
     Captures the performance of a tuning run.
