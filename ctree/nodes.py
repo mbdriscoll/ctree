@@ -188,9 +188,12 @@ class File(CommonNode):
     """Holds a list of statements."""
     _fields = ['body']
 
-    def __init__(self, name="generated", body=None):
+    def __init__(self, name="generated", body=None, compile_command='CC', compile_flags='CFLAGS', config_target='jit'):
         self.name = name
         self.body = body if body else []
+        self.compile_command = compile_command
+        self.compile_flags = compile_flags
+        self.config_target = config_target
 
     def codegen(self, *args):
         """Convert this substree into program text (a string)."""
