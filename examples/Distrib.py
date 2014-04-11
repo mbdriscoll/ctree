@@ -54,6 +54,11 @@ class OpTranslator(LazySpecializedFunction):
         given in program_config.
         """
         arg_config, tuner_config = program_config
+
+        tree = VVMul(Vec("A"), VVAdd(Vec("B"), Vec("C")))
+        if tuner_config['apply_distributive_law']:
+            ...
+
         A_ptr = arg_config['A_ptr']
         A_len = arg_config['A_len']
         A_dtype = arg_config['A_dtype']
