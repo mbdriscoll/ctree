@@ -30,11 +30,10 @@ class CNode(CtreeNode):
 class CFile(CNode, File):
     """Represents a .c file."""
 
-    def __init__(self, name="generated", body=None):
-        if not body:
-            body = []
+    def __init__(self, name="generated", body=None, config_target='c'):
         super(CFile, self).__init__(name, body)
         self._ext = "c"
+        self.config_target = config_target
 
     def get_bc_filename(self):
         return "%s.bc" % self.name
@@ -57,8 +56,8 @@ class CFile(CNode, File):
             c_file.write(program_text)
 
         # call clang to generate LLVM bitcode file
-        CC = ctree.CONFIG.get('jit', 'CC')
-        CFLAGS = ctree.CONFIG.get('jit', 'CFLAGS')
+        CC = ctree.CONFIG.get(self.config_target, 'CC')
+        CFLAGS = ctree.CONFIG.get(self.config_target, 'CFLAGS')
         compile_cmd = "%s -emit-llvm %s -o %s -c %s" % (CC, CFLAGS, ll_bc_file, c_src_file)
         log.info("compilation command: %s", compile_cmd)
         subprocess.check_call(compile_cmd, shell=True)

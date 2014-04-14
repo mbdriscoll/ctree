@@ -191,6 +191,7 @@ class File(CommonNode):
     def __init__(self, name="generated", body=None):
         self.name = name
         self.body = body if body else []
+        self.config_target = 'c'
 
     def codegen(self, *args):
         """Convert this substree into program text (a string)."""
