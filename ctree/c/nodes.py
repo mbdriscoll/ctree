@@ -29,12 +29,13 @@ class CNode(CtreeNode):
 
 class CFile(CNode, File):
     """Represents a .c file."""
+    _ext = "c"
 
     def __init__(self, name="generated", body=None):
         if not body:
             body = []
-        super(CFile, self).__init__(name, body)
-        self._ext = "c"
+        CNode.__init__(self)
+        File.__init__(self, name, body)
 
     def get_bc_filename(self):
         return "%s.bc" % self.name
