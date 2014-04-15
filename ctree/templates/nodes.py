@@ -26,7 +26,7 @@ class TemplateNode(CtreeNode):
 
         return TemplateCodeGen(indent).visit(self)
 
-    def _to_dot(self):
+    def to_dot(self):
         from ctree.templates.dotgen import TemplateDotGen
 
         return TemplateDotGen().visit(self)

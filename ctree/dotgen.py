@@ -4,6 +4,25 @@ from ctree.visitors import NodeVisitor
 from ctree.util import enumerate_flatten
 
 
+def to_dot_for_py_ast_nodes(self):
+    from ctree.py.dotgen import PyDotGen
+
+    return PyDotGen().visit(self)
+
+
+"""
+Bind to_dot_for_py_ast_nodes to all classes that derive from ast.AST. Ideally
+we'd be able to bind one method to ast.AST, but it's a built-in type so we
+can't.
+"""
+for entry in ast.__dict__.values():
+    try:
+        if issubclass(entry, ast.AST):
+            entry.to_dot = to_dot_for_py_ast_nodes
+    except TypeError:
+        pass
+
+
 class DotGenVisitor(NodeVisitor):
     """
     Generates a representation of the AST in the DOT graph language.
@@ -45,29 +64,5 @@ class DotGenVisitor(NodeVisitor):
                 if isinstance(child, ast.AST):
                     suffix = "".join(["[%d]" % i for i in index])
                     out_string += 'n%d -> n%d [label="%s%s"];\n' % (id(node), id(child), fieldname, suffix)
-                    out_string += _to_dot(child)
+                    out_string += child.to_dot()
         return out_string
-
-
-def _to_dot(node):
-    """
-    Convert node to DOT, even if it's a Python AST node.
-    """
-    from ctree.nodes import CtreeNode
-    from ctree.py.dotgen import PyDotGen
-
-    assert isinstance(node, ast.AST), \
-        "Cannot convert %s to DOT." % type(node)
-    if isinstance(node, CtreeNode):
-        return node._to_dot()
-    else:
-        return PyDotGen().visit(node)
-
-
-def to_dot(node):
-    """
-    Returns a DOT representation of 'node' suitable for viewing with a DOT viewer like Graphviz.
-    """
-    assert isinstance(node, ast.AST), \
-        "Cannot convert %s to DOT." % type(node)
-    return "digraph myprogram {\n%s}" % _to_dot(node)

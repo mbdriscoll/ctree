@@ -28,6 +28,4 @@ class TestOclCodegen(unittest.TestCase):
         self._check(SymbolRef("foo", cl_mem()), "cl_mem foo")
 
     def test_cl_mem_dot(self):
-        from ctree.dotgen import to_dot
-
-        to_dot(SymbolRef("foo", cl_mem()))
+        SymbolRef("foo", cl_mem()).to_dot()

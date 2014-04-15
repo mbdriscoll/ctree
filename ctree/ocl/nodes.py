@@ -14,7 +14,7 @@ class OclNode(CtreeNode):
 
         return OclCodeGen(indent).visit(self)
 
-    def _to_dot(self, indent=0):
+    def to_dot(self, indent=0):
         """generate dot element for this node"""
         from ctree.ocl.dotgen import OclDotGen
 

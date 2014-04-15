@@ -7,7 +7,7 @@ import ast
 # ---------------------------------------------------------------------------
 # dot generator
 
-from ctree.dotgen import DotGenVisitor, to_dot
+from ctree.dotgen import DotGenVisitor
 
 
 class PyDotGen(DotGenVisitor):

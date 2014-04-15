@@ -21,7 +21,7 @@ class CNode(CtreeNode):
 
         return CCodeGen(indent).visit(self)
 
-    def _to_dot(self):
+    def to_dot(self):
         from ctree.c.dotgen import CDotGen
 
         return CDotGen().visit(self)

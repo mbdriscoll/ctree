@@ -12,8 +12,6 @@ from ctree.nodes import *
 from ctree.c.nodes import *
 from ctree.c.types import *
 
-from ctree.dotgen import to_dot
-
 
 def main():
     stmt0 = Assign(SymbolRef('foo'), Constant(123.4))
@@ -21,7 +19,7 @@ def main():
         SymbolRef("spam", Int()), SymbolRef("eggs", Long())], [String("baz")])
     stmt3 = [[SymbolRef("AAAAA")]]
     tree = CFile("myfile", [stmt0, stmt1, stmt3])
-    print (to_dot(tree))
+    print (tree.to_dot())
 
 
 if __name__ == '__main__':

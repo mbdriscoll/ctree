@@ -1,6 +1,5 @@
 import unittest
 
-from ctree.dotgen import to_dot
 from ctree.frontend import get_ast
 from fixtures.sample_asts import *
 
@@ -14,22 +13,22 @@ class TestDotGen(unittest.TestCase):
     """
 
     def test_c_identity(self):
-        self.assertNotEqual(to_dot(identity_ast), "")
+        self.assertNotEqual(identity_ast.to_dot(), "")
 
     def test_c_gcd(self):
-        self.assertNotEqual(to_dot(gcd_ast), "")
+        self.assertNotEqual(gcd_ast.to_dot(), "")
 
     def test_c_fib(self):
-        self.assertNotEqual(to_dot(fib_ast), "")
+        self.assertNotEqual(fib_ast.to_dot(), "")
 
     def test_c_l2norm(self):
-        self.assertNotEqual(to_dot(l2norm_ast), "")
+        self.assertNotEqual(l2norm_ast.to_dot(), "")
 
     def test_py_identity(self):
-        self.assertNotEqual(to_dot(get_ast(identity)), "")
+        self.assertNotEqual(get_ast(identity).to_dot(), "")
 
     def test_py_gcd(self):
-        self.assertNotEqual(to_dot(get_ast(gcd)), "")
+        self.assertNotEqual(get_ast(gcd).to_dot(), "")
 
     def test_py_fib(self):
-        self.assertNotEqual(to_dot(get_ast(fib)), "")
+        self.assertNotEqual(get_ast(fib).to_dot(), "")

@@ -18,7 +18,6 @@ from ctree.templates.nodes import FileTemplate
 from ctree.transformations import *
 from ctree.jit import LazySpecializedFunction
 from ctree.types import get_ctree_type
-from ctree.dotgen import to_dot
 
 # ---------------------------------------------------------------------------
 # Specializer code
@@ -78,7 +77,7 @@ class OpTranslator(LazySpecializedFunction):
         tree = Project([kernel, control])
 
         with open("graph.dot", 'w') as f:
-          f.write( to_dot(tree) )
+          f.write( tree.to_dot() )
 
         entry_point_typesig = FuncType(Int(), [A_type]).as_ctype()
         return tree, entry_point_typesig
