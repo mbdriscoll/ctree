@@ -20,7 +20,7 @@ class OmpNode(CtreeNode):
 
         return OmpCodeGen(indent).visit(self)
 
-    def to_dot(self):
+    def _to_dot(self):
         from ctree.omp.dotgen import OmpDotGen
 
         return OmpDotGen().visit(self)

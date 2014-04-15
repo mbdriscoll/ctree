@@ -38,7 +38,7 @@ class CtreeNode(ast.AST):
 
     def to_dot(self):
         """Retrieve the AST in DOT format for vizualization."""
-        raise Exception("Node class %s should override to_dot()" % type(self))
+        return "digraph mytree {\n%s}" % self._to_dot()
 
     def _requires_semicolon(self):
         """When coverted to a string, this node should be followed by a semicolon."""
@@ -148,7 +148,7 @@ class CommonNode(CtreeNode):
     def codegen(self, indent=0):
         return CommonCodeGen(indent).visit(self)
 
-    def to_dot(self):
+    def _to_dot(self):
         return CommonDotGen().visit(self)
 
 

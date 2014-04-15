@@ -17,7 +17,7 @@ def main():
     stmt0 = Assign(SymbolRef('foo'), Constant(123.4))
     stmt1 = FunctionDecl(Float(), SymbolRef("bar"), [
         SymbolRef("spam", Int()), SymbolRef("eggs", Long())], [String("baz")])
-    stmt3 = [[SymbolRef("AAAAA")]]
+    stmt3 = [[SymbolRef("abc")]]
     tree = CFile("myfile", [stmt0, stmt1, stmt3])
     print (tree.to_dot())
 

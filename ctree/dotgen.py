@@ -4,11 +4,13 @@ from ctree.visitors import NodeVisitor
 from ctree.util import enumerate_flatten
 
 
-def to_dot_for_py_ast_nodes(self):
+def to_dot_inner_for_py_ast_nodes(self):
     from ctree.py.dotgen import PyDotGen
 
     return PyDotGen().visit(self)
 
+def to_dot_outer_for_py_ast_nodes(self):
+    return "digraph mytree {\n%s}" % self._to_dot()
 
 """
 Bind to_dot_for_py_ast_nodes to all classes that derive from ast.AST. Ideally
@@ -18,7 +20,8 @@ can't.
 for entry in ast.__dict__.values():
     try:
         if issubclass(entry, ast.AST):
-            entry.to_dot = to_dot_for_py_ast_nodes
+            entry._to_dot = to_dot_inner_for_py_ast_nodes
+            entry.to_dot  = to_dot_outer_for_py_ast_nodes
     except TypeError:
         pass
 
@@ -41,13 +44,17 @@ class DotGenVisitor(NodeVisitor):
     def label(self, node):
         """
         A string to provide useful information for visualization, debugging, etc.
-        This routine will attempt to call a label_XXX routine for class XXX, if
-        such a routine exists (much like the visit_XXX routines).
+        This routine will return the first successful call among:
+        1) node.label()
+        2) dotgenvisitor.label_XXX(node)
         """
         out_string = r"%s\n" % type(node).__name__
-        labeller = getattr(self, "label_" + type(node).__name__, None)
-        if labeller:
-            out_string += labeller(node)
+        if hasattr(node, 'label'):
+            out_string += node.label()
+        else:
+            labeller = getattr(self, "label_" + type(node).__name__, None)
+            if labeller:
+                out_string += labeller(node)
         return out_string
 
     def generic_visit(self, node):
@@ -64,5 +71,5 @@ class DotGenVisitor(NodeVisitor):
                 if isinstance(child, ast.AST):
                     suffix = "".join(["[%d]" % i for i in index])
                     out_string += 'n%d -> n%d [label="%s%s"];\n' % (id(node), id(child), fieldname, suffix)
-                    out_string += child.to_dot()
+                    out_string += child._to_dot()
         return out_string
