@@ -34,10 +34,13 @@ class CodeGenVisitor(NodeVisitor):
         else:
             return "\n%s" % body
 
-    def _parentheses(self, node):
+    def _parenthesize(self, parent, child):
         """A format string that includes parentheses if needed."""
-        return "(%s)" if self._requires_parentheses(node) else "%s"
+        if self._requires_parentheses(parent, child):
+            return "(%s)" % child
+        else:
+            return "%s" % child
 
-    def _requires_parentheses(self, _):
-        """TODO: figure out why this is always true"""
+    def _requires_parentheses(self, parent, child):
+        """True by default."""
         return True

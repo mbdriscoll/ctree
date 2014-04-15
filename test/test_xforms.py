@@ -41,28 +41,6 @@ class TestSetTypeSig(unittest.TestCase):
         self._check(func_type, choose_ast)
 
 
-class TestFixUpParentPointers(unittest.TestCase):
-    def _check(self, root):
-        from ctree.analyses import VerifyParentPointers
-
-        VerifyParentPointers().visit(root)
-
-    def test_identity(self):
-        identity_ast.find(SymbolRef, name="x").parent = None
-        tree = FixUpParentPointers().visit(identity_ast)
-        self._check(tree)
-
-    def test_fib(self):
-        fib_ast.find(Constant, value=2).parent = None
-        tree = FixUpParentPointers().visit(fib_ast)
-        self._check(tree)
-
-    def test_gcd(self):
-        gcd_ast.find(Return).parent = None
-        tree = FixUpParentPointers().visit(gcd_ast)
-        self._check(tree)
-
-
 class TestCtxScrubber(unittest.TestCase):
     def _check(self, tree):
         for node in ast.walk(tree):

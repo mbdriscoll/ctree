@@ -14,14 +14,11 @@ class CCodeGen(CodeGenVisitor):
     Manages generation of C code.
     """
 
-    def _requires_parentheses(self, node):
+    def _requires_parentheses(self, parent, node):
         """
-        Return True if the current precedence is less than the
-        parent precedence.  If the precedences are equal, check whether the
-        node's orientation to the parent matches associativity.  If it doesn't,
-        enclose with parentheses.
+        Returns node as a string, optionally with parentheses around it if
+        needed to enforce precendence rules.
         """
-        parent = getattr(node, 'parent', None)
         if isinstance(node, (UnaryOp, BinaryOp, TernaryOp)) and\
                 isinstance(parent, (UnaryOp, BinaryOp, TernaryOp, Cast)):
             prec = get_precedence(node)
@@ -54,29 +51,33 @@ class CCodeGen(CodeGenVisitor):
         return s
 
     def visit_UnaryOp(self, node):
+        op  = self._parenthesize(node, node.op)
+        arg = self._parenthesize(node, node.arg)
         if isinstance(node.op, (Op.PostInc, Op.PostDec)):
-            s = "%s %s" % (node.arg, node.op)
+            return "%s %s" % (arg, op)
         else:
-            s = "%s %s" % (node.op, node.arg)
-        return self._parentheses(node) % s
+            return "%s %s" % (op, arg)
 
     def visit_BinaryOp(self, node):
+        left  = self._parenthesize(node, node.left)
+        right = self._parenthesize(node, node.right)
         if isinstance(node.op, Op.ArrayRef):
-            s = "%s[%s]" % (node.left, node.right)
+            return "%s[%s]" % (left, right)
         else:
-            s = "%s %s %s" % (node.left, node.op, node.right)
-        return self._parentheses(node) % s
+            return "%s %s %s" % (left, node.op, right)
 
     def visit_AugAssign(self, node):
         return "%s %s= %s" % (node.target, node.op, node.value)
 
     def visit_TernaryOp(self, node):
-        s = "%s ? %s : %s" % (node.cond, node.then, node.elze)
-        return self._parentheses(node) % s
+        cond = self._parenthesize(node, node.cond)
+        then = self._parenthesize(node, node.then)
+        elze = self._parenthesize(node, node.elze)
+        return "%s ? %s : %s" % (cond, then, elze)
 
     def visit_Cast(self, node):
-        s = "(%s) %s" % (node.type, node.value)
-        return self._parentheses(node) % s
+        value = self._parenthesize(node, node.value)
+        return "(%s) %s" % (node.type, value)
 
     def visit_Constant(self, node):
         if isinstance(node.value, str):

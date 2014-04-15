@@ -65,8 +65,6 @@ class _ConcreteSpecializedFunction(object):
     def __init__(self, entry_point_name, project, entry_point_typesig, extra_args=tuple()):
         assert isinstance(project, Project), \
             "Expected a Project but it got a %s." % type(project)
-        assert project.parent is None, \
-            "Expected null project.parent, but got: %s." % type(project.parent)
 
         VerifyOnlyCtreeNodes().visit(project)
 

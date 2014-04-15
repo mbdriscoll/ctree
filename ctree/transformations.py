@@ -151,20 +151,6 @@ class PyBasicConversions(NodeTransformer):
         return node
 
 
-class FixUpParentPointers(NodeTransformer):
-    """
-    Add parent pointers if they're missing.
-    """
-
-    def generic_visit(self, node):
-        for fieldname, value in ast.iter_fields(node):
-            for child in flatten(value):
-                if isinstance(child, CtreeNode):
-                    setattr(child, 'parent', node)
-                    self.visit(child)
-        return node
-
-
 class ResolveGeneratedPathRefs(NodeTransformer):
     """
     Converts any instances of ctree.nodes.GeneratedPathRef into strings containing the absolute path

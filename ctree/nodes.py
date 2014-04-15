@@ -20,15 +20,6 @@ class CtreeNode(ast.AST):
     def __init__(self):
         """Initialize a new AST Node."""
         super(CtreeNode, self).__init__()
-        self.parent = None
-
-    def __setattr__(self, name, value):
-        """Set attribute and preserve parent pointers."""
-        if name != "parent":
-            for child in flatten(value):
-                if isinstance(child, CtreeNode):
-                    child.parent = self
-        super(CtreeNode, self).__setattr__(name, value)
 
     def __str__(self):
         return self.codegen()
@@ -43,16 +34,6 @@ class CtreeNode(ast.AST):
     def _requires_semicolon(self):
         """When coverted to a string, this node should be followed by a semicolon."""
         return True
-
-    def get_root(self):
-        """
-        Traverse the parent pointer list to find the eldest
-        parent without a parent, aka the root.
-        """
-        root = self
-        while root.parent is not None:
-            root = root.parent
-        return root
 
     def find_all(self, node_class, **kwargs):
         """
@@ -98,45 +79,6 @@ class CtreeNode(ast.AST):
         for node in ast.walk(self):
             if pred(node):
                 yield node
-
-    def replace(self, new_node):
-        """
-        Replace the current node with 'new_node'.
-        """
-        parent = self.parent
-        assert self.parent, "Tried to replace a node without a parent."
-        for fieldname, child in ast.iter_fields(parent):
-            if child is self:
-                setattr(parent, fieldname, new_node)
-            elif isinstance(child, list) and self in child:
-                child[child.index(self)] = new_node
-        return new_node
-
-    def insert_before(self, older_sibling):
-        """
-        Insert the given node just before 'self' in the current scope. Requires
-        that 'self' be contained in a list.
-        """
-        parent = self.parent
-        assert self.parent, "Tried to insert_before a node without a parent."
-        for fieldname, child in ast.iter_fields(parent):
-            if isinstance(child, list) and self in child:
-                child.insert(child.index(self), older_sibling)
-                return
-        raise Exception("Couldn't perform insertion.")
-
-    def insert_after(self, younger_sibling):
-        """
-        Insert the given node just before 'self' in the current scope. Requires
-        that 'self' be contained in a list.
-        """
-        parent = self.parent
-        assert self.parent, "Tried to insert_before a node without a parent."
-        for fieldname, child in ast.iter_fields(parent):
-            if isinstance(child, list) and self in child:
-                child.insert(child.index(self) + 1, younger_sibling)
-                return
-        raise Exception("Couldn't perform insertion.")
 
 
 # ---------------------------------------------------------------------------
