@@ -10,6 +10,7 @@ import ast
 
 from ctree.codegen import CodeGenVisitor
 from ctree.dotgen import DotGenVisitor
+from ctree.util import flatten
 
 
 class CtreeNode(ast.AST):
@@ -24,12 +25,9 @@ class CtreeNode(ast.AST):
     def __setattr__(self, name, value):
         """Set attribute and preserve parent pointers."""
         if name != "parent":
-            if isinstance(value, CtreeNode):
-                value.parent = self
-            elif isinstance(value, list):
-                for grandchild in value:
-                    if isinstance(grandchild, CtreeNode):
-                        grandchild.parent = self
+            for child in flatten(value):
+                if isinstance(child, CtreeNode):
+                    child.parent = self
         super(CtreeNode, self).__setattr__(name, value)
 
     def __str__(self):
@@ -193,6 +191,7 @@ class File(CommonNode):
     def __init__(self, name="generated", body=None):
         self.name = name
         self.body = body if body else []
+        self.config_target = 'c'
 
     def codegen(self, *args):
         """Convert this substree into program text (a string)."""

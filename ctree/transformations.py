@@ -4,12 +4,13 @@ A set of basic transformers for python asts
 import os
 import ast
 
-from ctree.nodes import Project
+from ctree.nodes import Project, CtreeNode
 from ctree.c.nodes import Op, Constant, String, SymbolRef, BinaryOp, TernaryOp, Return
 from ctree.c.nodes import If, CFile, FunctionCall, FunctionDecl, For, Assign, AugAssign
 from ctree.c.nodes import Lt, PostInc, AddAssign, SubAssign, MulAssign, DivAssign
 from ctree.c.types import Long
 from ctree.visitors import NodeTransformer
+from ctree.util import flatten
 
 
 class PyCtxScrubber(NodeTransformer):
@@ -156,14 +157,11 @@ class FixUpParentPointers(NodeTransformer):
     """
 
     def generic_visit(self, node):
-        for fieldname, child in ast.iter_fields(node):
-            if type(child) is list:
-                for grandchild in child:
-                    setattr(grandchild, 'parent', node)
-                    self.visit(grandchild)
-            elif isinstance(child, ast.AST):
-                setattr(child, 'parent', node)
-                self.visit(child)
+        for fieldname, value in ast.iter_fields(node):
+            for child in flatten(value):
+                if isinstance(child, CtreeNode):
+                    setattr(child, 'parent', node)
+                    self.visit(child)
         return node
 
 

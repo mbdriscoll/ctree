@@ -1,6 +1,7 @@
 import ast
 
 from ctree.visitors import NodeVisitor
+from ctree.util import enumerate_flatten
 
 
 class DotGenVisitor(NodeVisitor):
@@ -39,15 +40,12 @@ class DotGenVisitor(NodeVisitor):
             out_string += 'n%s -> n%s [label="parent",style=dotted];\n' % (id(node), id(node.parent))
 
         # edges to children
-        for fieldname, child in ast.iter_fields(node):
-            if type(child) is list:
-                for i, grandchild in enumerate(child):
-                    out_string += 'n%d -> n%d [label="%s[%d]"];\n' % \
-                         (id(node), id(grandchild), fieldname, i)
-                    out_string += _to_dot(grandchild)
-            elif isinstance(child, ast.AST):
-                out_string += 'n%d -> n%d [label="%s"];\n' % (id(node), id(child), fieldname)
-                out_string += _to_dot(child)
+        for fieldname, fieldvalue in ast.iter_fields(node):
+            for index, child in enumerate_flatten(fieldvalue):
+                if isinstance(child, ast.AST):
+                    suffix = "".join(["[%d]" % i for i in index])
+                    out_string += 'n%d -> n%d [label="%s%s"];\n' % (id(node), id(child), fieldname, suffix)
+                    out_string += _to_dot(child)
         return out_string
 
 
