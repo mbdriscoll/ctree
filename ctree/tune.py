@@ -88,6 +88,29 @@ class EnumParameter(Parameter):
         return self._values
 
 
+class IntegerArrayParameter(Parameter):
+    """An array of integers."""
+    def __init__(self, name, count=1, lower_bound=0, upper_bound=1):
+        """Create an IntArray parameter."""
+        super(IntegerArrayParameter, self).__init__(name)
+        self._values = itertools.product(range(lower_bound,upper_bound), repeat=count)
+
+    def values(self):
+        return self._values
+
+
+class EnumArrayParameter(Parameter):
+    """An array of enums."""
+    def __init__(self, name, count=1, values=None):
+        """Create an EnumArray parameter."""
+        super(EnumArrayParameter, self).__init__(name)
+        values = values if values else []
+        self._values = itertools.product(values, repeat=count)
+
+    def values(self):
+        return self._values
+
+
 class Result(object):
     """
     Captures the performance of a tuning run.
