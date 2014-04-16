@@ -33,7 +33,6 @@ class DotGenVisitor(NodeVisitor):
 
     We can use pydot to do this, instead of using plain string concatenation.
     """
-
     @staticmethod
     def _qualified_name(obj):
         """
