@@ -13,10 +13,10 @@ class CppNode(CtreeNode):
 
         return CppCodeGen(indent).visit(self)
 
-    def _to_dot(self):
-        from ctree.cpp.dotgen import CppDotGen
+    def label(self):
+        from ctree.cpp.dotgen import CppDotLabeller
 
-        return CppDotGen().visit(self)
+        return CppDotLabeller().visit(self)
 
     def _requires_semicolon(self):
         return False

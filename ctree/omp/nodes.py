@@ -20,10 +20,10 @@ class OmpNode(CtreeNode):
 
         return OmpCodeGen(indent).visit(self)
 
-    def _to_dot(self):
-        from ctree.omp.dotgen import OmpDotGen
+    def label(self):
+        from ctree.omp.dotgen import OmpDotLabeller
 
-        return OmpDotGen().visit(self)
+        return OmpDotLabeller().visit(self)
 
     def _requires_semicolon(self):
         return False

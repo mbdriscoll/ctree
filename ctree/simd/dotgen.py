@@ -1,12 +1,12 @@
 """
-DOT generation for SIMD.
+DOT labeller for SIMD.
 """
 
-from ctree.dotgen import DotGenVisitor
+from ctree.dotgen import DotGenLabeller
 
 
-class SimdDotGen(DotGenVisitor):
+class SimdDotLabeller(DotGenLabeller):
     """
-    Visitor to generator DOT.
+    Visitor to label SIMD nodes in DOT.
     """
     pass

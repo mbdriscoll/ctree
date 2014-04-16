@@ -9,7 +9,7 @@ log = logging.getLogger(__name__)
 import ast
 
 from ctree.codegen import CodeGenVisitor
-from ctree.dotgen import DotGenVisitor
+from ctree.dotgen import DotGenVisitor, DotGenLabeller
 from ctree.util import flatten
 
 
@@ -94,7 +94,7 @@ class CommonNode(CtreeNode):
     def codegen(self, indent=0):
         return CommonCodeGen(indent).visit(self)
 
-    def _to_dot(self):
+    def label(self):
         return CommonDotGen().visit(self)
 
 
@@ -174,8 +174,8 @@ class CommonCodeGen(CodeGenVisitor):
         raise Exception("Unresolved GeneratedPathRefs to file %s." % (node.target.get_filename()))
 
 
-class CommonDotGen(DotGenVisitor):
+class CommonDotGen(DotGenLabeller):
     """Manages coversion of all common nodes to dot."""
 
-    def label_GeneratedPathRef(self, node):
+    def visit_GeneratedPathRef(self, node):
         return "target: %s" % node.target.get_filename()

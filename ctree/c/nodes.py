@@ -21,10 +21,10 @@ class CNode(CtreeNode):
 
         return CCodeGen(indent).visit(self)
 
-    def _to_dot(self):
-        from ctree.c.dotgen import CDotGen
+    def label(self):
+        from ctree.c.dotgen import CDotGenLabeller
 
-        return CDotGen().visit(self)
+        return CDotGenLabeller().visit(self)
 
 
 class CFile(CNode, File):

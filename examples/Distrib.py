@@ -17,7 +17,6 @@ from ctree.c.types import *
 from ctree.templates.nodes import *
 from ctree.transformations import *
 from ctree.jit import LazySpecializedFunction
-from ctree.dotgen import DotGenVisitor
 
 # ---------------------------------------------------------------------------
 # Specializer code - nodes

@@ -4,13 +4,18 @@ from ctree.visitors import NodeVisitor
 from ctree.util import enumerate_flatten
 
 
-def to_dot_inner_for_py_ast_nodes(self):
-    from ctree.py.dotgen import PyDotGen
+def label_for_py_ast_nodes(self):
+    from ctree.py.dotgen import PyDotLabeller
 
-    return PyDotGen().visit(self)
+    return PyDotLabeller().visit(self)
 
 def to_dot_outer_for_py_ast_nodes(self):
     return "digraph mytree {\n%s}" % self._to_dot()
+
+def to_dot_inner_for_py_ast_nodes(self):
+    from ctree.dotgen import DotGenVisitor
+
+    return DotGenVisitor().visit(self)
 
 """
 Bind to_dot_for_py_ast_nodes to all classes that derive from ast.AST. Ideally
@@ -20,19 +25,26 @@ can't.
 for entry in ast.__dict__.values():
     try:
         if issubclass(entry, ast.AST):
-            entry._to_dot = to_dot_inner_for_py_ast_nodes
+            entry.label   = label_for_py_ast_nodes
             entry.to_dot  = to_dot_outer_for_py_ast_nodes
+            entry._to_dot = to_dot_inner_for_py_ast_nodes
     except TypeError:
         pass
+
+
+class DotGenLabeller(NodeVisitor):
+    def generic_visit(self, node):
+        return ""
 
 
 class DotGenVisitor(NodeVisitor):
     """
     Generates a representation of the AST in the DOT graph language.
     See http://en.wikipedia.org/wiki/DOT_(graph_description_language)
-
-    We can use pydot to do this, instead of using plain string concatenation.
     """
+    def __init__(self):
+        self._visited = set()
+
     @staticmethod
     def _qualified_name(obj):
         """
@@ -43,26 +55,18 @@ class DotGenVisitor(NodeVisitor):
     def label(self, node):
         """
         A string to provide useful information for visualization, debugging, etc.
-        This routine will return the first successful call among:
-        1) node.label()
-        2) dotgenvisitor.label_XXX(node)
         """
-        out_string = r"%s\n" % type(node).__name__
-        if hasattr(node, 'label'):
-            out_string += node.label()
-        else:
-            labeller = getattr(self, "label_" + type(node).__name__, None)
-            if labeller:
-                out_string += labeller(node)
-        return out_string
+        return r"%s\n%s" % (type(node).__name__, node.label())
 
     def generic_visit(self, node):
+        # abort if visited
+        if node in self._visited:
+            return ""
+        else:
+            self._visited.add(node)
+
         # label this node
         out_string = 'n%s [label="%s"];\n' % (id(node), self.label(node))
-
-        # edge to parent
-        if hasattr(node, 'parent') and node.parent is not None:
-            out_string += 'n%s -> n%s [label="parent",style=dotted];\n' % (id(node), id(node.parent))
 
         # edges to children
         for fieldname, fieldvalue in ast.iter_fields(node):
@@ -70,5 +74,5 @@ class DotGenVisitor(NodeVisitor):
                 if isinstance(child, ast.AST):
                     suffix = "".join(["[%d]" % i for i in index])
                     out_string += 'n%d -> n%d [label="%s%s"];\n' % (id(node), id(child), fieldname, suffix)
-                    out_string += child._to_dot()
+                    out_string += self.visit(child)
         return out_string
