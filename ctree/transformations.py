@@ -147,8 +147,16 @@ class PyBasicConversions(NodeTransformer):
             return MulAssign(target, value)
         elif op is ast.Div:
             return DivAssign(target, value)
-        # Error?
+        # TODO: Error?
         return node
+
+    def visit_Assign(self, node):
+        if len(node.targets) > 1:
+            # Raise exception?
+            return node
+        target = self.visit(node.targets[0])
+        value = self.visit(node.value)
+        return Assign(target, value)
 
 
 class FixUpParentPointers(NodeTransformer):

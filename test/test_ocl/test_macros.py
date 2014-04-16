@@ -44,6 +44,10 @@ class TestOclMacros(unittest.TestCase):
         tree = get_global_id(0)
         self.assertEqual(tree.codegen(), "get_global_id(0)")
 
+    def get_group_id(self):
+        tree = get_group_id(0)
+        self.assertEqual(tree.codegen(), "get_group_id(0)")
+
     def get_local_size(self):
         tree = get_local_size(0)
         self.assertEqual(tree.codegen(), "get_local_size(0)")

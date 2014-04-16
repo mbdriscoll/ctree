@@ -282,3 +282,9 @@ class TestBasicConversions(unittest.TestCase):
                                ast.Div(), ast.Num(3))
         c_ast = DivAssign(SymbolRef('i'), Constant(3))
         self._check(py_ast, c_ast)
+
+    def test_Assign(self):
+        py_ast = ast.Assign([ast.Name('i', ast.Load())],
+                            ast.Num(3))
+        c_ast = Assign(SymbolRef('i'), Constant(3))
+        self._check(py_ast, c_ast)
