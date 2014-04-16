@@ -27,6 +27,7 @@ class Vector(CtreeNode):
         self.name = name
         self.loc = loc
         self.type = type
+        self._loc_cache = {}
 
     def label(self):
         return "name: %s\\nloc: %s" % (self.name, self.loc)
@@ -36,6 +37,11 @@ class Vector(CtreeNode):
 
     def codegen(self):
         return "%s %s" % (self.get_type(), self.name)
+
+    def on(self, mem):
+        if mem not in self._loc_cache:
+            self._loc_cache[mem] = CopiedVector(self, to=mem)
+        return self._loc_cache[mem]
 
 class CopiedVector(Vector):
     _fields = ["data"]
@@ -61,7 +67,7 @@ class ComputedVector(Vector):
         if not name:
             name = "computed%d" % self._next_id
             ComputedVector._next_id += 1
-        super(ComputedVector, self).__init__(name=name, loc=loc)
+        super(ComputedVector, self).__init__(name=name, loc=data.loc)
 
 # ---------------------------------------------------------------------------
 # Specializer code - transformers
@@ -96,8 +102,13 @@ class DistributiveLaw(NodeTransformer):
             return node
 
 class VectorFinder(NodeTransformer):
+    def __init__(self):
+        self._cache = {}
+
     def visit_SymbolRef(self, node):
-        return Vector(node.name)
+        if node.name not in self._cache:
+            self._cache[node.name] = Vector(node.name)
+        return self._cache[node.name]
 
 class InsertIntermediates(NodeTransformer):
     def __init__(self, directives):
@@ -124,21 +135,33 @@ class CopyInserter(NodeTransformer):
     def visit_BinaryOp(self, node):
         node = self.generic_visit(node)
         if node.loc != node.left.loc:
-            node.left = CopiedVector(node.left, to=node.loc)
+            if not isinstance(node.left, Vector):
+                node.left = ComputedVector(node.left)
+            node.left = node.left.on(node.loc)
         if node.loc != node.right.loc:
-            node.right = CopiedVector(node.right, to=node.loc)
+            if not isinstance(node.right, Vector):
+                node.right= ComputedVector(node.right)
+            node.right = node.right.on(node.loc)
         return node
 
     def visit_ComputedVector(self, node):
         node.data = self.visit(node.data)
         if node.loc != node.data.loc:
-            node.data = CopiedVector(node.data, to=node.loc)
+            node.data = node.data.on(node.loc)
+        return node
+
+    def visit_CopiedVector(self, node):
+        node.data = self.visit(node.data)
+        if not isinstance(node.data, ComputedVector):
+            node.data = ComputedVector(node.data)
         return node
 
     def visit_Return(self, node):
         value = self.visit(node.value)
         if value.loc != 'main':
-            return CopiedVector(value, to='main')
+            if not isinstance(node.value, Vector):
+                value = ComputedVector(node.value)
+            return value.on('main')
         elif isinstance(value, BinaryOp):
             return ComputedVector(value, loc='main')
         return value
@@ -165,8 +188,8 @@ class OpTranslator(LazySpecializedFunction):
         from ctree.tune import BooleanArrayParameter
         from ctree.tune import EnumArrayParameter
 
-        nMuls = 0
-        nAdds = 2
+        nMuls = 2
+        nAdds = 1
         nBinops = nMuls + nAdds
         params = [
             BooleanArrayParameter("distribute", count=nMuls),
@@ -209,7 +232,7 @@ class OpTranslator(LazySpecializedFunction):
         fn.params.insert(0, ans)
 
         # identify vectors
-        proj = VectorFinder().visit(proj)
+        fn.defn = [VectorFinder().visit(fn.defn[0])]
 
         # set parameter types
         ptrs = arg_config['ptrs']
@@ -219,10 +242,11 @@ class OpTranslator(LazySpecializedFunction):
         # tag operations with platforms
         locs = tuner_config['locs']
         proj = LocationTagger(locs).visit(proj)
-        proj = CopyInserter().visit(proj)
 
         intermediate_directives = tuner_config['intermediates']
-        proj = InsertIntermediates(intermediate_directives).visit(proj)
+        #proj = InsertIntermediates(intermediate_directives).visit(proj)
+
+        proj = CopyInserter().visit(proj)
 
         proj = RemoveRedundantVectors().visit(proj)
 
@@ -268,7 +292,7 @@ class Elementwise(object):
 
 def py_op(a, b, c):
     #return (a + b) * (c + d)
-    return a + b + c
+    return a * (b + c)
 
 def main():
     n = 12
