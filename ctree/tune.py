@@ -53,6 +53,10 @@ class Parameter(object):
     def __init__(self, name):
         """Create a parameter with the given name."""
         self.name = name
+        self._values = []
+
+    def values(self):
+        return self._values
 
 
 class IntegerParameter(Parameter):
@@ -62,9 +66,6 @@ class IntegerParameter(Parameter):
         super(IntegerParameter, self).__init__(name)
         self._values = range(lower_bound, upper_bound)
 
-    def values(self):
-        return self._values
-
 
 class BooleanParameter(Parameter):
     """A boolean parameter."""
@@ -72,9 +73,6 @@ class BooleanParameter(Parameter):
         """Create a bool parameter."""
         super(BooleanParameter, self).__init__(name)
         self._values = [True, False]
-
-    def values(self):
-        return self._values
 
 
 class EnumParameter(Parameter):
@@ -84,9 +82,6 @@ class EnumParameter(Parameter):
         super(EnumParameter, self).__init__(name)
         self._values = values
 
-    def values(self):
-        return self._values
-
 
 class IntegerArrayParameter(Parameter):
     """An array of integers."""
@@ -94,9 +89,6 @@ class IntegerArrayParameter(Parameter):
         """Create an IntArray parameter."""
         super(IntegerArrayParameter, self).__init__(name)
         self._values = itertools.product(range(lower_bound,upper_bound), repeat=count)
-
-    def values(self):
-        return self._values
 
 
 class EnumArrayParameter(Parameter):
@@ -107,8 +99,13 @@ class EnumArrayParameter(Parameter):
         values = values if values else []
         self._values = itertools.product(values, repeat=count)
 
-    def values(self):
-        return self._values
+
+class BooleanArrayParameter(Parameter):
+    """An array of booleans."""
+    def __init__(self, name, count=1):
+        """Create an BooleanArray parameter."""
+        super(BooleanArrayParameter, self).__init__(name)
+        self._values = itertools.product([True,False], repeat=count)
 
 
 class Result(object):

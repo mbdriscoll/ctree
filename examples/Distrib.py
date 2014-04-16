@@ -3,6 +3,8 @@ Code generator for the expression A*(B+C), where A, B, and C are vectors
 and all operations are element-wise.
 """
 
+n = 0
+
 import logging
 
 logging.basicConfig(level=20)
@@ -13,27 +15,166 @@ from ctree.frontend import get_ast
 from ctree.c.nodes import *
 from ctree.c.types import *
 from ctree.templates.nodes import *
-from ctree.dotgen import to_dot
 from ctree.transformations import *
 from ctree.jit import LazySpecializedFunction
+from ctree.dotgen import DotGenVisitor
 
 # ---------------------------------------------------------------------------
-# Specializer code
+# Specializer code - nodes
+
+class Vector(CtreeNode):
+    def __init__(self, name=None, loc='main', type=None):
+        self.name = name
+        self.loc = loc
+        self.type = type
+
+    def label(self):
+        return "name: %s\\nloc: %s" % (self.name, self.loc)
+
+    def get_type(self):
+        return self.type
+
+    def codegen(self):
+        return "%s %s" % (self.get_type(), self.name)
+
+class CopiedVector(Vector):
+    _fields = ["data"]
+    _next_id = 0
+    def __init__(self, data, to='main', name=None):
+        self.data = data
+        if not name:
+            name = "copied%d" % self._next_id
+            CopiedVector._next_id += 1
+        super(CopiedVector, self).__init__(name=name, loc=to)
+
+    def label(self):
+        to = "to: %s" % self.loc
+        frm = "from: %s" % self.data.loc
+        return "name: %s\\n%s\\n%s" % (self.name, to, frm)
+
+
+class ComputedVector(Vector):
+    _fields = ["data"]
+    _next_id = 0
+    def __init__(self, data=None, name=None, loc=None):
+        self.data = data
+        if not name:
+            name = "computed%d" % self._next_id
+            ComputedVector._next_id += 1
+        super(ComputedVector, self).__init__(name=name, loc=loc)
+
+# ---------------------------------------------------------------------------
+# Specializer code - transformers
+
+class DistributiveLaw(NodeTransformer):
+    def __init__(self, directives):
+        super(DistributiveLaw, self).__init__()
+        self._directives = iter(directives)
+
+    def visit_BinaryOp(self, node):
+        ab = node.left  = self.visit(node.left)
+        cd = node.right = self.visit(node.right)
+        dist_left  = isinstance(ab, BinaryOp) and isinstance(ab.op, Op.Add)
+        dist_right = isinstance(cd, BinaryOp) and isinstance(cd.op, Op.Add)
+        if isinstance(node.op, Op.Mul) and \
+           (dist_left or dist_right) and \
+           self._directives.next() == True:
+
+            if dist_right and dist_left:
+                a, b = ab.left, ab.right
+                c, d = cd.left, cd.right
+                return Add(Add(Mul(a,c), Mul(b,c)), Add(Mul(a,d), Mul(b,d)))
+            elif dist_right:
+                c, d = cd.left, cd.right
+                return Add(Mul(ab, c), Mul(ab, d))
+            elif dist_left:
+                a, b = ab.left, ab.right
+                return Add(Mul(a, cd), Add(b, cd))
+            else:
+                raise ValueError("Term shouldn't distribute.")
+        else:
+            return node
+
+class VectorFinder(NodeTransformer):
+    def visit_SymbolRef(self, node):
+        return Vector(node.name)
+
+class InsertIntermediates(NodeTransformer):
+    def __init__(self, directives):
+        self._directives = iter(directives)
+
+    def visit_BinaryOp(self, node):
+        tree = self.generic_visit(node)
+        return ComputedVector(tree, loc=tree.loc) if self._directives.next() else tree
+
+    def visit_CopiedVector(self, node):
+        tree = self.visit(node.data)
+        node.data = ComputedVector(tree, loc=tree.loc)
+        return node
+
+class LocationTagger(NodeTransformer):
+    def __init__(self, directives):
+        self.directives = iter(directives)
+
+    def visit_BinaryOp(self, node):
+        node.loc = self.directives.next()
+        return self.generic_visit(node)
+
+class CopyInserter(NodeTransformer):
+    def visit_BinaryOp(self, node):
+        node = self.generic_visit(node)
+        if node.loc != node.left.loc:
+            node.left = CopiedVector(node.left, to=node.loc)
+        if node.loc != node.right.loc:
+            node.right = CopiedVector(node.right, to=node.loc)
+        return node
+
+    def visit_ComputedVector(self, node):
+        node.data = self.visit(node.data)
+        if node.loc != node.data.loc:
+            node.data = CopiedVector(node.data, to=node.loc)
+        return node
+
+    def visit_Return(self, node):
+        value = self.visit(node.value)
+        if value.loc != 'main':
+            return CopiedVector(value, to='main')
+        elif isinstance(value, BinaryOp):
+            return ComputedVector(value, loc='main')
+        return value
+
+class RemoveRedundantVectors(NodeTransformer):
+    def visit_ComputedVector(self, node):
+        node.data = self.visit(node.data)
+        if isinstance(node.data, Vector) and node.loc == node.data.loc:
+            return node.data
+        else:
+            return node
+
+# label binary ops with location
+BinaryOp.label = lambda self: "op: %s\\nloc: %s" % (self.op, getattr(self, 'loc', None))
+
+# ---------------------------------------------------------------------------
+# Specializer code - translator
 
 class OpTranslator(LazySpecializedFunction):
     def get_tuning_driver(self):
         from ctree.tune import BruteForceTuningDriver
         from ctree.tune import MinimizeTime
         from ctree.tune import IntegerParameter
-        from ctree.tune import BooleanParameter
+        from ctree.tune import BooleanArrayParameter
+        from ctree.tune import EnumArrayParameter
 
+        nMuls = 0
+        nAdds = 2
+        nBinops = nMuls + nAdds
         params = [
-            IntegerParameter("mode", 1, 3),
-            BooleanParameter("apply_distributive_law"),
+            BooleanArrayParameter("distribute", count=nMuls),
+            BooleanArrayParameter("intermediates", count=nBinops),
+            EnumArrayParameter("locs", count=nBinops, values=['main', 'ocl[0]']),
         ]
 
-        objective = MinimizeTime()
-        return BruteForceTuningDriver(params, objective)
+        return BruteForceTuningDriver(params, MinimizeTime())
 
     def args_to_subconfig(self, args):
         """
@@ -41,11 +182,10 @@ class OpTranslator(LazySpecializedFunction):
         that classifies them. Arguments with identical subconfigs
         might be processed by the same generated code.
         """
-        A = args[0]
+        ptrs = tuple(NdPointer.to(a) for a in args)
         return {
-            'A_ptr': NdPointer.to(A),
-            'A_len': len(A),
-            'A_dtype': A.dtype,
+            'ptrs': ptrs,
+            'len': len(args[0]),
         }
 
     def transform(self, py_ast, program_config):
@@ -55,128 +195,71 @@ class OpTranslator(LazySpecializedFunction):
         """
         arg_config, tuner_config = program_config
 
-        tree = VVMul(Vec("A"), VVAdd(Vec("B"), Vec("C")))
-        if tuner_config['apply_distributive_law']:
-            ...
+        # run basic conversions
+        proj = PyBasicConversions().visit(py_ast)
+        fn = proj.find(FunctionDecl, name="py_op")
+        fn.return_type = Void()
 
-        A_ptr = arg_config['A_ptr']
-        A_len = arg_config['A_len']
-        A_dtype = arg_config['A_dtype']
-        mode = tuner_config['mode']
+        # run platform-independent transformations
+        distribute_directives = tuner_config['distribute']
+        proj = DistributiveLaw(distribute_directives).visit(proj)
 
-        if   mode == 1: return self._transform_cpu_cpu_serial(A_ptr, A_len, A_dtype)
-        if   mode == 2: return self._transform_cpu_cpu_parallel(A_ptr, A_len, A_dtype)
-        else:
-            raise ValueError("Unrecognized implementation mode: %d" % mode)
+        # insert parameter to hold answer
+        ans = SymbolRef("ans", fn.params[0].type)
+        fn.params.insert(0, ans)
 
-    def _transform_cpu_cpu_serial(self, A_ptr, A_len, A_dtype):
-        tmpB = np.zeros(A_len, dtype=A_dtype)
-        tmpC = np.zeros(A_len, dtype=A_dtype)
+        # identify vectors
+        proj = VectorFinder().visit(proj)
 
-        tree = CFile("generated", [
-            StringTemplate("""\
-            void op(float *A, float *B, float *C, float *ans, float *tmpB, float *tmpC) {
-                // D = A*B+A*C elementwise
-                for (int i = 0; i < $n; i++) {
-                    tmpB[i] = A[i] * B[i];
-                }
+        # set parameter types
+        ptrs = arg_config['ptrs']
+        for ty, param in zip(ptrs, fn.params):
+            param.type = ty
 
-                for (int i = 0; i < $n; i++) {
-                    tmpC[i] = A[i] * C[i];
-                }
+        # tag operations with platforms
+        locs = tuner_config['locs']
+        proj = LocationTagger(locs).visit(proj)
+        proj = CopyInserter().visit(proj)
 
-                for (int i = 0; i < $n; i++) {
-                    ans[i] = tmpB[i] + tmpC[i];
-                }
-            }
-            """, {'n' : Constant(A_len)}),
-        ])
+        intermediate_directives = tuner_config['intermediates']
+        proj = InsertIntermediates(intermediate_directives).visit(proj)
 
-        extra_args = (tmpB, tmpC)
-        entry_point_typesig = FuncType(Void(), [A_ptr] * 6).as_ctype()
-        return Project([tree]), entry_point_typesig, extra_args
+        proj = RemoveRedundantVectors().visit(proj)
 
-    def _transform_cpu_cpu_parallel(self, A_ptr, A_len, A_dtype):
-        import ctree.omp
+        global n
+        with open('graph.%d.dot' % n, 'w') as f:
+            f.write(proj.to_dot())
+        n += 1
 
-        tmpB = np.empty(A_len, dtype=A_dtype)
-        tmpC = np.empty(A_len, dtype=A_dtype)
+        """
+        proj = ReturnsToWrites(ans).visit(proj)
 
-        tree = CFile("generated", [
-            StringTemplate("""\
-            #include <omp.h>
-            void op(float *A, float *B, float *C, float *ans, float *tmpB, float *tmpC) {
-                // D = A*B+A*C elementwise
-                omp_set_num_threads(2);
-
-                #pragma omp parallel sections
-                {
-                    #pragma omp section
-                    {
-                        for (int i = 0; i < $n; i++)
-                            tmpB[i] = A[i] * B[i];
-                    }
-
-                    #pragma omp section
-                    {
-                        for (int i = 0; i < $n; i++)
-                            tmpC[i] = A[i] * C[i];
-                    }
-                }
-
-                for (int i = 0; i < $n; i++)
-                    ans[i] = tmpB[i] + tmpC[i];
-            }
-            """, {'n' : Constant(A_len)}),
-        ])
-
-        extra_args = (tmpB, tmpC)
-        entry_point_typesig = FuncType(Void(), [A_ptr] * 6).as_ctype()
-        return Project([tree]), entry_point_typesig, extra_args
+        intermediates = tuner_config['intermediates']
+        proj = VectorIdentifier(intermediates).visit(proj)
+        proj = RedudantVectorEliminator().visit(proj)
+        proj = CopyInserter().visit(proj)
 
 
-    def _transform_gpu_gpu_serial(self, A_ptr, A_len, A_dtype):
-        tmpB = np.zeros(A_len, dtype=A_dtype)
-        tmpC = np.zeros(A_len, dtype=A_dtype)
+        """
+        fn.defn = [SymbolRef("foo", Int())]
 
-        tree = CFile("generated", [
-            StringTemplate("""\
-            void op(float *A, float *B, float *C, float *ans, float *tmpB, float *tmpC) {
-                // D = A*B+A*C elementwise
-                for (int i = 0; i < $n; i++) {
-                    tmpB[i] = A[i] * B[i];
-                }
-
-                for (int i = 0; i < $n; i++) {
-                    tmpC[i] = A[i] * C[i];
-                }
-
-                for (int i = 0; i < $n; i++) {
-                    ans[i] = tmpB[i] + tmpC[i];
-                }
-            }
-            """, {'n' : Constant(A_len)}),
-        ])
-
-        extra_args = (tmpB, tmpC)
-        entry_point_typesig = FuncType(Void(), [A_ptr] * 6).as_ctype()
-        return Project([tree]), entry_point_typesig, extra_args
+        return proj, fn.get_type().as_ctype()
 
 
-class Op(object):
+class Elementwise(object):
     """
     A class for managing independent operation on elements
     in numpy arrays.
     """
 
-    def __init__(self):
+    def __init__(self, fn):
         """Instantiate translator."""
-        self.c_op = OpTranslator(None, "op")
+        self.c_op = OpTranslator(get_ast(fn), "py_op")
 
-    def __call__(self, a, b, c):
+    def __call__(self, *args):
         """Apply the operator to the arguments via a generated function."""
-        answer = np.zeros_like(a)
-        self.c_op(a, b, c, answer)
+        answer = np.zeros_like(args[0])
+        self.c_op(answer, *args)
         return answer
 
 
@@ -184,14 +267,15 @@ class Op(object):
 # User code
 
 def py_op(a, b, c):
-    return a * (b + c)
+    #return (a + b) * (c + d)
+    return a + b + c
 
 def main():
     n = 12
-    c_op = Op()
+    c_op = Elementwise(py_op)
 
     # doubling doubles
-    for i in range(2):
+    for i in range(16):
       a = np.arange(n, dtype=np.float32)
       b = np.ones(n, dtype=np.float32)
       c = np.ones(n, dtype=np.float32)
@@ -199,7 +283,7 @@ def main():
       actual = c_op(a, b, c)
       expected = py_op(a, b, c)
 
-      np.testing.assert_array_equal(actual, expected)
+      #np.testing.assert_array_equal(actual, expected)
 
     print("Success.")
 

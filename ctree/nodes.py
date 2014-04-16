@@ -31,6 +31,10 @@ class CtreeNode(ast.AST):
         """Retrieve the AST in DOT format for vizualization."""
         return "digraph mytree {\n%s}" % self._to_dot()
 
+    def _to_dot(self):
+        """Retrieve the AST in DOT format for vizualization."""
+        return DotGenVisitor().visit(self)
+
     def _requires_semicolon(self):
         """When coverted to a string, this node should be followed by a semicolon."""
         return True
