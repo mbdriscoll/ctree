@@ -1,4 +1,8 @@
-"""just in time utilities"""
+"""
+Just-in-time compilation support.
+"""
+
+import abc
 import copy
 import shutil
 import tempfile
@@ -61,26 +65,27 @@ class ConcreteSpecializedFunction(object):
     """
     A function backed by generated code.
     """
+    __metaclass__ = abc.ABCMeta
 
-    def __init__(self, entry_point_name, project_ast_node, entry_point_typesig):
-        assert isinstance(project_ast_node, Project), \
-            "Expected a Project but it got a %s." % type(project_ast_node)
+    def _compile(self, entry_point_name, project_node, entry_point_typesig, **kwargs):
+        """
+        Returns a python callable.
+        """
+        assert isinstance(project_node, Project), \
+            "Expected a Project but it got a %s." % type(project_node)
 
-        VerifyOnlyCtreeNodes().visit(project_ast_node)
+        VerifyOnlyCtreeNodes().visit(project_node)
 
-        self.module = project_ast_node.codegen()
+        self._module = project_node.codegen(**kwargs)
 
-        highlighted = highlight(str(self.module.ll_module), 'llvm')
+        highlighted = highlight(str(self._module.ll_module), 'llvm')
         log.debug("full LLVM program is: <<<\n%s\n>>>" % highlighted)
 
-        self._c_function = self.module.get_callable(entry_point_name,
-                                           entry_point_typesig)
+        return self._module.get_callable(entry_point_name, entry_point_typesig)
 
+    @abc.abstractmethod
     def __call__(self, *args, **kwargs):
-        assert not kwargs, \
-            "Passing kwargs to SpecializedFunction.__call__ isn't supported."
-
-        return self._c_function(*args, **kwargs)
+        pass
 
 
 class LazySpecializedFunction(object):
@@ -89,9 +94,8 @@ class LazySpecializedFunction(object):
     code just-in-time.
     """
 
-    def __init__(self, py_ast, entry_point_name):
+    def __init__(self, py_ast):
         self.original_tree = py_ast
-        self.entry_point_name = entry_point_name
         self.concrete_functions = {}  # config -> callable map
         self._tuner = self.get_tuning_driver()
 
@@ -141,7 +145,7 @@ class LazySpecializedFunction(object):
 
             self.concrete_functions[config_hash] = csf
 
-        return self.concrete_functions[config_hash](*args)
+        return self.concrete_functions[config_hash](*args, **kwargs)
 
     def report(self, *args, **kwargs):
         """

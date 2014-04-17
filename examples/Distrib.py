@@ -10,6 +10,7 @@ import logging
 logging.basicConfig(level=20)
 
 import numpy as np
+import pycl as cl
 
 from ctree.frontend import get_ast
 from ctree.c.nodes import *
@@ -17,6 +18,7 @@ from ctree.c.types import *
 from ctree.templates.nodes import *
 from ctree.transformations import *
 from ctree.jit import LazySpecializedFunction
+from ctree.jit import ConcreteSpecializedFunction
 
 # ---------------------------------------------------------------------------
 # Specializer code - nodes
@@ -122,14 +124,23 @@ class DoFusion(NodeTransformer):
 
 
 class LocationTagger(NodeTransformer):
-    def __init__(self, directives):
+    def __init__(self, main_memory, directives):
+        self.main_memory = main_memory
         self.directives = iter(directives)
 
     def visit_BinaryOp(self, node):
         node.loc = self.directives.next()
         return self.generic_visit(node)
 
+    def visit_Vector(self, node):
+        node.loc = self.main_memory
+        return self.generic_visit(node)
+
+
 class CopyInserter(NodeTransformer):
+    def __init__(self, main_memory):
+        self._main_mem = main_memory
+
     def visit_BinaryOp(self, node):
         node = self.generic_visit(node)
         if node.loc != node.left.loc:
@@ -156,12 +167,12 @@ class CopyInserter(NodeTransformer):
 
     def visit_Return(self, node):
         value = self.visit(node.value)
-        if value.loc != MainMemory:
+        if value.loc != self._main_mem:
             if not isinstance(node.value, Vector):
                 value = ComputedVector(node.value)
-            return value.on(MainMemory)
+            return value.on(self._main_mem)
         elif isinstance(value, BinaryOp):
-            return ComputedVector(value, loc=MainMemory)
+            return ComputedVector(value, loc=self._main_mem)
         return value
 
 class RemoveRedundantVectors(NodeTransformer):
@@ -179,27 +190,35 @@ class AllocateIntermediates(NodeTransformer):
 
     def visit_ComputedVector(self, node):
         node.mem = node.loc.allocate(self.length, self.dtype)
+        return node
 
     def visit_CopiedVector(self, node):
         node.mem = node.loc.allocate(self.length, self.dtype)
-        self.args = SymbolRef(node.name, type=
+        return node
 
 class Memory(object):
     pass
 
 class MainMemory(Memory):
-    @staticmethod
-    def allocate(length, dtype):
+    def allocate(self, length, dtype):
         print dtype, type(dtype)
         return np.empty([length], dtype=dtype)
 
+    def __str__(self):
+        return "MainMemory"
+
 class OclMemory(Memory):
-    @staticmethod
-    def allocate(length, dtype, cl_context):
-        return cl.CreateBuffer(cl_context, length * dtype.itemsize)
+    def __init__(self, cl_context):
+        self.cl_context = cl_context
+
+    def allocate(self, length, dtype):
+        return cl.CreateBuffer(self.cl_context, length * dtype.itemsize)
+
+    def __str__(self):
+        return "OclMemory<%s>" % [dev.name for dev in self.cl_context.devices][0]
 
 # label binary ops with location
-BinaryOp.label = lambda self: "op: %s\\nloc: %s" % (self.op, getattr(self, 'loc', None))
+BinaryOp.label = lambda self: "op: %s\\nloc: %s" % (self.op, self.loc)
 
 # ---------------------------------------------------------------------------
 # Specializer code - translator
@@ -217,7 +236,7 @@ class OpTranslator(LazySpecializedFunction):
         nBinops = nMuls + nAdds
         params = [
             BooleanArrayParameter("distribute", count=nMuls*4),
-            EnumArrayParameter("locs", count=nBinops, values=[MainMemory, OclMemory]),
+            EnumArrayParameter("locs", count=nBinops, values=['main', 'ocl<1>']),
             BooleanArrayParameter("fusion", count=nBinops),
         ]
 
@@ -242,9 +261,13 @@ class OpTranslator(LazySpecializedFunction):
         """
         arg_config, tuner_config = program_config
 
-        # set up OpenCL context
-        import pycl as cl
+        # set up OpenCL context and memory spaces
         cl_context = cl.clCreateContextFromType(cl.CL_DEVICE_TYPE_GPU)
+        mem_map = {
+            'main': MainMemory(),
+            'ocl<1>': OclMemory(cl_context),
+        }
+        main_memory = mem_map['main']
 
         # run basic conversions
         proj = PyBasicConversions().visit(py_ast)
@@ -267,21 +290,21 @@ class OpTranslator(LazySpecializedFunction):
         for ty, param in zip(ptrs, fn.params):
             param.type = ty
 
-        locs = tuner_config['locs']
+        locs = [mem_map[loc] for loc in tuner_config['locs']]
         fusion_directives = tuner_config['fusion']
 
-        proj = LocationTagger(locs).visit(proj)
+        proj = LocationTagger(main_memory, locs).visit(proj)
         proj = InsertIntermediates().visit(proj)
-        proj = CopyInserter().visit(proj)
+        proj = CopyInserter(main_memory).visit(proj)
         proj = DoFusion(fusion_directives).visit(proj)
         proj = RemoveRedundantVectors().visit(proj)
 
-        assert isinstance(fn.defn[0], ComputedVector)
+        assert isinstance(fn.defn[0], Vector)
         fn.defn[0].name = ans.name
 
         allocator = AllocateIntermediates(ptrs[0].ptr._dtype_, arg_config['len'])
         proj = allocator.visit(proj)
-        extra_args = allocator.get_extra_args()
+        #extra_args = allocator.get_extra_args()
 
         global n
         with open('graph.%d.dot' % n, 'w') as f:
@@ -290,7 +313,7 @@ class OpTranslator(LazySpecializedFunction):
 
         fn.defn = [SymbolRef("foo", Int())]
 
-        return proj, fn.get_type().as_ctype(), (cl_context)
+        return ConcreteSpecializedFunction(fn.name, proj, fn.get_type().as_ctype())
 
 
 class Elementwise(object):
