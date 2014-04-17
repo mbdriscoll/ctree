@@ -14,6 +14,7 @@ from ctree.c.types import *
 from ctree.templates.nodes import *
 from ctree.transformations import *
 from ctree.jit import LazySpecializedFunction
+from ctree.jit import ConcreteSpecializedFunction
 from ctree.types import get_ctree_type
 
 # ---------------------------------------------------------------------------
@@ -76,8 +77,11 @@ class OpTranslator(LazySpecializedFunction):
         with open("graph.dot", 'w') as f:
             f.write( tree.to_dot() )
 
+        name = self.entry_point_name
+        proj = Project([tree])
         entry_point_typesig = FuncType(Void(), [array_type]).as_ctype()
-        return Project([tree]), entry_point_typesig
+
+        return ConcreteSpecializedFunction(name, proj, entry_point_typesig)
 
 
 class ArrayOp(object):

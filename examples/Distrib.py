@@ -22,7 +22,7 @@ from ctree.jit import LazySpecializedFunction
 # Specializer code - nodes
 
 class Vector(CtreeNode):
-    def __init__(self, name=None, loc='main', type=None):
+    def __init__(self, name, loc=None, type=None):
         self.name = name
         self.loc = loc
         self.type = type
@@ -45,7 +45,7 @@ class Vector(CtreeNode):
 class CopiedVector(Vector):
     _fields = ["data"]
     _next_id = 0
-    def __init__(self, data, to='main', name=None):
+    def __init__(self, data, to=None, name=None):
         self.data = data
         if not name:
             name = "copied%d" % self._next_id
@@ -71,9 +71,9 @@ class ComputedVector(Vector):
 # ---------------------------------------------------------------------------
 # Specializer code - transformers
 
-class DistributiveLaw(NodeTransformer):
+class ApplyDistributiveProperty(NodeTransformer):
     def __init__(self, directives):
-        super(DistributiveLaw, self).__init__()
+        super(ApplyDistributiveProperty, self).__init__()
         self._directives = iter(directives)
 
     def visit_BinaryOp(self, node):
@@ -81,24 +81,18 @@ class DistributiveLaw(NodeTransformer):
         cd = node.right = self.visit(node.right)
         dist_left  = isinstance(ab, BinaryOp) and isinstance(ab.op, Op.Add)
         dist_right = isinstance(cd, BinaryOp) and isinstance(cd.op, Op.Add)
-        if isinstance(node.op, Op.Mul) and \
-           (dist_left or dist_right) and \
-           self._directives.next() == True:
-
-            if dist_right and dist_left:
-                a, b = ab.left, ab.right
+        if isinstance(node.op, Op.Mul):
+            if dist_right and self._directives.next():
                 c, d = cd.left, cd.right
-                return Add(Add(Mul(a,c), Mul(b,c)), Add(Mul(a,d), Mul(b,d)))
-            elif dist_right:
-                c, d = cd.left, cd.right
-                return Add(Mul(ab, c), Mul(ab, d))
-            elif dist_left:
+                abc = self.visit( Mul(ab,c) )
+                abd = self.visit( Mul(ab,d) )
+                return Add(abc, abd)
+            elif dist_left and self._directives.next():
                 a, b = ab.left, ab.right
-                return Add(Mul(a, cd), Add(b, cd))
-            else:
-                raise ValueError("Term shouldn't distribute.")
-        else:
-            return node
+                acd = self.visit( Mul(a, cd) )
+                bcd = self.visit( Mul(b, cd) )
+                return Add(acd, bcd)
+        return node
 
 class VectorFinder(NodeTransformer):
     def __init__(self):
@@ -110,17 +104,22 @@ class VectorFinder(NodeTransformer):
         return self._cache[node.name]
 
 class InsertIntermediates(NodeTransformer):
+    def visit_BinaryOp(self, node):
+        tree = self.generic_visit(node)
+        return ComputedVector(tree, loc=tree.loc)
+
+class DoFusion(NodeTransformer):
     def __init__(self, directives):
         self._directives = iter(directives)
 
     def visit_BinaryOp(self, node):
         tree = self.generic_visit(node)
-        return ComputedVector(tree, loc=tree.loc) if self._directives.next() else tree
+        if isinstance(tree.left, ComputedVector) and self._directives.next():
+            tree.left = tree.left.data
+        if isinstance(tree.right, ComputedVector) and self._directives.next():
+            tree.right = tree.right.data
+        return tree
 
-    def visit_CopiedVector(self, node):
-        tree = self.visit(node.data)
-        node.data = ComputedVector(tree, loc=tree.loc)
-        return node
 
 class LocationTagger(NodeTransformer):
     def __init__(self, directives):
@@ -157,12 +156,12 @@ class CopyInserter(NodeTransformer):
 
     def visit_Return(self, node):
         value = self.visit(node.value)
-        if value.loc != 'main':
+        if value.loc != MainMemory:
             if not isinstance(node.value, Vector):
                 value = ComputedVector(node.value)
-            return value.on('main')
+            return value.on(MainMemory)
         elif isinstance(value, BinaryOp):
-            return ComputedVector(value, loc='main')
+            return ComputedVector(value, loc=MainMemory)
         return value
 
 class RemoveRedundantVectors(NodeTransformer):
@@ -172,6 +171,32 @@ class RemoveRedundantVectors(NodeTransformer):
             return node.data
         else:
             return node
+
+class AllocateIntermediates(NodeTransformer):
+    def __init__(self, dtype, length):
+        self.dtype = dtype
+        self.length = length
+
+    def visit_ComputedVector(self, node):
+        node.mem = node.loc.allocate(self.length, self.dtype)
+
+    def visit_CopiedVector(self, node):
+        node.mem = node.loc.allocate(self.length, self.dtype)
+        self.args = SymbolRef(node.name, type=
+
+class Memory(object):
+    pass
+
+class MainMemory(Memory):
+    @staticmethod
+    def allocate(length, dtype):
+        print dtype, type(dtype)
+        return np.empty([length], dtype=dtype)
+
+class OclMemory(Memory):
+    @staticmethod
+    def allocate(length, dtype, cl_context):
+        return cl.CreateBuffer(cl_context, length * dtype.itemsize)
 
 # label binary ops with location
 BinaryOp.label = lambda self: "op: %s\\nloc: %s" % (self.op, getattr(self, 'loc', None))
@@ -191,9 +216,9 @@ class OpTranslator(LazySpecializedFunction):
         nAdds = 1
         nBinops = nMuls + nAdds
         params = [
-            BooleanArrayParameter("distribute", count=nMuls),
-            BooleanArrayParameter("intermediates", count=nBinops),
-            EnumArrayParameter("locs", count=nBinops, values=['main', 'ocl[0]']),
+            BooleanArrayParameter("distribute", count=nMuls*4),
+            EnumArrayParameter("locs", count=nBinops, values=[MainMemory, OclMemory]),
+            BooleanArrayParameter("fusion", count=nBinops),
         ]
 
         return BruteForceTuningDriver(params, MinimizeTime())
@@ -217,6 +242,10 @@ class OpTranslator(LazySpecializedFunction):
         """
         arg_config, tuner_config = program_config
 
+        # set up OpenCL context
+        import pycl as cl
+        cl_context = cl.clCreateContextFromType(cl.CL_DEVICE_TYPE_GPU)
+
         # run basic conversions
         proj = PyBasicConversions().visit(py_ast)
         fn = proj.find(FunctionDecl, name="py_op")
@@ -224,7 +253,7 @@ class OpTranslator(LazySpecializedFunction):
 
         # run platform-independent transformations
         distribute_directives = tuner_config['distribute']
-        proj = DistributiveLaw(distribute_directives).visit(proj)
+        proj = ApplyDistributiveProperty(distribute_directives).visit(proj)
 
         # insert parameter to hold answer
         ans = SymbolRef("ans", fn.params[0].type)
@@ -238,35 +267,30 @@ class OpTranslator(LazySpecializedFunction):
         for ty, param in zip(ptrs, fn.params):
             param.type = ty
 
-        # tag operations with platforms
         locs = tuner_config['locs']
+        fusion_directives = tuner_config['fusion']
+
         proj = LocationTagger(locs).visit(proj)
-
-        intermediate_directives = tuner_config['intermediates']
-        #proj = InsertIntermediates(intermediate_directives).visit(proj)
-
+        proj = InsertIntermediates().visit(proj)
         proj = CopyInserter().visit(proj)
-
+        proj = DoFusion(fusion_directives).visit(proj)
         proj = RemoveRedundantVectors().visit(proj)
+
+        assert isinstance(fn.defn[0], ComputedVector)
+        fn.defn[0].name = ans.name
+
+        allocator = AllocateIntermediates(ptrs[0].ptr._dtype_, arg_config['len'])
+        proj = allocator.visit(proj)
+        extra_args = allocator.get_extra_args()
 
         global n
         with open('graph.%d.dot' % n, 'w') as f:
             f.write(proj.to_dot())
         n += 1
 
-        """
-        proj = ReturnsToWrites(ans).visit(proj)
-
-        intermediates = tuner_config['intermediates']
-        proj = VectorIdentifier(intermediates).visit(proj)
-        proj = RedudantVectorEliminator().visit(proj)
-        proj = CopyInserter().visit(proj)
-
-
-        """
         fn.defn = [SymbolRef("foo", Int())]
 
-        return proj, fn.get_type().as_ctype()
+        return proj, fn.get_type().as_ctype(), (cl_context)
 
 
 class Elementwise(object):
@@ -290,7 +314,6 @@ class Elementwise(object):
 # User code
 
 def py_op(a, b, c):
-    #return (a + b) * (c + d)
     return a * (b + c)
 
 def main():
@@ -299,9 +322,9 @@ def main():
 
     # doubling doubles
     for i in range(16):
-      a = np.arange(n, dtype=np.float32)
-      b = np.ones(n, dtype=np.float32)
-      c = np.ones(n, dtype=np.float32)
+      a = np.arange(n, dtype=np.float32())
+      b = np.ones(n, dtype=np.float32())
+      c = np.ones(n, dtype=np.float32())
 
       actual = c_op(a, b, c)
       expected = py_op(a, b, c)

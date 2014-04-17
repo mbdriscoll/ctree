@@ -12,6 +12,7 @@ from ctree.c.types import FuncType
 from ctree.transformations import *
 from ctree.frontend import get_ast
 from ctree.jit import LazySpecializedFunction
+from ctree.jit import ConcreteSpecializedFunction
 from ctree.types import get_ctree_type
 
 
@@ -38,7 +39,7 @@ class BasicTranslator(LazySpecializedFunction):
         fib_type = FuncType(fib_arg_type, [fib_arg_type])
         fib_fn.set_typesig(fib_type)
 
-        return tree, fib_type.as_ctype()
+        return ConcreteSpecializedFunction(fib_fn.name, tree, fib_type.as_ctype())
 
 
 def main():

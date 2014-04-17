@@ -57,29 +57,30 @@ class JitModule(object):
         return entry_point_typesig(c_func_ptr)
 
 
-class _ConcreteSpecializedFunction(object):
+class ConcreteSpecializedFunction(object):
     """
     A function backed by generated code.
     """
 
-    def __init__(self, entry_point_name, project, entry_point_typesig, extra_args=tuple()):
-        assert isinstance(project, Project), \
-            "Expected a Project but it got a %s." % type(project)
+    def __init__(self, entry_point_name, project_ast_node, entry_point_typesig):
+        assert isinstance(project_ast_node, Project), \
+            "Expected a Project but it got a %s." % type(project_ast_node)
 
-        VerifyOnlyCtreeNodes().visit(project)
+        VerifyOnlyCtreeNodes().visit(project_ast_node)
 
-        self.module = project.codegen()
+        self.module = project_ast_node.codegen()
+
         highlighted = highlight(str(self.module.ll_module), 'llvm')
         log.debug("full LLVM program is: <<<\n%s\n>>>" % highlighted)
-        self.fn = self.module.get_callable(entry_point_name,
+
+        self._c_function = self.module.get_callable(entry_point_name,
                                            entry_point_typesig)
-        self._extra_args = extra_args
 
     def __call__(self, *args, **kwargs):
         assert not kwargs, \
             "Passing kwargs to SpecializedFunction.__call__ isn't supported."
 
-        return self.fn(*(args + self._extra_args), **kwargs)
+        return self._c_function(*args, **kwargs)
 
 
 class LazySpecializedFunction(object):
@@ -129,15 +130,16 @@ class LazySpecializedFunction(object):
         else:
             ctree.STATS.log("specialized function cache miss")
             log.info("specialized function cache miss.")
-            translator_result = self.transform(
+
+            csf = self.transform(
                 copy.deepcopy(self.original_tree),
                 program_config
             )
 
-            self.concrete_functions[config_hash] = _ConcreteSpecializedFunction(
-                self.entry_point_name,
-                *translator_result
-            )
+            assert isinstance(csf , ConcreteSpecializedFunction), \
+                "Expected a ctree.jit.ConcreteSpecializedFunction, but got a %s." % type(csf)
+
+            self.concrete_functions[config_hash] = csf
 
         return self.concrete_functions[config_hash](*args)
 

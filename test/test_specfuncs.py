@@ -5,6 +5,7 @@ from ctree.c.nodes import *
 from ctree.types import get_ctree_type
 
 from ctree.jit import LazySpecializedFunction
+from ctree.jit import ConcreteSpecializedFunction
 
 from fixtures.sample_asts import *
 
@@ -18,9 +19,9 @@ class TestTranslator(LazySpecializedFunction):
         func_type = FuncType(arg_types[0], list(arg_types))
 
         tree.set_typesig(func_type)
-        tree = Project([CFile("generated", [tree])]), func_type.as_ctype()
+        proj = Project([CFile("generated", [tree])])
 
-        return tree
+        return ConcreteSpecializedFunction(self.entry_point_name, proj, func_type.as_ctype())
 
 
 class BadArgs(LazySpecializedFunction):
@@ -30,17 +31,14 @@ class BadArgs(LazySpecializedFunction):
 
 class DefaultArgs(LazySpecializedFunction):
     def transform(self, tree, program_config):
+        proj = Project([CFile("generated", [tree])])
+        ctype = tree.get_type().as_ctype()
         return tree
 
 
 class NoTransform(LazySpecializedFunction):
     def args_to_subconfig(self, args):
         return {'arg_typesig': tuple(get_ctree_type(arg) for arg in args)}
-
-
-class NoTuningSpace(NoTransform):
-    def transform(self, tree, program_config):
-        return tree
 
 
 class TestSpecializers(unittest.TestCase):

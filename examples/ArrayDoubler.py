@@ -11,9 +11,9 @@ import numpy as np
 from ctree.frontend import get_ast
 from ctree.c.nodes import *
 from ctree.c.types import *
-from ctree.dotgen import to_dot
 from ctree.transformations import *
 from ctree.jit import LazySpecializedFunction
+from ctree.jit import ConcreteSpecializedFunction
 from ctree.types import get_ctree_type
 
 # ---------------------------------------------------------------------------
@@ -75,7 +75,8 @@ class OpTranslator(LazySpecializedFunction):
 
         entry_point_typesig = tree.find(FunctionDecl, name="apply_all").get_type().as_ctype()
 
-        return Project([tree]), entry_point_typesig
+        proj = Project([tree])
+        return ConcreteSpecializedFunction(self.entry_point_name, proj, entry_point_typesig)
 
 
 class ArrayOp(object):
