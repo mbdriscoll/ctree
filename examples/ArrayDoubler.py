@@ -76,8 +76,15 @@ class OpTranslator(LazySpecializedFunction):
         entry_point_typesig = tree.find(FunctionDecl, name="apply_all").get_type().as_ctype()
 
         proj = Project([tree])
-        return ConcreteSpecializedFunction(self.entry_point_name, proj, entry_point_typesig)
+        return ArrayFn().finalize("apply_all", proj, entry_point_typesig)
 
+class ArrayFn(ConcreteSpecializedFunction):
+    def finalize(self, entry_point_name, project_node, entry_typesig):
+        self._c_function = self._compile(entry_point_name, project_node, entry_typesig)
+        return self
+
+    def __call__(self, *args, **kwargs):
+        return self._c_function(*args, **kwargs)
 
 class ArrayOp(object):
     """
@@ -87,7 +94,7 @@ class ArrayOp(object):
 
     def __init__(self):
         """Instantiate translator."""
-        self.c_apply_all = OpTranslator(get_ast(self.apply), "apply_all")
+        self.c_apply_all = OpTranslator(get_ast(self.apply))
 
     def __call__(self, A):
         """Apply the operator to the arguments via a generated function."""

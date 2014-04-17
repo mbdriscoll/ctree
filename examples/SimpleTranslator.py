@@ -23,9 +23,17 @@ def fib(n):
         return fib(n - 1) + fib(n - 2)
 
 
+class BasicFunction(ConcreteSpecializedFunction):
+    def __init__(self, entry_name, project_node, entry_typesig):
+        self._c_function = self._compile(entry_name, project_node, entry_typesig)
+
+    def __call__(self, *args, **kwargs):
+        return self._c_function(*args, **kwargs)
+
+
 class BasicTranslator(LazySpecializedFunction):
     def __init__(self, func):
-        super(BasicTranslator, self).__init__(get_ast(func), func.__name__)
+        super(BasicTranslator, self).__init__(get_ast(func))
 
     def args_to_subconfig(self, args):
         return {'arg_type': get_ctree_type(args[0])}
@@ -39,7 +47,7 @@ class BasicTranslator(LazySpecializedFunction):
         fib_type = FuncType(fib_arg_type, [fib_arg_type])
         fib_fn.set_typesig(fib_type)
 
-        return ConcreteSpecializedFunction(fib_fn.name, tree, fib_type.as_ctype())
+        return BasicFunction(fib_fn.name, tree, fib_type.as_ctype())
 
 
 def main():

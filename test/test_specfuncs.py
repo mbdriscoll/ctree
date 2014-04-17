@@ -21,7 +21,15 @@ class TestTranslator(LazySpecializedFunction):
         tree.set_typesig(func_type)
         proj = Project([CFile("generated", [tree])])
 
-        return ConcreteSpecializedFunction(self.entry_point_name, proj, func_type.as_ctype())
+        return BasicFunction(tree.name, proj, func_type.as_ctype())
+
+
+class BasicFunction(ConcreteSpecializedFunction):
+    def __init__(self, entry, tree, typesig):
+        self._c_function = self._compile(entry, tree, typesig)
+
+    def __call__(self, *args, **kwargs):
+        return self._c_function(*args, **kwargs)
 
 
 class BadArgs(LazySpecializedFunction):
@@ -33,7 +41,7 @@ class DefaultArgs(LazySpecializedFunction):
     def transform(self, tree, program_config):
         proj = Project([CFile("generated", [tree])])
         ctype = tree.get_type().as_ctype()
-        return tree
+        return BasicFunction(tree.name, proj, ctype)
 
 
 class NoTransform(LazySpecializedFunction):
@@ -43,40 +51,40 @@ class NoTransform(LazySpecializedFunction):
 
 class TestSpecializers(unittest.TestCase):
     def test_identity_int(self):
-        c_identity = TestTranslator(identity_ast, "identity")
+        c_identity = TestTranslator(identity_ast)
         self.assertEqual(c_identity(1), identity(1))
 
     def test_identity_float(self):
-        c_identity = TestTranslator(identity_ast, "identity")
+        c_identity = TestTranslator(identity_ast)
         self.assertEqual(c_identity(1.2), identity(1.2))
 
     def test_identity_intfloat(self):
-        c_identity = TestTranslator(identity_ast, "identity")
+        c_identity = TestTranslator(identity_ast)
         self.assertEqual(c_identity(1), identity(1))
         self.assertEqual(c_identity(1.2), identity(1.2))
 
     def test_fib_int(self):
-        c_fib = TestTranslator(fib_ast, "fib")
+        c_fib = TestTranslator(fib_ast)
         self.assertEqual(c_fib(1), fib(1))
 
     def test_fib_float(self):
-        c_fib = TestTranslator(fib_ast, "fib")
+        c_fib = TestTranslator(fib_ast)
         self.assertEqual(c_fib(1.2), fib(1.2))
 
     def test_fib_intfloat(self):
-        c_fib = TestTranslator(fib_ast, "fib")
+        c_fib = TestTranslator(fib_ast)
         self.assertEqual(c_fib(1), fib(1))
         self.assertEqual(c_fib(1.2), fib(1.2))
 
     def test_gcd_int(self):
-        c_gcd = TestTranslator(gcd_ast, "gcd")
+        c_gcd = TestTranslator(gcd_ast)
         self.assertEqual(c_gcd(1, 2), gcd(1, 2))
 
     def test_default_args_to_subconfig(self):
-        c_identity = DefaultArgs(identity_ast, "identity")
+        c_identity = DefaultArgs(identity_ast)
         self.assertEqual(c_identity.args_to_subconfig([1, 2, 3]), {})
 
     def test_no_transform(self):
-        c_identity = NoTransform(identity_ast, "identity")
+        c_identity = NoTransform(identity_ast)
         with self.assertRaises(NotImplementedError):
             self.assertEqual(c_identity(1.2), identity(1.2))

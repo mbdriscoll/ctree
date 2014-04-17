@@ -77,11 +77,18 @@ class OpTranslator(LazySpecializedFunction):
         with open("graph.dot", 'w') as f:
             f.write( tree.to_dot() )
 
-        name = self.entry_point_name
         proj = Project([tree])
         entry_point_typesig = FuncType(Void(), [array_type]).as_ctype()
 
-        return ConcreteSpecializedFunction(name, proj, entry_point_typesig)
+        return BasicFunction("apply_all", proj, entry_point_typesig)
+
+
+class BasicFunction(ConcreteSpecializedFunction):
+    def __init__(self, entry_name, proj_node, entry_typesig):
+        self._c_function = self._compile(entry_name, proj_node, entry_typesig)
+
+    def __call__(self, *args, **kwargs):
+        return self._c_function(*args, **kwargs)
 
 
 class ArrayOp(object):
@@ -92,7 +99,7 @@ class ArrayOp(object):
 
     def __init__(self):
         """Instantiate translator."""
-        self.c_apply_all = OpTranslator(get_ast(self.apply), "apply_all")
+        self.c_apply_all = OpTranslator(get_ast(self.apply))
 
     def __call__(self, A):
         """Apply the operator to the arguments via a generated function."""
