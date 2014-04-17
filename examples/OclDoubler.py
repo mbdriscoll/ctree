@@ -8,18 +8,7 @@ logging.basicConfig(level=20)
 
 import numpy as np
 import ctypes as ct
-
-from pycl import (
-    clCreateProgramWithSource,
-    clCreateContextFromType,
-    clCreateCommandQueue,
-    buffer_from_ndarray,
-    buffer_to_ndarray,
-    cl_command_queue,
-    cl_context,
-    cl_kernel,
-    cl_mem,
-)
+import pycl as cl
 
 from ctree.c.nodes import *
 from ctree.c.types import *
@@ -39,8 +28,8 @@ from ctree.types import get_ctree_type
 
 class OpFunction(ConcreteSpecializedFunction):
     def __init__(self):
-        self.cl_context = clCreateContextFromType()
-        self.cl_queue = clCreateCommandQueue(self.cl_context)
+        self.context = cl.clCreateContextFromType()
+        self.queue = cl.clCreateCommandQueue(self.context)
 
     def finalize(self, kernel, tree, entry_name, entry_type):
         self.kernel = kernel
@@ -48,9 +37,9 @@ class OpFunction(ConcreteSpecializedFunction):
         return self
 
     def __call__(self, A):
-        buf, evt = buffer_from_ndarray(self.cl_queue, A, blocking=False)
-        self._c_function(A, self.cl_context, self.cl_queue, self.kernel, buf)
-        B, evt = buffer_to_ndarray(self.cl_queue, buf, like=A)
+        buf, evt = cl.buffer_from_ndarray(self.queue, A, blocking=False)
+        self._c_function(A, self.context, self.queue, self.kernel, buf)
+        B, evt = cl.buffer_to_ndarray(self.queue, buf, like=A)
         return B
 
 
@@ -69,10 +58,6 @@ class OpTranslator(LazySpecializedFunction):
         Convert the Python AST to a C AST according to the directions
         given in program_config.
         """
-        from pycl import (cl_context, cl_command_queue, cl_kernel, cl_mem)
-
-        fn = OpFunction()
-
         len_A, A_dtype, A_ndim, A_shape = program_config[0]
         A_type = NdPointer(A_dtype, A_ndim, A_shape)
 
@@ -107,15 +92,12 @@ class OpTranslator(LazySpecializedFunction):
         """, {'n': Constant(len_A + 32 - (len_A % 32))})
 
         proj = Project([kernel, CFile("generated", [control])])
+        fn = OpFunction()
 
-        program = clCreateProgramWithSource(fn.cl_context, kernel.codegen()).build()
+        program = cl.clCreateProgramWithSource(fn.context, kernel.codegen()).build()
         apply_kernel_ptr = program['apply_kernel']
-        apply_kernel_ptr.argtypes = (cl_mem,)
 
-        with open("graph.dot", 'w') as f:
-          f.write( proj.to_dot() )
-
-        entry_type = ct.CFUNCTYPE(ct.c_void_p, A_type.ptr, cl_context, cl_command_queue, cl_kernel, cl_mem)
+        entry_type = ct.CFUNCTYPE(ct.c_void_p, A_type.ptr, cl.cl_context, cl.cl_command_queue, cl.cl_kernel, cl.cl_mem)
         return fn.finalize(apply_kernel_ptr, proj, "apply_all", entry_type)
 
 
@@ -157,7 +139,7 @@ class Squarer(ArrayOp):
 
 
 def main():
-    data = np.arange(1234, dtype=np.float32)
+    data = np.arange(12, dtype=np.float32)
 
     # squaring floats
     squarer = Squarer()
