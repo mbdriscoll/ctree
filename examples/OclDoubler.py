@@ -7,6 +7,7 @@ import logging
 logging.basicConfig(level=20)
 
 import numpy as np
+import ctypes as ct
 
 from pycl import (
     clCreateProgramWithSource,
@@ -14,6 +15,9 @@ from pycl import (
     clCreateCommandQueue,
     buffer_from_ndarray,
     buffer_to_ndarray,
+    cl_command_queue,
+    cl_context,
+    cl_kernel,
     cl_mem,
 )
 
@@ -23,7 +27,7 @@ from ctree.cpp.nodes import *
 from ctree.ocl.nodes import *
 from ctree.ocl.types import *
 from ctree.ocl.macros import *
-from ctree.templates.nodes import FileTemplate
+from ctree.templates.nodes import StringTemplate
 from ctree.transformations import *
 from ctree.frontend import get_ast
 from ctree.jit import LazySpecializedFunction
@@ -38,15 +42,15 @@ class OpFunction(ConcreteSpecializedFunction):
         self.cl_context = clCreateContextFromType()
         self.cl_queue = clCreateCommandQueue(self.cl_context)
 
-    def finalize(self, cl_kernel):
-        self.kernel = cl_kernel
+    def finalize(self, kernel, tree, entry_name, entry_type):
+        self.kernel = kernel
+        self._c_function = self._compile(entry_name, tree, entry_type)
         return self
 
     def __call__(self, A):
-        queue = self.cl_queue
-        buf, in_evt = buffer_from_ndarray(queue, A, blocking=False)
-        run_evt = self.kernel(buf).on(queue, len(A), wait_for=in_evt)
-        B, out_evt = buffer_to_ndarray(queue, buf, like=A, wait_for=run_evt)
+        buf, evt = buffer_from_ndarray(self.cl_queue, A, blocking=False)
+        self._c_function(A, self.cl_context, self.cl_queue, self.kernel, buf)
+        B, evt = buffer_to_ndarray(self.cl_queue, buf, like=A)
         return B
 
 
@@ -65,6 +69,8 @@ class OpTranslator(LazySpecializedFunction):
         Convert the Python AST to a C AST according to the directions
         given in program_config.
         """
+        from pycl import (cl_context, cl_command_queue, cl_kernel, cl_mem)
+
         fn = OpFunction()
 
         len_A, A_dtype, A_ndim, A_shape = program_config[0]
@@ -79,22 +85,38 @@ class OpTranslator(LazySpecializedFunction):
             defn=[
                 Assign(SymbolRef("i", Int()),
                        FunctionCall(SymbolRef("get_global_id"), [Constant(0)])),
-                Assign(ArrayRef(SymbolRef("A"), SymbolRef("i")),
-                       FunctionCall(SymbolRef("apply"),
-                                    [ArrayRef(SymbolRef("A"), SymbolRef("i"))])),
+                If(Lt(SymbolRef("i"), Constant(len_A)), [
+                    Assign(ArrayRef(SymbolRef("A"), SymbolRef("i")),
+                           FunctionCall(SymbolRef("apply"),
+                                        [ArrayRef(SymbolRef("A"), SymbolRef("i"))])),
+                ], []),
             ]
         ).set_kernel()
 
         kernel = OclFile("kernel", [apply_one, apply_kernel])
 
+        control = StringTemplate(r"""
+        #include <OpenCL/opencl.h>
+        void apply_all(float* A, cl_context ctx, cl_command_queue queue, cl_kernel kernel, cl_mem buf) {
+            size_t global = $n;
+            size_t local = 32;
+            clSetKernelArg(kernel, 0, sizeof(cl_mem), &buf);
+            clEnqueueNDRangeKernel(queue, kernel, 1, NULL, &global, &local, 0, NULL, NULL);
+
+        }
+        """, {'n': Constant(len_A + 32 - (len_A % 32))})
+
+        proj = Project([kernel, CFile("generated", [control])])
+
         program = clCreateProgramWithSource(fn.cl_context, kernel.codegen()).build()
-        cl_kernel = program['apply_kernel']
-        cl_kernel.argtypes = cl_mem,
+        apply_kernel_ptr = program['apply_kernel']
+        apply_kernel_ptr.argtypes = (cl_mem,)
 
         with open("graph.dot", 'w') as f:
-          f.write( kernel.to_dot() )
+          f.write( proj.to_dot() )
 
-        return fn.finalize(cl_kernel)
+        entry_type = ct.CFUNCTYPE(ct.c_void_p, A_type.ptr, cl_context, cl_command_queue, cl_kernel, cl_mem)
+        return fn.finalize(apply_kernel_ptr, proj, "apply_all", entry_type)
 
 
 class ArrayOp(object):
@@ -116,7 +138,7 @@ class ArrayOp(object):
 
 
 # ---------------------------------------------------------------------------
-# User code
+# user code
 
 class Doubler(ArrayOp):
     """Double elements of the array."""
@@ -135,7 +157,7 @@ class Squarer(ArrayOp):
 
 
 def main():
-    data = np.arange(1024, dtype=np.float32)
+    data = np.arange(1234, dtype=np.float32)
 
     # squaring floats
     squarer = Squarer()
