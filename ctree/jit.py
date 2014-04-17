@@ -25,8 +25,14 @@ class JitModule(object):
     """
 
     def __init__(self):
-        self.compilation_dir = tempfile.mkdtemp(prefix="ctree-",
-                                                dir=tempfile.gettempdir())
+        import os
+
+        # write files to $TEMPDIR/ctree/run-XXXX
+        ctree_dir = os.path.join(tempfile.gettempdir(), "ctree")
+        if not os.path.exists(ctree_dir):
+            os.mkdir(ctree_dir)
+
+        self.compilation_dir = tempfile.mkdtemp(prefix="run-", dir=ctree_dir)
         self.ll_module = ll.Module.new('ctree')
         self.exec_engine = None
         log.info("temporary compilation directory is: %s",
