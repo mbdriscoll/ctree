@@ -40,7 +40,6 @@ class TestAllExamples(unittest.TestCase):
         from examples import TuningSpecializer
         TuningSpecializer.main()
 
-    @unittest.skip("intermitten failures")
     def test_OclDoubler(self):
         from examples import OclDoubler
         OclDoubler.main()
