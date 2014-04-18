@@ -36,27 +36,27 @@ class TestOclMacros(unittest.TestCase):
         tree = barrier(CLK_LOCAL_MEM_FENCE())
         self.assertEqual(tree.codegen(), "barrier(CLK_LOCAL_MEM_FENCE)")
 
-    def get_local_id(self):
+    def test_get_local_id(self):
         tree = get_local_id(0)
         self.assertEqual(tree.codegen(), "get_local_id(0)")
 
-    def get_global_id(self):
+    def test_get_global_id(self):
         tree = get_global_id(0)
         self.assertEqual(tree.codegen(), "get_global_id(0)")
 
-    def get_group_id(self):
+    def test_get_group_id(self):
         tree = get_group_id(0)
         self.assertEqual(tree.codegen(), "get_group_id(0)")
 
-    def get_local_size(self):
+    def test_get_local_size(self):
         tree = get_local_size(0)
         self.assertEqual(tree.codegen(), "get_local_size(0)")
 
-    def get_num_groups(self):
+    def test_get_num_groups(self):
         tree = get_num_groups(0)
         self.assertEqual(tree.codegen(), "get_num_groups(0)")
 
-    def clReleaseMemObject(self):
+    def test_clReleaseMemObject(self):
         tree = clReleaseMemObject(SymbolRef('device_object'))
         self.assertEqual(tree.codegen(), "clReleaseMemObject(device_object)")
 
