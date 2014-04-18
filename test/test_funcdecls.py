@@ -43,3 +43,9 @@ class TestFuncDecls(unittest.TestCase):
         self._check(node, """void* fn() {
     foo + bar;
 }""")
+
+    def test_set_kernel(self):
+        params = [SymbolRef("bar", Int()), SymbolRef('baz', Int())]
+        node = FunctionDecl(Ptr(Void()), SymbolRef("foo"), params)
+        node.set_kernel();
+        self._check(node, "__kernel void* foo(int bar, int baz)")
