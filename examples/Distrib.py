@@ -187,38 +187,66 @@ class AllocateIntermediates(NodeTransformer):
     def __init__(self, dtype, length):
         self.dtype = dtype
         self.length = length
+        self.allocated = []
 
     def visit_ComputedVector(self, node):
         node.mem = node.loc.allocate(self.length, self.dtype)
-        return node
+        self.allocated.append(node)
+        return self.generic_visit(node)
 
     def visit_CopiedVector(self, node):
         node.mem = node.loc.allocate(self.length, self.dtype)
-        return node
+        self.allocated.append(node)
+        return self.generic_visit(node)
+
+class Linearize(NodeTransformer):
+    def __init__(self):
+        self._stmts = []
+
+    def visit_ComputedVector(self, node):
+        node = self.generic_visit(node)
+        self._stmts.append(node)
+        return SymbolRef(node.name)
+
+    def visit_Vector(self, node):
+        return SymbolRef(node.name)
+
+class Loopize(NodeTransformer):
+    def __init__(self, nElems):
+        self.nElems = nElems
+
+    def visit_ComputedVector(self, node):
+        i = SymbolRef("i", Int())
+        return For(Assign(i, Constant(0)), Lt(i.copy(), Constant(self.nElems)), PostInc(i.copy()), [
+            Assign( ArrayRef(SymbolRef(node.name), i.copy()),
+                    self.visit(node.data) )
+        ])
+
+    def visit_SymbolRef(self, node):
+        return ArrayRef(node, SymbolRef("i"))
 
 class Memory(object):
     pass
 
 class MainMemory(Memory):
     def allocate(self, length, dtype):
-        print dtype, type(dtype)
         return np.empty([length], dtype=dtype)
 
     def __str__(self):
         return "MainMemory"
 
 class OclMemory(Memory):
-    def __init__(self, cl_context):
-        self.cl_context = cl_context
+    def __init__(self, context):
+        self.context = context
 
     def allocate(self, length, dtype):
-        return cl.CreateBuffer(self.cl_context, length * dtype.itemsize)
+        return cl.clCreateBuffer(self.context, length * dtype.itemsize)
 
     def __str__(self):
-        return "OclMemory<%s>" % [dev.name for dev in self.cl_context.devices][0]
+        return "OclMemory<%s>" % [dev.name for dev in self.context.devices][0]
 
 # label binary ops with location
-BinaryOp.label = lambda self: "op: %s\\nloc: %s" % (self.op, self.loc)
+BinaryOp.label = lambda self: "op: %s\\nloc: %s" % (self.op, getattr(self, 'loc', '?'))
 
 # ---------------------------------------------------------------------------
 # Specializer code - translator
@@ -236,7 +264,7 @@ class OpTranslator(LazySpecializedFunction):
         nBinops = nMuls + nAdds
         params = [
             BooleanArrayParameter("distribute", count=nMuls*4),
-            EnumArrayParameter("locs", count=nBinops, values=['main', 'ocl<1>']),
+            EnumArrayParameter("locs", count=nBinops, values=['main']),
             BooleanArrayParameter("fusion", count=nBinops),
         ]
 
@@ -262,10 +290,10 @@ class OpTranslator(LazySpecializedFunction):
         arg_config, tuner_config = program_config
 
         # set up OpenCL context and memory spaces
-        cl_context = cl.clCreateContextFromType(cl.CL_DEVICE_TYPE_GPU)
+        context = cl.clCreateContextFromType()
         mem_map = {
             'main': MainMemory(),
-            'ocl<1>': OclMemory(cl_context),
+            'ocl<1>': OclMemory(context),
         }
         main_memory = mem_map['main']
 
@@ -277,10 +305,6 @@ class OpTranslator(LazySpecializedFunction):
         # run platform-independent transformations
         distribute_directives = tuner_config['distribute']
         proj = ApplyDistributiveProperty(distribute_directives).visit(proj)
-
-        # insert parameter to hold answer
-        ans = SymbolRef("ans", fn.params[0].type)
-        fn.params.insert(0, ans)
 
         # identify vectors
         fn.defn = [VectorFinder().visit(fn.defn[0])]
@@ -300,20 +324,50 @@ class OpTranslator(LazySpecializedFunction):
         proj = RemoveRedundantVectors().visit(proj)
 
         assert isinstance(fn.defn[0], Vector)
-        fn.defn[0].name = ans.name
+        # final result: fn.defn[0].name = ans.name
 
-        allocator = AllocateIntermediates(ptrs[0].ptr._dtype_, arg_config['len'])
+        dtype, length = ptrs[0].ptr._dtype_, arg_config['len']
+        allocator = AllocateIntermediates(dtype, length)
         proj = allocator.visit(proj)
-        #extra_args = allocator.get_extra_args()
+        allocator.allocated[0].name = "ans"
+
+        for a in allocator.allocated:
+            if isinstance(a.mem, np.ndarray):
+                ty = NdPointer.to(a.mem)
+            elif isinstance(a.mem, cl.cl_mem):
+                raise NotImplementedError("Can't handle cl_mem types.")
+            fn.params.append(SymbolRef(a.name, ty))
+
+        linearizer = Linearize()
+        proj = linearizer.visit(proj)
+        fn.defn = linearizer._stmts
+
+        loopizer = Loopize(length)
+        fn.defn = [loopizer.visit(stmt) for stmt in fn.defn]
+
+        c_func = ElementwiseFunction()
+        c_func.intermediates = [a.mem for a in allocator.allocated]
 
         global n
         with open('graph.%d.dot' % n, 'w') as f:
             f.write(proj.to_dot())
         n += 1
 
-        fn.defn = [SymbolRef("foo", Int())]
+        return c_func.finalize("py_op", proj, fn.get_type().as_ctype())
 
-        return ConcreteSpecializedFunction(fn.name, proj, fn.get_type().as_ctype())
+class ElementwiseFunction(ConcreteSpecializedFunction):
+    def __init__(self):
+        self.context = cl.clCreateContextFromType()
+        self.queue = cl.clCreateCommandQueue(self.context)
+
+    def finalize(self, entry_name, proj, typesig):
+        self._c_function = self._compile(entry_name, proj, typesig)
+        return self
+
+    def __call__(self, *args):
+        full_args = list(args) + self.intermediates
+        self._c_function(*full_args)
+        return np.copy(self.intermediates[0])
 
 
 class Elementwise(object):
@@ -324,13 +378,11 @@ class Elementwise(object):
 
     def __init__(self, fn):
         """Instantiate translator."""
-        self.c_op = OpTranslator(get_ast(fn), "py_op")
+        self.jit = OpTranslator(get_ast(fn))
 
     def __call__(self, *args):
         """Apply the operator to the arguments via a generated function."""
-        answer = np.zeros_like(args[0])
-        self.c_op(answer, *args)
-        return answer
+        return self.jit(*args)
 
 
 # ---------------------------------------------------------------------------
@@ -352,7 +404,7 @@ def main():
       actual = c_op(a, b, c)
       expected = py_op(a, b, c)
 
-      #np.testing.assert_array_equal(actual, expected)
+      np.testing.assert_array_equal(actual, expected)
 
     print("Success.")
 

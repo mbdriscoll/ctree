@@ -38,7 +38,7 @@ class OpFunction(ConcreteSpecializedFunction):
 
     def __call__(self, A):
         buf, evt = cl.buffer_from_ndarray(self.queue, A, blocking=False)
-        self._c_function(self.context, self.queue, self.kernel, buf)
+        self._c_function(self.queue, self.kernel, buf)
         B, evt = cl.buffer_to_ndarray(self.queue, buf, like=A)
         return B
 
@@ -82,7 +82,7 @@ class OpTranslator(LazySpecializedFunction):
 
         control = StringTemplate(r"""
         #include <OpenCL/opencl.h>
-        void apply_all(cl_context ctx, cl_command_queue queue, cl_kernel kernel, cl_mem buf) {
+        void apply_all(cl_command_queue queue, cl_kernel kernel, cl_mem buf) {
             size_t global = $n;
             size_t local = 32;
             clSetKernelArg(kernel, 0, sizeof(cl_mem), &buf);
@@ -97,7 +97,7 @@ class OpTranslator(LazySpecializedFunction):
         program = cl.clCreateProgramWithSource(fn.context, kernel.codegen()).build()
         apply_kernel_ptr = program['apply_kernel']
 
-        entry_type = ct.CFUNCTYPE(ct.c_void_p, cl.cl_context, cl.cl_command_queue, cl.cl_kernel, cl.cl_mem)
+        entry_type = ct.CFUNCTYPE(ct.c_void_p, cl.cl_command_queue, cl.cl_kernel, cl.cl_mem)
         return fn.finalize(apply_kernel_ptr, proj, "apply_all", entry_type)
 
 
