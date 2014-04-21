@@ -365,22 +365,13 @@ class OpTranslator(LazySpecializedFunction):
         schedules = FindParallelism().visit(fn.defn[0])
         print "SCHEDULES", schedules
 
-        def choose_schedule(dag):
-            if isinstance(dag, list):
-                sched = []
-                for node in dag:
-                    sched.extend( choose_schedule(node) )
-                return sched
-            elif isinstance(dag, set):
-                work_items = [choose_schedule(node) for node in dag]
-                return OmpParallelSections(work_items)
-            else:
-                return [dag]
+        from ctree.omp.macros import parallelize_tasks
 
-        schedule = choose_schedule(schedules)
+        schedule = parallelize_tasks(schedules)
         refconv = RefConverter()
         for item in schedule:
-            item.data = refconv.visit(item.data)
+            if hasattr(item, 'data'):
+                item.data = refconv.visit(item.data)
 
         fn.defn = schedule
 
