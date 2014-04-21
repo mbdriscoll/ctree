@@ -1,8 +1,10 @@
 import unittest
+from textwrap import dedent
 
 from ctree.omp.nodes import *
 from ctree.omp.macros import *
 from ctree.c.nodes import *
+from ctree.c.types import *
 
 
 class TestOmpCodegen(unittest.TestCase):
@@ -33,11 +35,29 @@ class TestOmpCodegen(unittest.TestCase):
     def test_no_semicolons(self):
         """There shouldn't be semicolons after Omp statementss."""
         node = Block([OmpParallel(), Assign(SymbolRef("x"), Constant(3))])
-        self.assertEqual(str(node), """{
-    #pragma omp parallel
-    x = 3;
-}""")
+        self.assertEqual(str(node), dedent("""\
+        {
+            #pragma omp parallel
+            x = 3;
+        }"""))
 
     def test_get_wtime(self):
         node = omp_get_wtime()
         self.assertEqual(str(node), "omp_get_wtime()")
+
+    def test_sections_1(self):
+        node = Block([
+            OmpParallelSections(),
+            Block([
+                OmpSection(),
+                Assign(SymbolRef("i", Int()), Constant(2)),
+            ]),
+        ])
+        self.assertEqual(str(node), dedent("""\
+        {
+            #pragma omp parallel sections
+            {
+                #pragma omp section
+                int i = 2;
+            }
+        """))

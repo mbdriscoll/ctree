@@ -5,6 +5,7 @@ and all operations are element-wise.
 
 n = 0
 
+import itertools
 import logging
 
 logging.basicConfig(level=20)
@@ -15,6 +16,7 @@ import pycl as cl
 from ctree.frontend import get_ast
 from ctree.c.nodes import *
 from ctree.c.types import *
+from ctree.omp.macros import *
 from ctree.templates.nodes import *
 from ctree.transformations import *
 from ctree.jit import LazySpecializedFunction
@@ -199,17 +201,40 @@ class AllocateIntermediates(NodeTransformer):
         self.allocated.append(node)
         return self.generic_visit(node)
 
-class Linearize(NodeTransformer):
-    def __init__(self):
-        self._stmts = []
+from ctree.visitors import NodeVisitor
+
+class GetWorkItems(NodeVisitor):
+    def visit_BinaryOp(self, node):
+        lhs = self.visit(node.left)
+        rhs = self.visit(node.right)
+        return lhs + rhs
 
     def visit_ComputedVector(self, node):
-        node = self.generic_visit(node)
-        self._stmts.append(node)
-        return SymbolRef(node.name)
+        return [node]
+
+class FindParallelism(NodeVisitor):
+    def visit_BinaryOp(self, node):
+        left  = self.visit(node.left)
+        right = self.visit(node.right)
+        if left and right:
+            return {left, right} # XXX: type error on regular set. why?
+        elif left or right:
+            return left or right
+
+    def visit_ComputedVector(self, node):
+        compute = self.visit(node.data)
+        if compute:
+            return [compute, node]
+        else:
+            return node
+
+class RefConverter(NodeTransformer):
+    def visit_ComputedVector(self, node):
+        return ArrayRef(SymbolRef(node.name), SymbolRef("i"))
 
     def visit_Vector(self, node):
-        return SymbolRef(node.name)
+        return ArrayRef(SymbolRef(node.name), SymbolRef("i"))
+
 
 class Loopize(NodeTransformer):
     def __init__(self, nElems):
@@ -222,8 +247,8 @@ class Loopize(NodeTransformer):
                     self.visit(node.data) )
         ])
 
-    def visit_SymbolRef(self, node):
-        return ArrayRef(node, SymbolRef("i"))
+    def visit_Vector(self, node):
+        return ArrayRef(SymbolRef(node.name), SymbolRef("i"))
 
 class Memory(object):
     pass
@@ -263,9 +288,9 @@ class OpTranslator(LazySpecializedFunction):
         nAdds = 1
         nBinops = nMuls + nAdds
         params = [
-            BooleanArrayParameter("distribute", count=nMuls*4),
             EnumArrayParameter("locs", count=nBinops, values=['main']),
-            BooleanArrayParameter("fusion", count=nBinops),
+            BooleanArrayParameter("fusion", count=2),
+            BooleanArrayParameter("distribute", count=1),
         ]
 
         return BruteForceTuningDriver(params, MinimizeTime())
@@ -324,7 +349,6 @@ class OpTranslator(LazySpecializedFunction):
         proj = RemoveRedundantVectors().visit(proj)
 
         assert isinstance(fn.defn[0], Vector)
-        # final result: fn.defn[0].name = ans.name
 
         dtype, length = ptrs[0].ptr._dtype_, arg_config['len']
         allocator = AllocateIntermediates(dtype, length)
@@ -338,20 +362,38 @@ class OpTranslator(LazySpecializedFunction):
                 raise NotImplementedError("Can't handle cl_mem types.")
             fn.params.append(SymbolRef(a.name, ty))
 
-        linearizer = Linearize()
-        proj = linearizer.visit(proj)
-        fn.defn = linearizer._stmts
+        schedules = FindParallelism().visit(fn.defn[0])
+        print "SCHEDULES", schedules
+
+        def choose_schedule(dag):
+            if isinstance(dag, list):
+                sched = []
+                for node in dag:
+                    sched.extend( choose_schedule(node) )
+                return sched
+            elif isinstance(dag, set):
+                work_items = [choose_schedule(node) for node in dag]
+                return OmpParallelSections(work_items)
+            else:
+                return [dag]
+
+        schedule = choose_schedule(schedules)
+        refconv = RefConverter()
+        for item in schedule:
+            item.data = refconv.visit(item.data)
+
+        fn.defn = schedule
 
         loopizer = Loopize(length)
         fn.defn = [loopizer.visit(stmt) for stmt in fn.defn]
-
-        c_func = ElementwiseFunction()
-        c_func.intermediates = [a.mem for a in allocator.allocated]
 
         global n
         with open('graph.%d.dot' % n, 'w') as f:
             f.write(proj.to_dot())
         n += 1
+
+        c_func = ElementwiseFunction()
+        c_func.intermediates = [a.mem for a in allocator.allocated]
 
         return c_func.finalize("py_op", proj, fn.get_type().as_ctype())
 
@@ -397,9 +439,10 @@ def main():
 
     # doubling doubles
     for i in range(16):
-      a = np.arange(n, dtype=np.float32())
-      b = np.ones(n, dtype=np.float32())
-      c = np.ones(n, dtype=np.float32())
+      a = np.arange(0*n, 1*n, dtype=np.float32())
+      b = np.arange(1*n, 2*n, dtype=np.float32())
+      c = np.arange(2*n, 3*n, dtype=np.float32())
+      d = np.arange(3*n, 4*n, dtype=np.float32())
 
       actual = c_op(a, b, c)
       expected = py_op(a, b, c)

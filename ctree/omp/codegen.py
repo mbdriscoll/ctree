@@ -22,6 +22,18 @@ class OmpCodeGen(CodeGenVisitor):
             s += " " + ", ".join(map(str, node.clauses))
         return s
 
+    def visit_OmpParallelSections(self, node):
+        s = "#pragma omp parallel sections"
+        if node.clauses:
+            s += " " + ", ".join(map(str, node.clauses))
+        return s
+
+    def visit_OmpSection(self, node):
+        s = "#pragma omp section"
+        if node.clauses:
+            s += " " + ", ".join(map(str, node.clauses))
+        return s
+
     def visit_OmpIfClause(self, node):
         return "if(%s)" % node.exp
 
