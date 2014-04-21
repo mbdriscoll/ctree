@@ -6,8 +6,9 @@ from ctree.omp.macros import *
 from ctree.c.nodes import *
 from ctree.c.types import *
 
+from util import CtreeTest
 
-class TestOmpCodegen(unittest.TestCase):
+class TestOmpCodegen(CtreeTest):
     def test_parallel(self):
         node = OmpParallel()
         self.assertEqual(str(node), "#pragma omp parallel")
@@ -53,11 +54,11 @@ class TestOmpCodegen(unittest.TestCase):
                 Assign(SymbolRef("i", Int()), Constant(2)),
             ]),
         ])
-        self.assertEqual(str(node), dedent("""\
+        self._check_code(node, """\
         {
             #pragma omp parallel sections
             {
                 #pragma omp section
                 int i = 2;
             }
-        """))
+        }""")
