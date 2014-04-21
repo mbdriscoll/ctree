@@ -176,6 +176,9 @@ class Block(Statement):
         self.body = body if body else []
         super(Block, self).__init__()
 
+    def _requires_semicolon(self):
+        return False
+
 
 class String(Literal):
     """Cite me."""
