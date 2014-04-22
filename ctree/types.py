@@ -1,44 +1,59 @@
-import abc
+import logging
 
-from ctree.nodes import CtreeNode
-from ctree.visitors import NodeVisitor
+from ctree import _TYPE_CODEGENERATORS as generators
+from ctree import _TYPE_RECOGNIZERS    as recognizers
 
+log = logging.getLogger(__name__)
 
-class CtreeType(CtreeNode):
-    def codegen(self, indent=0):
-        raise Exception("%s should override codegen()" % type(self))
-
-    def as_ctypes(self):
-        raise Exception("%s should override as_ctypes()" % type(self))
-
-    def __eq__(self, other):
-        return str(self) == str(other)
-
-    def __hash__(self):
-        return hash(str(self))
-
-
-class TypeFetcher(NodeVisitor):
+def register_type_codegenerators(codegen_dict):
     """
-    Dynamically computes the type of the Expression.
+    Registers routines for generating code for types.
+
+    :param codegen_dict: Maps type classes to functions that
+    take an instance of that class and return the corresponding
+    string.
     """
-    pass
+    existing_keys = generators.viewkeys()
+    new_keys      = codegen_dict.viewkeys()
+    intersection = existing_keys & new_keys
+    if intersection:
+        log.warning("replacing existing type_codegenerator for %s", intersection)
+
+    for genfn in generators.itervalues():
+        assert callable(genfn), "Found a non-callable type_codegen: %s" % genfn
+
+    generators.update(codegen_dict)
 
 
-class CtreeTypeResolver(object):
-    __metaclass__ = abc.ABCMeta
+def register_type_recognizers(typerec_dict):
+    """
+    Registers routines for getting ctypes objects from Python objects.
 
-    @staticmethod
-    @abc.abstractmethod
-    def resolve(obj):
-        pass
+    :param typerec_dict: Maps Python classes to functions that
+    take an instance of that class and return the corresponding
+    ctypes object.
+    """
+    existing_keys = recognizers.viewkeys()
+    new_keys      = typerec_dict.viewkeys()
+    intersection = existing_keys & new_keys
+    if intersection:
+        log.warning("replacing existing type_recognizer for %s", intersection)
+
+    for genfn in recognizers.itervalues():
+        assert callable(genfn), "Found a non-callable type_codegen: %s" % genfn
+
+    recognizers.update(typerec_dict)
 
 
-def get_ctree_type(obj):
-    from ctree.c.types import CTypeResolver, NumpyTypeResolver
+def get_ctype(py_obj):
+    try:
+        return recognizers[type(py_obj)](py_obj)
+    except KeyError:
+        raise ValueError("No type recognizer defined for %s." % type(py_obj))
 
-    for resolver in [CTypeResolver(), NumpyTypeResolver()]:
-        ty = resolver.resolve(obj)
-        if ty is not None:
-            return ty
-    raise Exception("Unable to resolve type for %s." % repr(obj))
+
+def codegen_type(ctype):
+    try:
+        return generators[type(ctype)](ctype)
+    except KeyError:
+        raise ValueError("No code generator defined for %s." % type(ctype))

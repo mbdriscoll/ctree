@@ -50,8 +50,10 @@ class CtreeTest(unittest.TestCase):
         expected = textwrap.dedent(str(expected))
 
         if actual != expected:
+            actual_display = (actual + ("\n" if actual[-1] != "\n" else "")).splitlines(True)
+            expected_display = expected.splitlines(True)
             diff_gen = difflib.unified_diff(
-                actual.splitlines(True), expected.splitlines(True),
+                actual_display, expected_display,
                 "<actual>", "<expected>")
             diff = "".join(diff_gen)
             print highlight(diff, language='diff')

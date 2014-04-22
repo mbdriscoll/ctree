@@ -5,6 +5,8 @@ from ctree.types import CtreeType, CtreeTypeResolver, TypeFetcher, get_ctree_typ
 
 class OclType(CtreeType):
     """Base class for all built-in OpenCL Types."""
+    def __init__(self, ctype=None):
+        self.ctype = ctype
 
     def codegen(self, indent=0):
         from ctree.ocl.codegen import OclCodeGen
@@ -12,7 +14,7 @@ class OclType(CtreeType):
         return OclCodeGen().visit(self)
 
     def as_ctype(self):
-        raise NotImplementedError()
+        return self.ctype
 
 
 class cl_device_id(OclType):
@@ -35,5 +37,7 @@ class cl_kernel(OclType):
     pass
 
 
-class cl_mem(OclType):
-    pass
+class cl_buffer(OclType):
+    @staticmethod
+    def to(ocl_buf):
+        return OclType(ocl_buf)

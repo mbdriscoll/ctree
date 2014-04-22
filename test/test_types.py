@@ -1,128 +1,74 @@
-import unittest
+import ctypes
 
-from ctree.c.nodes import *
-from ctree.c.types import *
+from ctree.types import (
+    get_ctype,
+    codegen_type,
+)
 
+from util import CtreeTest
 
-class TestTypeProperties(unittest.TestCase):
-    def test_float_equality(self):
-        self.assertEqual(Float(), Float())
+import ctree
+import ctree.c
+from ctree.c.nodes import SymbolRef
 
-    def test_unequality(self):
-        self.assertNotEqual(Float(), Int())
+class TestTypeRecognizer(CtreeTest):
+    def test_int(self):
+        ty = get_ctype(123)
+        self.assertEqual(ty, ctypes.c_int)
 
+    def test_float(self):
+        ty = get_ctype(456.7)
+        self.assertEqual(ty, ctypes.c_double)
 
-class TestTypeFetcher(unittest.TestCase):
-    def _check(self, actual, expected):
-        self.assertEqual(actual, expected)
+    def test_char(self):
+        ty = get_ctype("c")
+        self.assertEqual(ty, ctypes.c_char)
 
-    def test_string_type(self):
-        s = String("foo")
-        self._check(s.get_type(), Ptr(Char()))
+    def test_none(self):
+        ty = get_ctype(None)
+        self.assertEqual(ty, ctypes.c_void_p)
 
-    def test_int_type(self):
-        n = Constant(123)
-        self._check(n.get_type(), Long())
+    def test_bool(self):
+        ty = get_ctype(True)
+        self.assertEqual(ty, ctypes.c_bool)
 
-    def test_float_type(self):
-        n = Constant(123.4)
-        self._check(n.get_type(), Double())
+    def test_string(self):
+        self.assertEqual(get_ctype("foo"),     ctypes.c_char_p)
+        self.assertEqual(get_ctype(""),        ctypes.c_char_p)
+        self.assertEqual(get_ctype("one two"), ctypes.c_char_p)
 
-    def test_char_type(self):
-        n = Constant('b')
-        self._check(n.get_type(), Char())
-
-    def test_binop_add_intint(self):
-        a, b = Constant(1), Constant(2)
-        node = Add(a, b)
-        self._check(node.get_type(), Long())
-
-    def test_binop_add_floatfloat(self):
-        a, b = Constant(1.3), Constant(2.4)
-        node = Add(a, b)
-        self._check(node.get_type(), Double())
-
-    def test_binop_add_floatint(self):
-        a, b = Constant(1.3), Constant(2)
-        node = Add(a, b)
-        self._check(node.get_type(), Double())
-
-    def test_binop_add_intfloat(self):
-        a, b = Constant(1), Constant(2.3)
-        node = Add(a, b)
-        self._check(node.get_type(), Double())
-
-    def test_binop_add_charint(self):
-        a, b = Constant('b'), Constant(2)
-        node = Add(a, b)
-        self._check(node.get_type(), Long())
-
-    def test_binop_add_charfloat(self):
-        a, b = Constant('b'), Constant(2.3)
-        node = Add(a, b)
-        self._check(node.get_type(), Double())
-
-    def test_binop_compare_lessthan(self):
-        a, b = Constant('b'), Constant(2.3)
-        node = Lt(a, b)
-        self._check(node.get_type(), Int())
-
-    def test_binop_compare_comma(self):
-        a, b = Constant('b'), Constant(2.3)
-        node = Comma(a, b)
-        self._check(node.get_type(), Double())
-
-    def test_bad_constant(self):
-        class nothing:
-            pass
-
-        a = Constant(nothing())
-        with self.assertRaises(Exception):
-            self._check(a.get_type(), Int())
-
-    class Nothing:
-        pass
-
-    def test_bad_type_coversion(self):
-        with self.assertRaises(Exception):
-            get_ctree_type(self.Nothing)
-
-    def test_bad_obj_coversion(self):
-        with self.assertRaises(Exception):
-            get_ctree_type(self.Nothing())
+    def test_bad_type(self):
+        class Bad(object): pass
+        with self.assertRaises(ValueError):
+            ty = get_ctype(Bad())
 
 
-class BadType(CtreeType):
-    pass
+class TestTypeCodeGen(CtreeTest):
+    def test_int(self):
+        tree = SymbolRef("i", ctypes.c_int())
+        self._check_code(tree, "long i")
 
+    def test_float(self):
+        tree = SymbolRef("i", ctypes.c_double())
+        self._check_code(tree, "double i")
 
-class GoodType(CtreeType):
+    def test_char(self):
+        tree = SymbolRef("i", ctypes.c_char())
+        self._check_code(tree, "char i")
 
-    def codegen(self):
-        pass
+    def test_none(self):
+        tree = SymbolRef("i", ctypes.c_void_p())
+        self._check_code(tree, "void* i")
 
-    def as_ctypes(self):
-        pass
+    def test_bool(self):
+        tree = SymbolRef("i", ctypes.c_bool())
+        self._check_code(tree, "bool i")
 
+    def test_string(self):
+        tree = SymbolRef("i", ctypes.c_char_p())
+        self._check_code(tree, "char* i")
 
-class TestOverrideException(unittest.TestCase):
-
-    def test_no_codegen(self):
-        with self.assertRaises(Exception):
-            BadType().codegen()
-
-    def test_no_as_ctypes(self):
-        with self.assertRaises(Exception):
-            BadType().as_ctypes()
-
-    def test_with_codegen(self):
-        try:
-            GoodType().codegen()
-        except Exception:
-            self.fail("codegen should not raise exception.")
-
-    def test_with_as_ctypes(self):
-        try:
-            GoodType().as_ctypes()
-        except Exception:
-            self.fail("as_ctypes should not raise exception.")
+    def test_bad_type(self):
+        class Bad(object): pass
+        with self.assertRaises(ValueError):
+            SymbolRef("i", Bad()).codegen()

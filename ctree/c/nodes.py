@@ -233,9 +233,6 @@ class SymbolRef(Literal):
         else:
             return SymbolRef(self.name)
 
-    def get_ctype(self):
-        return self.type.as_ctype()
-
 class FunctionDecl(Statement):
     """Cite me."""
     _fields = ['params', 'defn']

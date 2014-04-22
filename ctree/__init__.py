@@ -89,6 +89,10 @@ class Counter(object):
 STATS = Counter()
 atexit.register(STATS.report)
 
+# Registries for type-based logic in extension packages.
+_TYPE_CODEGENERATORS = {}
+_TYPE_RECOGNIZERS = {}
+
 import ast
 import inspect
 import ctree.frontend

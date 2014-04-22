@@ -284,11 +284,8 @@ class OpTranslator(LazySpecializedFunction):
         from ctree.tune import BooleanArrayParameter
         from ctree.tune import EnumArrayParameter
 
-        nMuls = 2
-        nAdds = 1
-        nBinops = nMuls + nAdds
         params = [
-            EnumArrayParameter("locs", count=nBinops, values=['main']),
+            EnumArrayParameter("locs", count=3, values=['main', 'ocl<1>']),
             BooleanArrayParameter("fusion", count=2),
             BooleanArrayParameter("distribute", count=1),
         ]
@@ -313,6 +310,8 @@ class OpTranslator(LazySpecializedFunction):
         given in program_config.
         """
         arg_config, tuner_config = program_config
+
+        ComputedVector._next_id = 0
 
         # set up OpenCL context and memory spaces
         context = cl.clCreateContextFromType()
@@ -355,22 +354,22 @@ class OpTranslator(LazySpecializedFunction):
         proj = allocator.visit(proj)
         allocator.allocated[0].name = "ans"
 
+        import pycl
+        from ctree.ocl.types import cl_buffer
+
         for a in allocator.allocated:
             if isinstance(a.mem, np.ndarray):
                 ty = NdPointer.to(a.mem)
-            elif isinstance(a.mem, cl.cl_mem):
-                raise NotImplementedError("Can't handle cl_mem types.")
+            elif isinstance(a.mem, pycl.cl_mem):
+                ty = cl_buffer.to(a.mem)
             fn.params.append(SymbolRef(a.name, ty))
 
         schedules = FindParallelism().visit(fn.defn[0])
-        print "SCHEDULES", schedules
-
-        from ctree.omp.macros import parallelize_tasks
-
         schedule = parallelize_tasks(schedules)
+
         refconv = RefConverter()
         for item in schedule:
-            if hasattr(item, 'data'):
+            if isinstance(item, Vector):
                 item.data = refconv.visit(item.data)
 
         fn.defn = schedule
@@ -381,6 +380,8 @@ class OpTranslator(LazySpecializedFunction):
         global n
         with open('graph.%d.dot' % n, 'w') as f:
             f.write(proj.to_dot())
+        with open('prog.%d.c' % n, 'w') as f:
+            f.write(str(proj.files[0]))
         n += 1
 
         c_func = ElementwiseFunction()
@@ -429,7 +430,7 @@ def main():
     c_op = Elementwise(py_op)
 
     # doubling doubles
-    for i in range(16):
+    for i in range(160):
       a = np.arange(0*n, 1*n, dtype=np.float32())
       b = np.arange(1*n, 2*n, dtype=np.float32())
       c = np.arange(2*n, 3*n, dtype=np.float32())
