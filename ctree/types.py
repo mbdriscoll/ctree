@@ -51,7 +51,6 @@ def get_ctype(py_obj):
         base = bases.pop()
         bases += base.__bases__
         try:
-            print "check base", base
             return recognizers[base](py_obj)
         except KeyError:
             pass
@@ -64,7 +63,6 @@ def codegen_type(ctype):
         base = bases.pop()
         bases += base.__bases__
         try:
-            print "check base", base
             return generators[base](ctype)
         except KeyError:
             pass

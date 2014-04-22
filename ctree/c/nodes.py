@@ -85,11 +85,6 @@ class Statement(CNode):
 class Expression(CNode):
     """Cite me."""
 
-    def get_type(self):
-        from ctree.c.types import CTypeFetcher
-
-        return CTypeFetcher().visit(self)
-
 
 class Return(Statement):
     """Section B.2.3 6.6.6 line 4."""
@@ -247,11 +242,6 @@ class FunctionDecl(Statement):
         self.kernel = False
         super(FunctionDecl, self).__init__()
 
-    def get_type(self):
-        from ctree.c.types import FuncType
-        arg_types = [p.get_type() for p in self.params]
-        return FuncType(self.return_type, arg_types)
-
     def set_inline(self, value=True):
         self.inline = value
         return self
@@ -262,14 +252,6 @@ class FunctionDecl(Statement):
 
     def set_kernel(self, value=True):
         self.kernel = value
-        return self
-
-    def set_typesig(self, func_type):
-        from ctree.c.types import FuncType
-        assert isinstance(func_type, FuncType)
-        self.return_type = func_type.return_type
-        for sym, ty in zip(self.params, func_type.arg_types):
-            sym.type = ty
         return self
 
 

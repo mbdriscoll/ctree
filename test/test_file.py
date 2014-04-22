@@ -1,20 +1,16 @@
-import unittest
+from util import CtreeTest
 
+from ctypes import *
 from ctree.c.nodes import *
-from ctree.c.types import *
 
 
-class TestFile(unittest.TestCase):
-    def _check(self, tree, expected):
-        actual = str(tree)
-        self.assertEqual(actual, expected)
-
+class TestFile(CtreeTest):
     def test_simple_00(self):
-        foo = SymbolRef("foo", sym_type=Int())
-        bar = FunctionDecl(Float(), SymbolRef("bar"))
+        foo = SymbolRef("foo", sym_type=c_long())
+        bar = FunctionDecl(c_double(), SymbolRef("bar"))
         tree = CFile("myfile", [foo, bar])
-        self._check(tree, """\
-// <file: myfile.c>
-int foo;
-float bar();
-""")
+        self._check_code(tree, """\
+        // <file: myfile.c>
+        long foo;
+        double bar();
+        """)

@@ -2,8 +2,8 @@
 A collection of pre-built ASTs for use in testing.
 """
 
+from ctypes import *
 from ctree.c.nodes import *
-from ctree.c.types import *
 from ctree.cpp.nodes import *
 
 # ---------------------------------------------------------------------------
@@ -15,7 +15,7 @@ def identity(x):
 
 
 identity_ast = \
-    FunctionDecl(Int(), "identity", [SymbolRef(SymbolRef("x"), Int())], [
+    FunctionDecl(c_int(), "identity", [SymbolRef(SymbolRef("x"), c_int())], [
         Return(SymbolRef("x"))
     ])
 
@@ -31,7 +31,7 @@ def gcd(a, b):
 
 
 gcd_ast = \
-    FunctionDecl(Int(), "gcd", [SymbolRef("a", Int()), SymbolRef("b", Int())], [
+    FunctionDecl(c_int(), "gcd", [SymbolRef("a", c_int()), SymbolRef("b", c_int())], [
         If(Eq(SymbolRef('b'), Constant(0)),
            [Return(SymbolRef('a'))],
            [Return(FunctionCall(SymbolRef('gcd'), [SymbolRef('b'), Mod(SymbolRef('a'),
@@ -50,7 +50,7 @@ def fib(n):
 
 
 fib_ast = \
-    FunctionDecl(Int(), "fib", [SymbolRef("n", Int())], [
+    FunctionDecl(c_int(), "fib", [SymbolRef("n", c_int())], [
         If(Lt(SymbolRef("n"), Constant(2)),
            [Return(SymbolRef("n"))],
            [Return(Add(FunctionCall(SymbolRef("fib"), [Sub(SymbolRef("n"), Constant(1))]),
@@ -66,7 +66,7 @@ def get_two():
 
 
 get_two_ast = \
-    FunctionDecl(Long(), "get_two", [], [
+    FunctionDecl(c_long(), "get_two", [], [
         Return(Constant(2))
     ])
 
@@ -82,8 +82,8 @@ def choose(p, a, b):
 
 
 choose_ast = \
-    FunctionDecl(Long(), "choose",
-                 [SymbolRef("p", Double()), SymbolRef("a", Long()), SymbolRef("b", Long())], [
+    FunctionDecl(c_long(), "choose",
+                 [SymbolRef("p", c_double()), SymbolRef("a", c_long()), SymbolRef("b", c_long())], [
             If(Lt(SymbolRef("p"), Constant(0.5)), [
                 Return(SymbolRef("a")),
             ], [
@@ -103,14 +103,14 @@ def l2norm(A):
 
 l2norm_ast = CFile("generated", [
     CppInclude("math.h"),
-    FunctionDecl(Double(), "l2norm",
+    FunctionDecl(c_double(), "l2norm",
         params=[
-            SymbolRef("A", NdPointer(np.float64, 1, 12)),
-            SymbolRef("n", Int()),
+            SymbolRef("A", np.ctypeslib.ndpointer(np.float64, 1, 12)()),
+            SymbolRef("n", c_int()),
         ],
         defn=[
-            SymbolRef("sum", Double()),
-            For(Assign(SymbolRef("i", Int()), Constant(0)),
+            SymbolRef("sum", c_double()),
+            For(Assign(SymbolRef("i", c_int()), Constant(0)),
                 Lt(SymbolRef("i"), SymbolRef("n")),
                 PostInc(SymbolRef("i")), [
                 AddAssign(SymbolRef("sum"),
