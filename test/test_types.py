@@ -14,28 +14,28 @@ from ctree.c.nodes import SymbolRef
 class TestTypeRecognizer(CtreeTest):
     def test_int(self):
         ty = get_ctype(123)
-        self.assertEqual(ty, ctypes.c_int)
+        self.assertIsInstance(ty, ctypes.c_int)
 
     def test_float(self):
         ty = get_ctype(456.7)
-        self.assertEqual(ty, ctypes.c_double)
+        self.assertIsInstance(ty, ctypes.c_double)
 
     def test_char(self):
         ty = get_ctype("c")
-        self.assertEqual(ty, ctypes.c_char)
+        self.assertIsInstance(ty, ctypes.c_char)
 
     def test_none(self):
         ty = get_ctype(None)
-        self.assertEqual(ty, ctypes.c_void_p)
+        self.assertIsInstance(ty, ctypes.c_void_p)
 
     def test_bool(self):
         ty = get_ctype(True)
-        self.assertEqual(ty, ctypes.c_bool)
+        self.assertIsInstance(ty, ctypes.c_bool)
 
     def test_string(self):
-        self.assertEqual(get_ctype("foo"),     ctypes.c_char_p)
-        self.assertEqual(get_ctype(""),        ctypes.c_char_p)
-        self.assertEqual(get_ctype("one two"), ctypes.c_char_p)
+        self.assertIsInstance(get_ctype("foo"),     ctypes.c_char_p)
+        self.assertIsInstance(get_ctype(""),        ctypes.c_char_p)
+        self.assertIsInstance(get_ctype("one two"), ctypes.c_char_p)
 
     def test_bad_type(self):
         class Bad(object): pass

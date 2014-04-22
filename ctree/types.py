@@ -46,14 +46,26 @@ def register_type_recognizers(typerec_dict):
 
 
 def get_ctype(py_obj):
-    try:
-        return recognizers[type(py_obj)](py_obj)
-    except KeyError:
-        raise ValueError("No type recognizer defined for %s." % type(py_obj))
+    bases = [type(py_obj)]
+    while bases:
+        base = bases.pop()
+        bases += base.__bases__
+        try:
+            print "check base", base
+            return recognizers[base](py_obj)
+        except KeyError:
+            pass
+    raise ValueError("No type recognizer defined for %s." % type(py_obj))
 
 
 def codegen_type(ctype):
-    try:
-        return generators[type(ctype)](ctype)
-    except KeyError:
-        raise ValueError("No code generator defined for %s." % type(ctype))
+    bases = [type(ctype)]
+    while bases:
+        base = bases.pop()
+        bases += base.__bases__
+        try:
+            print "check base", base
+            return generators[base](ctype)
+        except KeyError:
+            pass
+    raise ValueError("No code generator defined for %s." % type(ctype))
