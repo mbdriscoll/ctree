@@ -68,6 +68,10 @@ class TestTypeCodeGen(CtreeTest):
         tree = SymbolRef("i", ctypes.c_char_p())
         self._check_code(tree, "char* i")
 
+    def test_pointer(self):
+        tree = SymbolRef("i", ctypes.POINTER(ctypes.c_double)())
+        self._check_code(tree, "double* i")
+
     def test_bad_type(self):
         class Bad(object): pass
         with self.assertRaises(ValueError):
