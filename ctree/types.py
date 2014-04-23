@@ -66,7 +66,6 @@ def codegen_type(ctype):
         bases += base.__bases__
         try:
             val = generators[base](ctype)
-            print "MATCH %s (%s) -> %s" % (ctype, base, val)
             return val
         except KeyError:
             pass
@@ -74,4 +73,7 @@ def codegen_type(ctype):
 
 
 class c_void(ctypes.c_void_p):
+    """
+    Represents 'void' type in C.
+    """
     pass
