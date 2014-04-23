@@ -1,3 +1,5 @@
+from __future__ import absolute_import
+
 import types
 import ctypes
 
@@ -55,8 +57,8 @@ def get_ctype(py_obj):
 
     :param py_obj: A python object.
     """
-    assert isinstance(ctype, types.TypeType), \
-        "Expected a ctypes type class, not %s:" % ctype
+    assert not isinstance(ctype, types.TypeType), \
+        "Expected a ctypes type instance, not %s, (%s):" % (ctype, type(ctype))
 
     bases = [type(py_obj)]
     while bases:
@@ -75,8 +77,8 @@ def codegen_type(ctype):
 
     :param ctype: A ctype type instance to be unparsed.
     """
-    assert isinstance(ctype, types.TypeType), \
-        "Expected a ctypes type class, not %s:" % ctype
+    assert not isinstance(ctype, types.TypeType), \
+        "Expected a ctypes type instance, not %s, (%s):" % (ctype, type(ctype))
 
     bases = [type(ctype)]
     while bases:
@@ -88,10 +90,3 @@ def codegen_type(ctype):
         except KeyError:
             pass
     raise ValueError("No code generator defined for %s." % type(ctype))
-
-
-class c_void(ctypes.c_void_p):
-    """
-    Represents 'void' type in C.
-    """
-    pass

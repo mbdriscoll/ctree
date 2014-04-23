@@ -11,7 +11,6 @@ import ctypes as ct
 import pycl as cl
 
 import ctree.np
-from ctree.types import c_void
 from ctree.c.nodes import *
 from ctree.cpp.nodes import *
 from ctree.ocl.nodes import *
@@ -66,7 +65,7 @@ class OpTranslator(LazySpecializedFunction):
         apply_one.return_type = inner_type
         apply_one.params[0].type = inner_type
 
-        apply_kernel = FunctionDecl(c_void(), "apply_kernel",
+        apply_kernel = FunctionDecl(None, "apply_kernel",
             params=[SymbolRef("A", A()).set_global()],
             defn=[
                 Assign(SymbolRef("i", ct.c_int()),
@@ -98,7 +97,7 @@ class OpTranslator(LazySpecializedFunction):
         program = cl.clCreateProgramWithSource(fn.context, kernel.codegen()).build()
         apply_kernel_ptr = program['apply_kernel']
 
-        entry_type = ct.CFUNCTYPE(c_void, cl.cl_command_queue, cl.cl_kernel, cl.cl_mem)
+        entry_type = ct.CFUNCTYPE(None, cl.cl_command_queue, cl.cl_kernel, cl.cl_mem)
         return fn.finalize(apply_kernel_ptr, proj, "apply_all", entry_type)
 
 
