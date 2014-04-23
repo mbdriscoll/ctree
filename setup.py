@@ -55,6 +55,7 @@ setup(
         'ctree.ocl',
         'ctree.omp',
         'ctree.py',
+        'ctree.np',
         'ctree.simd',
         'ctree.templates',
         'ctree.opentuner',
