@@ -105,7 +105,7 @@ l2norm_ast = CFile("generated", [
     CppInclude("math.h"),
     FunctionDecl(c_double(), "l2norm",
         params=[
-            SymbolRef("A", np.ctypeslib.ndpointer(np.float64, 1, 12)()),
+            SymbolRef("A", np.ctypeslib.ndpointer(dtype=np.float64, ndim=1, shape=(12,))()),
             SymbolRef("n", c_int()),
         ],
         defn=[

@@ -63,7 +63,9 @@ def codegen_type(ctype):
         base = bases.pop()
         bases += base.__bases__
         try:
-            return generators[base](ctype)
+            val = generators[base](ctype)
+            print "MATCH %s (%s) -> %s" % (ctype, base, val)
+            return val
         except KeyError:
             pass
     raise ValueError("No code generator defined for %s." % type(ctype))

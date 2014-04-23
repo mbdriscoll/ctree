@@ -14,7 +14,7 @@ from ctree.c.nodes import SymbolRef
 class TestTypeRecognizer(CtreeTest):
     def test_int(self):
         ty = get_ctype(123)
-        self.assertIsInstance(ty, ctypes.c_int)
+        self.assertIsInstance(ty, ctypes.c_long)
 
     def test_float(self):
         ty = get_ctype(456.7)
@@ -46,6 +46,10 @@ class TestTypeRecognizer(CtreeTest):
 class TestTypeCodeGen(CtreeTest):
     def test_int(self):
         tree = SymbolRef("i", ctypes.c_int())
+        self._check_code(tree, "int i")
+
+    def test_long(self):
+        tree = SymbolRef("i", ctypes.c_long())
         self._check_code(tree, "long i")
 
     def test_float(self):

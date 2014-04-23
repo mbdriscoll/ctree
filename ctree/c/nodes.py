@@ -9,8 +9,10 @@ import logging
 
 log = logging.getLogger(__name__)
 
+from ctypes import CFUNCTYPE
 from ctree.nodes import CtreeNode, File
 from ctree.util import singleton, highlight
+from ctree.types import get_ctype
 
 
 class CNode(CtreeNode):
@@ -162,6 +164,9 @@ class Constant(Literal):
         self.value = value
         super(Constant, self).__init__()
 
+    def get_type(self):
+        return get_ctype(self.value)
+
 
 class Block(Statement):
     """Cite me."""
@@ -242,6 +247,11 @@ class FunctionDecl(Statement):
         self.kernel = False
         super(FunctionDecl, self).__init__()
 
+    def get_type(self):
+        arg_types = [type(p.type) for p in self.params]
+        res_type = type(self.return_type)
+        return CFUNCTYPE(res_type, *arg_types)
+
     def set_inline(self, value=True):
         self.inline = value
         return self
@@ -274,6 +284,10 @@ class BinaryOp(Expression):
         self.op = op
         self.right = right
         super(BinaryOp, self).__init__()
+
+    def get_type(self):
+        # FIXME: integer promotions and stuff like that
+        return self.left.get_type()
 
 
 class AugAssign(Expression):

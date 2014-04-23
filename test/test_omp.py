@@ -1,10 +1,11 @@
 import unittest
 from textwrap import dedent
 
+from ctypes import c_int
+
 from ctree.omp.nodes import *
 from ctree.omp.macros import *
 from ctree.c.nodes import *
-from ctree.c.types import *
 
 from util import CtreeTest
 
@@ -51,7 +52,7 @@ class TestOmpCodegen(CtreeTest):
             OmpParallelSections(),
             Block([
                 OmpSection(),
-                Assign(SymbolRef("i", Int()), Constant(2)),
+                Assign(SymbolRef("i", c_int()), Constant(2)),
             ]),
         ])
         self._check_code(node, """\

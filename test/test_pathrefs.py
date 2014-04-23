@@ -1,15 +1,14 @@
 import unittest
 
+from ctypes import c_char_p
 from ctree.nodes import *
 from ctree.c.nodes import *
-from ctree.c.types import *
-from ctree.jit import LazySpecializedFunction
 
-class TestVerifyParentPointers(unittest.TestCase):
+class TestPathRefs(unittest.TestCase):
     def test_self_ref(self):
         cfile = CFile("generated", [])
         tree = Project([cfile])
-        stmt = Assign(SymbolRef("path", Ptr(Char())), \
+        stmt = Assign(SymbolRef("path", c_char_p()), \
                       cfile.get_generated_path_ref())
         cfile.body.append(stmt)
 
@@ -21,10 +20,11 @@ class TestVerifyParentPointers(unittest.TestCase):
 
     def test_other_ref(self):
         from ctree.ocl.nodes import OclFile
+
         cfile = CFile("generated", [])
         oclfile = OclFile("kernel", [])
         tree = Project([cfile])
-        stmt = Assign(SymbolRef("path", Ptr(Char())), \
+        stmt = Assign(SymbolRef("path", c_char_p()), \
                       oclfile.get_generated_path_ref())
         cfile.body.append(stmt)
 

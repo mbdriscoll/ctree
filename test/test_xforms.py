@@ -2,43 +2,12 @@ import ast
 import sys
 import unittest
 
+from ctypes import c_long
+
 from fixtures.sample_asts import *
 from ctree.transformations import *
 from ctree.c.nodes import *
-from ctree.c.types import *
 from ctree.frontend import get_ast
-
-
-class TestSetTypeSig(unittest.TestCase):
-    def _check(self, func_type, tree):
-        if isinstance(tree, FunctionDecl):
-            self.assertEqual(tree.return_type, func_type.return_type)
-            for param, expected_type in zip(tree.params, func_type.arg_types):
-                self.assertEqual(param.type, expected_type)
-        elif isinstance(tree, ast.Module):
-            self._check(func_type, tree.body[0])
-        else:
-            self.fail("Can't check param setting on %s object." % tree)
-
-    def test_no_args(self):
-        func_type = FuncType(Long())
-        get_two_ast.set_typesig(func_type)
-        self._check(func_type, get_two_ast)
-
-    def test_one_arg(self):
-        func_type = FuncType(Long(), [Long()])
-        fib_ast.set_typesig(func_type)
-        self._check(func_type, fib_ast)
-
-    def test_two_args(self):
-        func_type = FuncType(Long(), [Long(), Long()])
-        gcd_ast.set_typesig(func_type)
-        self._check(func_type, gcd_ast)
-
-    def test_mixed_args(self):
-        func_type = FuncType(Long(), [Double(), Long(), Long()])
-        choose_ast.set_typesig(func_type)
-        self._check(func_type, choose_ast)
 
 
 class TestCtxScrubber(unittest.TestCase):
@@ -157,7 +126,7 @@ class TestBasicConversions(unittest.TestCase):
             [ast.Name("foo", ast.Load())],
             [],
         )
-        i = SymbolRef("i", Long())
+        i = SymbolRef("i", c_long())
         c_ast = For(
             Assign(i, Constant(0)),
             Lt(i.copy(), Constant(10)),
@@ -174,7 +143,7 @@ class TestBasicConversions(unittest.TestCase):
             [ast.Name("foo", ast.Load())],
             [],
         )
-        i = SymbolRef("i", Long())
+        i = SymbolRef("i", c_long())
         c_ast = For(
             Assign(i, Constant(2)),
             Lt(i.copy(), Constant(10)),
@@ -192,7 +161,7 @@ class TestBasicConversions(unittest.TestCase):
             [ast.Name("foo", ast.Load())],
             [],
         )
-        i = SymbolRef("i", Long())
+        i = SymbolRef("i", c_long())
         c_ast = For(
             Assign(i, Constant(2)),
             Lt(i.copy(), Constant(10)),
@@ -229,7 +198,7 @@ class TestBasicConversions(unittest.TestCase):
             [ast.Name("foo", ast.Load())],
             [],
         )
-        i = SymbolRef("i", Long())
+        i = SymbolRef("i", c_long())
         c_ast = For(
             Assign(i, Add(Constant(2), Constant(3))),
             Lt(i.copy(), Mul(Constant(4), Constant(10))),
