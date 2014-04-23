@@ -1,3 +1,4 @@
+import types
 import ctypes
 
 from ctree.types import (
@@ -9,7 +10,7 @@ from util import CtreeTest
 
 import ctree
 import ctree.c
-from ctree.c.nodes import SymbolRef
+from ctree.c.nodes import SymbolRef, FunctionDecl
 
 class TestTypeRecognizer(CtreeTest):
     def test_int(self):
@@ -26,7 +27,7 @@ class TestTypeRecognizer(CtreeTest):
 
     def test_none(self):
         ty = get_ctype(None)
-        self.assertIsInstance(ty, ctypes.c_void_p)
+        self.assertIsInstance(ty, types.NoneType)
 
     def test_bool(self):
         ty = get_ctype(True)

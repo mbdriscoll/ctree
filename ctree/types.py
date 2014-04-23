@@ -57,9 +57,6 @@ def get_ctype(py_obj):
 
     :param py_obj: A python object.
     """
-    assert not isinstance(ctype, types.TypeType), \
-        "Expected a ctypes type instance, not %s, (%s):" % (ctype, type(ctype))
-
     bases = [type(py_obj)]
     while bases:
         base = bases.pop()
