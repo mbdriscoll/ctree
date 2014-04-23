@@ -1,3 +1,4 @@
+import types
 import ctypes
 
 import logging
@@ -48,6 +49,15 @@ def register_type_recognizers(typerec_dict):
 
 
 def get_ctype(py_obj):
+    """
+    Given a python object, this routine tries to return the
+    closest ctype type instance corresponding to that object.
+
+    :param py_obj: A python object.
+    """
+    assert isinstance(ctype, types.TypeType), \
+        "Expected a ctypes type class, not %s:" % ctype
+
     bases = [type(py_obj)]
     while bases:
         base = bases.pop()
@@ -60,6 +70,14 @@ def get_ctype(py_obj):
 
 
 def codegen_type(ctype):
+    """
+    Unparses the given ctype.
+
+    :param ctype: A ctype type instance to be unparsed.
+    """
+    assert isinstance(ctype, types.TypeType), \
+        "Expected a ctypes type class, not %s:" % ctype
+
     bases = [type(ctype)]
     while bases:
         base = bases.pop()
