@@ -10,8 +10,9 @@ import numpy as np
 import ctypes as ct
 import pycl as cl
 
+import ctree.np
+from ctree.types import c_void
 from ctree.c.nodes import *
-from ctree.c.types import *
 from ctree.cpp.nodes import *
 from ctree.ocl.nodes import *
 from ctree.ocl.types import *
@@ -21,7 +22,6 @@ from ctree.transformations import *
 from ctree.frontend import get_ast
 from ctree.jit import LazySpecializedFunction
 from ctree.jit import ConcreteSpecializedFunction
-from ctree.types import get_ctree_type
 
 # ---------------------------------------------------------------------------
 # Specializer code
@@ -51,24 +51,25 @@ class OpTranslator(LazySpecializedFunction):
         might be processed by the same generated code.
         """
         A = args[0]
-        return len(A), A.dtype, A.ndim, A.shape
+        return np.ctypeslib.ndpointer(A.dtype, A.ndim, A.shape)
 
     def transform(self, py_ast, program_config):
         """
         Convert the Python AST to a C AST according to the directions
         given in program_config.
         """
-        len_A, A_dtype, A_ndim, A_shape = program_config[0]
-        A_type = NdPointer(A_dtype, A_ndim, A_shape)
+        A = program_config[0]
+        len_A = np.prod(A._shape_)
+        inner_type = A._dtype_.type()
 
         apply_one = PyBasicConversions().visit(py_ast.body[0])
-        apply_one.return_type = A_type.get_base_type()
-        apply_one.params[0].type = A_type.get_base_type()
+        apply_one.return_type = inner_type
+        apply_one.params[0].type = inner_type
 
-        apply_kernel = FunctionDecl(Void(), "apply_kernel",
-            params=[SymbolRef("A", A_type).set_global()],
+        apply_kernel = FunctionDecl(c_void(), "apply_kernel",
+            params=[SymbolRef("A", A()).set_global()],
             defn=[
-                Assign(SymbolRef("i", Int()),
+                Assign(SymbolRef("i", ct.c_int()),
                        FunctionCall(SymbolRef("get_global_id"), [Constant(0)])),
                 If(Lt(SymbolRef("i"), Constant(len_A)), [
                     Assign(ArrayRef(SymbolRef("A"), SymbolRef("i")),
@@ -97,7 +98,7 @@ class OpTranslator(LazySpecializedFunction):
         program = cl.clCreateProgramWithSource(fn.context, kernel.codegen()).build()
         apply_kernel_ptr = program['apply_kernel']
 
-        entry_type = ct.CFUNCTYPE(ct.c_void_p, cl.cl_command_queue, cl.cl_kernel, cl.cl_mem)
+        entry_type = ct.CFUNCTYPE(c_void, cl.cl_command_queue, cl.cl_kernel, cl.cl_mem)
         return fn.finalize(apply_kernel_ptr, proj, "apply_all", entry_type)
 
 

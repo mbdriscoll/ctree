@@ -3,6 +3,7 @@ import ctypes
 import _ctypes
 
 from ctree.types import (
+    c_void,
     codegen_type,
     register_type_recognizers,
     register_type_codegenerators,
@@ -26,7 +27,9 @@ register_type_codegenerators({
     ctypes.c_char_p:  lambda t: "char*",
     ctypes.c_void_p:  lambda t: "void*",
     ctypes.c_bool:    lambda t: "bool",
+    c_void:           lambda n: "void",
 
-    _ctypes.Array:    lambda ct: "%s*" % codegen_type(ct._type_()),
-    _ctypes._Pointer: lambda ct: "%s*" % codegen_type(ct._type_()),
+    _ctypes.Array:      lambda ct: "%s*" % codegen_type(ct._type_()),
+    _ctypes._Pointer:   lambda ct: "%s*" % codegen_type(ct._type_()),
+
 })

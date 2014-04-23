@@ -1,6 +1,7 @@
 import ctypes
 
 from ctree.types import (
+    c_void,
     get_ctype,
     codegen_type,
 )
@@ -75,6 +76,10 @@ class TestTypeCodeGen(CtreeTest):
     def test_pointer(self):
         tree = SymbolRef("i", ctypes.POINTER(ctypes.c_double)())
         self._check_code(tree, "double* i")
+
+    def test_none(self):
+        tree = SymbolRef("i", c_void())
+        self._check_code(tree, "void i")
 
     def test_bad_type(self):
         class Bad(object): pass

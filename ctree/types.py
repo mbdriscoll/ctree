@@ -1,3 +1,5 @@
+import ctypes
+
 import logging
 
 from ctree import _TYPE_CODEGENERATORS as generators
@@ -69,3 +71,7 @@ def codegen_type(ctype):
         except KeyError:
             pass
     raise ValueError("No code generator defined for %s." % type(ctype))
+
+
+class c_void(ctypes.c_void_p):
+    pass
