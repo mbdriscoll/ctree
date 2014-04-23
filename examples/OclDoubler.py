@@ -68,8 +68,7 @@ class OpTranslator(LazySpecializedFunction):
         apply_kernel = FunctionDecl(None, "apply_kernel",
             params=[SymbolRef("A", A()).set_global()],
             defn=[
-                Assign(SymbolRef("i", ct.c_int()),
-                       FunctionCall(SymbolRef("get_global_id"), [Constant(0)])),
+                Assign(SymbolRef("i", ct.c_int()), get_global_id(0)),
                 If(Lt(SymbolRef("i"), Constant(len_A)), [
                     Assign(ArrayRef(SymbolRef("A"), SymbolRef("i")),
                            FunctionCall(SymbolRef("apply"),

@@ -63,3 +63,20 @@ class TestOmpCodegen(CtreeTest):
                 int i = 2;
             }
         }""")
+
+class TestOmpMacros(CtreeTest):
+    def test_num_threads(self):
+        tree = omp_get_num_threads()
+        self._check_code(tree, "omp_get_num_threads()")
+
+    def test_thread_num(self):
+        tree = omp_get_thread_num()
+        self._check_code(tree, "omp_get_thread_num()")
+
+    def test_get_wtime(self):
+        tree = omp_get_wtime()
+        self._check_code(tree, "omp_get_wtime()")
+
+    def test_include(self):
+        tree = IncludeOmpHeader()
+        self._check_code(tree, "#include <omp.h>")
