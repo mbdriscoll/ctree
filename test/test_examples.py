@@ -7,7 +7,7 @@ The 'examples' directory needs to be in PYTHONPATH for these to pass.
 import unittest
 
 try:
-  import examples.ArrayDoubler
+  import examples
 except ImportError:
   HAVE_EXAMPLES = False
 else:

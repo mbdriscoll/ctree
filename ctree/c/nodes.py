@@ -3,6 +3,7 @@ AST nodes for C constructs.
 """
 
 import os
+import types
 import subprocess
 
 import logging
@@ -248,9 +249,25 @@ class FunctionDecl(Statement):
         super(FunctionDecl, self).__init__()
 
     def get_type(self):
-        arg_types = [type(p.type) for p in self.params]
-        res_type = type(self.return_type)
-        return CFUNCTYPE(res_type, *arg_types)
+        type_sig = []
+
+        # return type
+        if self.return_type is None:
+            type_sig.append(self.return_type)
+        else:
+            assert not isinstance(self.return_type, types.TypeType), \
+                "Expected a ctypes instance or None, got %s (%s)." % \
+                    (self.return_type, type(self.return_type))
+            type_sig.append( type(self.return_type) )
+
+        # parameter types
+        for param in self.params:
+            assert not isinstance(param.type, types.TypeType), \
+                "Expected a ctypes instance or None, got %s (%s)." % \
+                    (param.type, type(param.type))
+            type_sig.append( type(param.type) )
+
+        return CFUNCTYPE(*type_sig)
 
     def set_inline(self, value=True):
         self.inline = value

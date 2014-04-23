@@ -16,7 +16,6 @@ from ctree.templates.nodes import *
 from ctree.transformations import *
 from ctree.jit import LazySpecializedFunction
 from ctree.jit import ConcreteSpecializedFunction
-from ctree.types import c_void
 
 # ---------------------------------------------------------------------------
 # Specializer code
@@ -70,7 +69,7 @@ class OpTranslator(LazySpecializedFunction):
             f.write( tree.to_dot() )
 
         proj = Project([tree])
-        entry_point_typesig = CFUNCTYPE(c_void, A)
+        entry_point_typesig = CFUNCTYPE(None, A)
 
         return BasicFunction("apply_all", proj, entry_point_typesig)
 

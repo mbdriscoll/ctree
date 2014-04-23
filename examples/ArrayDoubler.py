@@ -4,7 +4,7 @@ Parses the python AST below, transforms it to C, JITs it, and runs it.
 
 import logging
 
-logging.basicConfig(level=20)
+#logging.basicConfig(level=10)
 
 import numpy as np
 
@@ -16,7 +16,7 @@ from ctree.c.nodes import *
 from ctree.transformations import *
 from ctree.jit import LazySpecializedFunction
 from ctree.jit import ConcreteSpecializedFunction
-from ctree.types import get_ctype, c_void
+from ctree.types import get_ctype
 
 # ---------------------------------------------------------------------------
 # Specializer code
@@ -46,7 +46,7 @@ class OpTranslator(LazySpecializedFunction):
 
         tree = CFile("generated", [
             py_ast.body[0],
-            FunctionDecl(c_void(), "apply_all",
+            FunctionDecl(None, "apply_all",
                          params=[SymbolRef("A", array_type())],
                          defn=[
                              For(Assign(SymbolRef("i", c_int()), Constant(0)),
