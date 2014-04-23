@@ -1,5 +1,7 @@
 import unittest
 
+import ctree.np
+
 from ctree.jit import *
 from fixtures.sample_asts import *
 
