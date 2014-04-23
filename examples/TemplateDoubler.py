@@ -8,14 +8,15 @@ logging.basicConfig(level=20)
 
 import numpy as np
 
+import ctree.np
+from ctypes import *
 from ctree.frontend import get_ast
 from ctree.c.nodes import *
-from ctree.c.types import *
 from ctree.templates.nodes import *
 from ctree.transformations import *
 from ctree.jit import LazySpecializedFunction
 from ctree.jit import ConcreteSpecializedFunction
-from ctree.types import get_ctree_type
+from ctree.types import c_void
 
 # ---------------------------------------------------------------------------
 # Specializer code
@@ -29,12 +30,7 @@ class OpTranslator(LazySpecializedFunction):
         might be processed by the same generated code.
         """
         A = args[0]
-        return {
-            'A_len':   len(A),
-            'A_dtype': A.dtype,
-            'A_ndim':  A.ndim,
-            'A_shape': A.shape,
-        }
+        return {'ptr': np.ctypeslib.ndpointer(A.dtype, A.ndim, A.shape)}
 
     def transform(self, py_ast, program_config):
         """
@@ -42,19 +38,14 @@ class OpTranslator(LazySpecializedFunction):
         given in program_config.
         """
         arg_config, tuner_config = program_config
-        len_A   = arg_config['A_len']
-        A_dtype = arg_config['A_dtype']
-        A_ndim  = arg_config['A_ndim']
-        A_shape = arg_config['A_shape']
-
-        inner_type = get_ctree_type(A_dtype)
-        array_type = NdPointer(A_dtype, A_ndim, A_shape)
-        apply_one_typesig = FuncType(inner_type, [inner_type])
+        A = arg_config['ptr']
+        inner_type = A._dtype_.type()
+        nItems = np.prod(A._shape_)
 
         template_entries = {
-            'array_decl': SymbolRef("A", array_type),
+            'array_decl': SymbolRef("A", A()),
             'array_ref' : SymbolRef("A"),
-            'num_items' : Constant(len_A),
+            'num_items' : Constant(nItems),
         }
 
         tree = CFile("generated", [
@@ -72,13 +63,14 @@ class OpTranslator(LazySpecializedFunction):
 
         apply_one = tree.find(FunctionDecl, name="apply")
         apply_one.set_static().set_inline()
-        apply_one.set_typesig(apply_one_typesig)
+        apply_one.return_type = inner_type
+        apply_one.params[0].type = inner_type
 
         with open("graph.dot", 'w') as f:
             f.write( tree.to_dot() )
 
         proj = Project([tree])
-        entry_point_typesig = FuncType(Void(), [array_type]).as_ctype()
+        entry_point_typesig = CFUNCTYPE(c_void, A)
 
         return BasicFunction("apply_all", proj, entry_point_typesig)
 
