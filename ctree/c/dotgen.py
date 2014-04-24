@@ -3,6 +3,7 @@ DOT generator for C constructs.
 """
 
 from ctree.dotgen import DotGenLabeller
+from ctree.types import codegen_type
 
 
 class CDotGenLabeller(DotGenLabeller):
@@ -24,7 +25,7 @@ class CDotGenLabeller(DotGenLabeller):
             s += r"inline "
         if node.kernel:
             s += r"__kernel "
-        s += r"%s %s(...)" % (node.return_type, node.name)
+        s += r"%s %s(...)" % (codegen_type(node.return_type), node.name)
         return s
 
     def visit_Constant(self, node):

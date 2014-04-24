@@ -3,6 +3,8 @@ Macros for simplifying construction of OpenCL
 programs.
 """
 
+import ast
+
 from ctree.c.nodes import SymbolRef, Block, Assign, FunctionCall
 from ctree.c.nodes import If, Eq, NotEq, Or, Not, Ref, Constant, String
 from ctree.c.macros import NULL, printf
@@ -49,3 +51,27 @@ def get_num_groups(id):
 
 def clReleaseMemObject(arg):
     return FunctionCall(SymbolRef('clReleaseMemObject'), [arg])
+
+def clEnqueueWriteBuffer(queue, buf, blocking, offset, cb, ptr, num_events=0, evt_list_ptr=None, evt=None):
+    if     isinstance(buf, str):              buf = SymbolRef(buf)
+    if     isinstance(blocking, bool):        blocking = Constant(int(blocking))
+    if     isinstance(ptr, str):              ptr = SymbolRef(ptr)
+    if not isinstance(offset, ast.AST):       offset = Constant(offset)
+    if not isinstance(cb, ast.AST):           cb = Constant(cb)
+    if not isinstance(num_events, ast.AST):   num_events = Constant(num_events)
+    if not isinstance(evt_list_ptr, ast.AST): event_list_ptr = NULL()
+    if not isinstance(evt, ast.AST):          evt = NULL()
+    return FunctionCall(SymbolRef('clEnqueueWriteBuffer'), [
+        queue, buf, blocking, offset, cb, ptr, num_events, event_list_ptr, evt])
+
+def clEnqueueReadBuffer(queue, buf, blocking, offset, cb, ptr, num_events=0, evt_list_ptr=None, evt=None):
+    if     isinstance(buf, str):              buf = SymbolRef(buf)
+    if     isinstance(blocking, bool):        blocking = Constant(int(blocking))
+    if     isinstance(ptr, str):              ptr = SymbolRef(ptr)
+    if not isinstance(offset, ast.AST):       offset = Constant(offset)
+    if not isinstance(cb, ast.AST):           cb = Constant(cb)
+    if not isinstance(num_events, ast.AST):   num_events = Constant(num_events)
+    if not isinstance(evt_list_ptr, ast.AST): event_list_ptr = NULL()
+    if not isinstance(evt, ast.AST):          evt = NULL()
+    return FunctionCall(SymbolRef('clEnqueueReadBuffer'), [
+        queue, buf, blocking, offset, cb, ptr, num_events, event_list_ptr, evt])

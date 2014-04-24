@@ -49,18 +49,20 @@ class OmpParallelFor(OmpNode):
 
 class OmpParallelSections(OmpNode):
     """ #pragma omp parallel sections... """
-    _fields = ['clauses']
+    _fields = ['clauses', 'sections']
 
-    def __init__(self, clauses=None):
-        self.clauses = clauses if clauses else []
+    def __init__(self, clauses=None, sections=None):
+        self.clauses = clauses or []
+        self.sections = sections or []
 
 
 class OmpSection(OmpNode):
     """ #pragma omp section ... """
-    _fields = ['clauses']
+    _fields = ['clauses', 'body']
 
-    def __init__(self, clauses=None):
-        self.clauses = clauses if clauses else []
+    def __init__(self, clauses=None, body=None):
+        self.clauses = clauses or []
+        self.body = body or []
 
 
 class OmpIvDep(OmpNode):

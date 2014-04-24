@@ -30,13 +30,11 @@ def parallelize_tasks(dag):
     if isinstance(dag, list):
         sched = []
         for node in dag:
-            sched.extend( parallelize_tasks(node) )
+            sched.extend(parallelize_tasks(node))
         return sched
     elif isinstance(dag, set):
-        sched = []
-        for node in dag:
-            sched.extend( [OmpSection(), Block(parallelize_tasks(node))] )
-        return [OmpParallelSections(), Block(sched)]
+        sched = [OmpSection(body=parallelize_tasks(node)) for node in dag]
+        return [OmpParallelSections(sections=sched)]
     else:
         return [dag]
 

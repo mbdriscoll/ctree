@@ -7,16 +7,22 @@ n = 0
 
 import itertools
 import logging
+import copy
 
 logging.basicConfig(level=20)
 
 import numpy as np
 import pycl as cl
+from ctypes import *
+
+import ctree.np
+import ctree.ocl
 
 from ctree.frontend import get_ast
 from ctree.c.nodes import *
-from ctree.c.types import *
+from ctree.cpp.nodes import *
 from ctree.omp.macros import *
+from ctree.ocl.macros import *
 from ctree.templates.nodes import *
 from ctree.transformations import *
 from ctree.jit import LazySpecializedFunction
@@ -38,10 +44,10 @@ class Vector(CtreeNode):
     def get_type(self):
         return self.type
 
-    def codegen(self):
+    def codegen(self, indent=0):
         return "%s %s" % (self.get_type(), self.name)
 
-    def on(self, mem):
+    def copy_to(self, mem):
         if mem not in self._loc_cache:
             self._loc_cache[mem] = CopiedVector(self, to=mem)
         return self._loc_cache[mem]
@@ -58,7 +64,7 @@ class CopiedVector(Vector):
 
     def label(self):
         to = "to: %s" % self.loc
-        frm = "from: %s" % self.data.loc
+        frm = "from: %s" % getattr(self.data, 'loc', '?')
         return "name: %s\\n%s\\n%s" % (self.name, to, frm)
 
 
@@ -148,17 +154,17 @@ class CopyInserter(NodeTransformer):
         if node.loc != node.left.loc:
             if not isinstance(node.left, Vector):
                 node.left = ComputedVector(node.left)
-            node.left = node.left.on(node.loc)
+            node.left = node.left.copy_to(node.loc)
         if node.loc != node.right.loc:
             if not isinstance(node.right, Vector):
                 node.right= ComputedVector(node.right)
-            node.right = node.right.on(node.loc)
+            node.right = node.right.copy_to(node.loc)
         return node
 
     def visit_ComputedVector(self, node):
         node.data = self.visit(node.data)
         if node.loc != node.data.loc:
-            node.data = node.data.on(node.loc)
+            node.data = node.data.copy_to(node.loc)
         return node
 
     def visit_CopiedVector(self, node):
@@ -172,7 +178,7 @@ class CopyInserter(NodeTransformer):
         if value.loc != self._main_mem:
             if not isinstance(node.value, Vector):
                 value = ComputedVector(node.value)
-            return value.on(self._main_mem)
+            return value.copy_to(self._main_mem)
         elif isinstance(value, BinaryOp):
             return ComputedVector(value, loc=self._main_mem)
         return value
@@ -228,12 +234,86 @@ class FindParallelism(NodeVisitor):
         else:
             return node
 
-class RefConverter(NodeTransformer):
-    def visit_ComputedVector(self, node):
-        return ArrayRef(SymbolRef(node.name), SymbolRef("i"))
+    def visit_CopiedVector(self, node):
+        copyin = self.visit(node.data)
+        if copyin:
+            return [copyin, node]
+        else:
+            return node
 
-    def visit_Vector(self, node):
-        return ArrayRef(SymbolRef(node.name), SymbolRef("i"))
+class RefConverter(NodeTransformer):
+    def visit_BinaryOp(self, node):
+        node.left = self.visit(node.left)
+        if isinstance(node.left, Vector):
+            node.left = ArrayRef(SymbolRef(node.left.name), SymbolRef("i"))
+
+        node.right = self.visit(node.right)
+        if isinstance(node.right, Vector):
+            node.right = ArrayRef(SymbolRef(node.right.name), SymbolRef("i"))
+
+        return node
+
+
+class KernelFinder(NodeTransformer):
+    def __init__(self, context, dev_mem, queue):
+        self.context = context
+        self.dev_memory = dev_mem
+        self.queue = queue
+
+    def visit_ComputedVector(self, node):
+        if node.loc == self.dev_memory:
+            fn, call = outline(node.data)
+            return call
+        else:
+            return node
+
+
+class AddCopyCommands(NodeTransformer):
+    def __init__(self, length, dtype, main_mem, device_mem, queue):
+        self.nBytes = length * dtype.itemsize
+        self.main_mem = main_mem
+        self.device_mem = device_mem
+        self.queue = queue
+
+    def visit_CopiedVector(self, node):
+        dst = node
+        src = node.data
+        assert src != dst, "Found a copy within same memory space."
+
+        if src.loc == self.main_mem and dst.loc == self.device_mem:
+            # host to device
+            return clEnqueueWriteBuffer(self.queue.copy(), dst.name, True, 0, self.nBytes, src.name)
+        else:
+            # device to host
+            return clEnqueueReadBuffer(self.queue.copy(), src.name, True, 0, self.nBytes, dst.name)
+
+def outline(tree, fn_name="outlined"):
+
+    class SymRefGatherer(NodeTransformer):
+        def __init__(self):
+            self.signature = []
+            self.declared = set()
+
+        def visit_SymbolRef(self, node):
+            if node.type:
+                self.declared.add(node.name)
+            elif node not in self.signature and \
+                 node.name not in self.declared:
+                self.signature.append(node.copy())
+            return node
+
+    symref_gatherer = SymRefGatherer()
+    tree = symref_gatherer.visit(tree)
+    signature = symref_gatherer.signature
+
+    if not isinstance(tree, list):
+        tree = [tree]
+
+    fn = FunctionDecl(None, fn_name, signature, tree)
+    call = FunctionCall(SymbolRef(fn_name), signature)
+
+    return fn, call
+
 
 
 class Loopize(NodeTransformer):
@@ -241,11 +321,13 @@ class Loopize(NodeTransformer):
         self.nElems = nElems
 
     def visit_ComputedVector(self, node):
-        i = SymbolRef("i", Int())
-        return For(Assign(i, Constant(0)), Lt(i.copy(), Constant(self.nElems)), PostInc(i.copy()), [
+        i = SymbolRef("i", c_int())
+        for_stmt = For(Assign(i, Constant(0)), Lt(i.copy(), Constant(self.nElems)), PostInc(i.copy()), [
             Assign( ArrayRef(SymbolRef(node.name), i.copy()),
                     self.visit(node.data) )
         ])
+
+        return [CppComment("on %s" % node.loc), for_stmt]
 
     def visit_Vector(self, node):
         return ArrayRef(SymbolRef(node.name), SymbolRef("i"))
@@ -298,7 +380,7 @@ class OpTranslator(LazySpecializedFunction):
         that classifies them. Arguments with identical subconfigs
         might be processed by the same generated code.
         """
-        ptrs = tuple(NdPointer.to(a) for a in args)
+        ptrs = tuple(np.ctypeslib.ndpointer(a.dtype) for a in args)
         return {
             'ptrs': ptrs,
             'len': len(args[0]),
@@ -311,8 +393,6 @@ class OpTranslator(LazySpecializedFunction):
         """
         arg_config, tuner_config = program_config
 
-        ComputedVector._next_id = 0
-
         # set up OpenCL context and memory spaces
         context = cl.clCreateContextFromType()
         mem_map = {
@@ -320,11 +400,12 @@ class OpTranslator(LazySpecializedFunction):
             'ocl<1>': OclMemory(context),
         }
         main_memory = mem_map['main']
+        dev_memory = mem_map['ocl<1>']
 
         # run basic conversions
         proj = PyBasicConversions().visit(py_ast)
         fn = proj.find(FunctionDecl, name="py_op")
-        fn.return_type = Void()
+        fn.return_type = None
 
         # run platform-independent transformations
         distribute_directives = tuner_config['distribute']
@@ -336,7 +417,7 @@ class OpTranslator(LazySpecializedFunction):
         # set parameter types
         ptrs = arg_config['ptrs']
         for ty, param in zip(ptrs, fn.params):
-            param.type = ty
+            param.type = ty()
 
         locs = [mem_map[loc] for loc in tuner_config['locs']]
         fusion_directives = tuner_config['fusion']
@@ -349,45 +430,47 @@ class OpTranslator(LazySpecializedFunction):
 
         assert isinstance(fn.defn[0], Vector)
 
-        dtype, length = ptrs[0].ptr._dtype_, arg_config['len']
+        dtype, length = ptrs[0]._dtype_, arg_config['len']
         allocator = AllocateIntermediates(dtype, length)
         proj = allocator.visit(proj)
         allocator.allocated[0].name = "ans"
 
+        c_func = ElementwiseFunction()
+
         import pycl
-        from ctree.ocl.types import cl_buffer
+
+        context = SymbolRef("context", pycl.cl_context())
+        queue = SymbolRef("queue", pycl.cl_command_queue())
 
         for a in allocator.allocated:
             if isinstance(a.mem, np.ndarray):
-                ty = NdPointer.to(a.mem)
+                ty = np.ctypeslib.ndpointer(a.mem.dtype)()
             elif isinstance(a.mem, pycl.cl_mem):
-                ty = cl_buffer.to(a.mem)
+                ty = a.mem
             fn.params.append(SymbolRef(a.name, ty))
 
         schedules = FindParallelism().visit(fn.defn[0])
-        schedule = parallelize_tasks(schedules)
+        fn.defn = parallelize_tasks(schedules)
+        print "SCHEDULES", fn.defn
 
-        refconv = RefConverter()
-        for item in schedule:
-            if isinstance(item, Vector):
-                item.data = refconv.visit(item.data)
+        proj = RefConverter().visit(proj)
 
-        fn.defn = schedule
+        proj = AddCopyCommands(length, dtype, main_memory, dev_memory, queue.copy()).visit(proj)
+        proj = Loopize(length).visit(proj)
 
-        loopizer = Loopize(length)
-        fn.defn = [loopizer.visit(stmt) for stmt in fn.defn]
+        fn.params.append(context)
+        fn.params.append(queue)
+        proj.files[0].body.insert(0, CppInclude("OpenCL/OpenCL.h"))
 
         global n
         with open('graph.%d.dot' % n, 'w') as f:
             f.write(proj.to_dot())
-        with open('prog.%d.c' % n, 'w') as f:
-            f.write(str(proj.files[0]))
+        #with open('prog.%d.c' % n, 'w') as f:
+        #    f.write(str(proj.files[0]))
         n += 1
 
-        c_func = ElementwiseFunction()
         c_func.intermediates = [a.mem for a in allocator.allocated]
-
-        return c_func.finalize("py_op", proj, fn.get_type().as_ctype())
+        return c_func.finalize("py_op", proj, fn.get_type())
 
 class ElementwiseFunction(ConcreteSpecializedFunction):
     def __init__(self):
@@ -399,7 +482,7 @@ class ElementwiseFunction(ConcreteSpecializedFunction):
         return self
 
     def __call__(self, *args):
-        full_args = list(args) + self.intermediates
+        full_args = list(args) + self.intermediates + [self.context, self.queue]
         self._c_function(*full_args)
         return np.copy(self.intermediates[0])
 

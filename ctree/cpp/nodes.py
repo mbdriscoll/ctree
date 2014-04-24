@@ -30,7 +30,7 @@ class CppInclude(CppNode):
         self.angled_brackets = angled_brackets
 
 
-class Comment(CppNode):
+class CppComment(CppNode):
     """Represents // foo"""
 
     def __init__(self, text=""):

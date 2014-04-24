@@ -26,12 +26,14 @@ class OmpCodeGen(CodeGenVisitor):
         s = "#pragma omp parallel sections"
         if node.clauses:
             s += " " + ", ".join(map(str, node.clauses))
+        s += "\n%s%s" % (self._tab(), self._genblock(node.sections))
         return s
 
     def visit_OmpSection(self, node):
         s = "#pragma omp section"
         if node.clauses:
             s += " " + ", ".join(map(str, node.clauses))
+        s += "\n%s%s" % (self._tab(), self._genblock(node.body))
         return s
 
     def visit_OmpIfClause(self, node):
