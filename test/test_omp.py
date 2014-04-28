@@ -48,21 +48,20 @@ class TestOmpCodegen(CtreeTest):
         self.assertEqual(str(node), "omp_get_wtime()")
 
     def test_sections_1(self):
-        node = Block([
-            OmpParallelSections(),
-            Block([
-                OmpSection(),
-                Assign(SymbolRef("i", c_int()), Constant(2)),
-            ]),
+        node = OmpParallelSections(sections=[
+                OmpSection(body=[
+                    Assign(SymbolRef("i", c_int()), Constant(2)),
+                ]),
         ])
         self._check_code(node, """\
+        #pragma omp parallel sections
         {
-            #pragma omp parallel sections
+            #pragma omp section
             {
-                #pragma omp section
                 int i = 2;
             }
         }""")
+
 
 class TestOmpMacros(CtreeTest):
     def test_num_threads(self):
