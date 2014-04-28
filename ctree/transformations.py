@@ -165,3 +165,28 @@ class ResolveGeneratedPathRefs(NodeTransformer):
     def visit_GeneratedPathRef(self, node):
         self.count += 1
         return String(os.path.join(self.compilation_dir, node.target.get_filename()))
+
+
+class Lifter(NodeTransformer):
+    """
+    To aid in adding new includes or parameters during tree
+    traversals, users can store them with arbirary child nodes and call this
+    transformation to move them to the correct position.
+    """
+    def __init__(self, lift_params=True, lift_includes=True):
+        self.lift_params = lift_params
+        self.lift_includes = lift_includes
+
+    def visit_FunctionDecl(self, node):
+        if self.lift_params:
+            for child in ast.walk(node):
+                node.params.extend( getattr(child, '_lift_params', []) )
+        return self.generic_visit(node)
+
+    def visit_CFile(self, node):
+        if self.lift_includes:
+            new_includes = []
+            for child in ast.walk(node):
+                new_includes.extend(getattr(child, '_lift_includes', []))
+            node.body = new_includes + node.body
+        return self.generic_visit(node)

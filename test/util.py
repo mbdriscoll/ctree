@@ -40,7 +40,7 @@ class PreventImport(object):
 
 
 class CtreeTest(unittest.TestCase):
-    def _check_code(self, actual, expected):
+    def _check_code(self, actual="", expected=""):
         if not isinstance(actual, str):
             actual = textwrap.dedent( str(actual) )
         if not isinstance(expected, str):

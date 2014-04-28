@@ -7,6 +7,8 @@ import logging
 log = logging.getLogger(__name__)
 
 import ast
+import collections
+import inflection
 
 from ctree.codegen import CodeGenVisitor
 from ctree.dotgen import DotGenVisitor, DotGenLabeller
@@ -83,6 +85,14 @@ class CtreeNode(ast.AST):
         for node in ast.walk(self):
             if pred(node):
                 yield node
+
+    def lift(self, **kwargs):
+        for key, vals in kwargs.iteritems():
+            if not isinstance(vals, collections.Iterable):
+                key, vals = inflection.pluralize(key), [vals]
+            field = "_lift_%s" % key
+            setattr(self, field, vals)
+            type(self)._fields.append(field)
 
 
 # ---------------------------------------------------------------------------

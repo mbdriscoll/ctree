@@ -6,6 +6,13 @@ from ctypes import *
 from ctree.c.nodes import *
 from ctree.cpp.nodes import *
 
+
+# ---------------------------------------------------------------------------
+# all sample ASTs in a list for iteration. ASTs must add themselves.
+
+SAMPLE_ASTS = []
+
+
 # ---------------------------------------------------------------------------
 # integer identity
 
@@ -19,6 +26,8 @@ identity_ast = \
         Return(SymbolRef("x"))
     ])
 
+
+SAMPLE_ASTS.append((identity, identity_ast))
 
 # ---------------------------------------------------------------------------
 # greatest common divisor
@@ -38,6 +47,7 @@ gcd_ast = \
                                                                        SymbolRef('b'))]))])
     ])
 
+SAMPLE_ASTS.append((gcd, gcd_ast))
 
 # ---------------------------------------------------------------------------
 # naive fibonacci
@@ -57,6 +67,7 @@ fib_ast = \
                        FunctionCall(SymbolRef("fib"), [Sub(SymbolRef("n"), Constant(2))])))])
     ])
 
+SAMPLE_ASTS.append((fib, fib_ast))
 
 # ---------------------------------------------------------------------------
 # a zero-argument function
@@ -70,6 +81,7 @@ get_two_ast = \
         Return(Constant(2))
     ])
 
+SAMPLE_ASTS.append((get_two, get_two_ast))
 
 # ---------------------------------------------------------------------------
 # a function with mixed argument types
@@ -91,6 +103,7 @@ choose_ast = \
                ])
         ])
 
+SAMPLE_ASTS.append((choose, choose_ast))
 
 # ---------------------------------------------------------------------------
 # a function that takes a numpy array
@@ -120,3 +133,5 @@ l2norm_ast = CFile("generated", [
         Return( FunctionCall("sqrt", [SymbolRef("sum")]) ),
     ])
 ])
+
+SAMPLE_ASTS.append((l2norm, l2norm_ast))
