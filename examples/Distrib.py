@@ -25,21 +25,24 @@ from ctree.omp.macros import *
 from ctree.ocl.macros import *
 from ctree.templates.nodes import *
 from ctree.transformations import *
+from ctree.visitors import NodeVisitor
 from ctree.jit import LazySpecializedFunction
 from ctree.jit import ConcreteSpecializedFunction
+
 
 # ---------------------------------------------------------------------------
 # Specializer code - nodes
 
 class Vector(CtreeNode):
-    def __init__(self, name, loc=None, type=None):
+    def __init__(self, name, type=None, loc=None):
         self.name = name
         self.loc = loc
         self.type = type
         self._loc_cache = {}
 
     def label(self):
-        return "name: %s\\nloc: %s" % (self.name, self.loc)
+        return "name: %s\\nloc: %s\\ntype: %s" % \
+            (self.name, self.loc, self.type)
 
     def get_type(self):
         return self.type
@@ -49,23 +52,23 @@ class Vector(CtreeNode):
 
     def copy_to(self, mem):
         if mem not in self._loc_cache:
-            self._loc_cache[mem] = CopiedVector(self, to=mem)
+            self._loc_cache[mem] = CopiedVector(self, to=mem, type=self.type)
         return self._loc_cache[mem]
 
 class CopiedVector(Vector):
     _fields = ["data"]
     _next_id = 0
-    def __init__(self, data, to=None, name=None):
+    def __init__(self, data=None, to=None):
         self.data = data
-        if not name:
-            name = "copied%d" % self._next_id
-            CopiedVector._next_id += 1
+        name = "copied%d" % self._next_id
+        CopiedVector._next_id += 1
         super(CopiedVector, self).__init__(name=name, loc=to)
 
     def label(self):
         to = "to: %s" % self.loc
         frm = "from: %s" % getattr(self.data, 'loc', '?')
-        return "name: %s\\n%s\\n%s" % (self.name, to, frm)
+        ty = "type: %s" % getattr(self, 'type', '?')
+        return "name: %s\\n%s\\n%s\\n%s" % (self.name, to, frm, ty)
 
 
 class ComputedVector(Vector):
@@ -76,7 +79,7 @@ class ComputedVector(Vector):
         if not name:
             name = "computed%d" % self._next_id
             ComputedVector._next_id += 1
-        super(ComputedVector, self).__init__(name=name, loc=data.loc)
+        super(ComputedVector, self).__init__(name=name, loc=loc)
 
 # ---------------------------------------------------------------------------
 # Specializer code - transformers
@@ -105,18 +108,45 @@ class ApplyDistributiveProperty(NodeTransformer):
         return node
 
 class VectorFinder(NodeTransformer):
-    def __init__(self):
+    def __init__(self, types, main_memory):
         self._cache = {}
+        self._types = (ty() for ty in types)
+        self._main_memory = main_memory
 
     def visit_SymbolRef(self, node):
-        if node.name not in self._cache:
-            self._cache[node.name] = Vector(node.name)
         return self._cache[node.name]
 
+    def visit_FunctionDecl(self, node):
+        for param in node.params:
+            self._cache[param.name] = Vector(param.name, self._types.next(), loc=self._main_memory)
+        return self.generic_visit(node)
+
+
 class InsertIntermediates(NodeTransformer):
+    def __init__(self, main_memory, locs):
+        self._main_memory = main_memory
+        self._locs = iter(locs)
+
     def visit_BinaryOp(self, node):
         tree = self.generic_visit(node)
-        return ComputedVector(tree, loc=tree.loc)
+        loc = self._locs.next()
+        return ComputedVector(tree, loc=loc)
+
+    def visit_Return(self, node):
+        answer = self.visit(node.value)
+        answer.name = "answer"
+        answer.loc = self._main_memory
+        return answer
+
+
+class LocationTagger(NodeTransformer):
+    def __init__(self, locs):
+        self._locs = iter(locs)
+
+    def visit_ComputedVector(self, node):
+        node.loc = self._locs.next()
+        return self.generic_visit(node)
+
 
 class DoFusion(NodeTransformer):
     def __init__(self, directives):
@@ -131,83 +161,37 @@ class DoFusion(NodeTransformer):
         return tree
 
 
-class LocationTagger(NodeTransformer):
-    def __init__(self, main_memory, directives):
-        self.main_memory = main_memory
-        self.directives = iter(directives)
-
-    def visit_BinaryOp(self, node):
-        node.loc = self.directives.next()
-        return self.generic_visit(node)
-
-    def visit_Vector(self, node):
-        node.loc = self.main_memory
-        return self.generic_visit(node)
-
-
 class CopyInserter(NodeTransformer):
     def __init__(self, main_memory):
-        self._main_mem = main_memory
-
-    def visit_BinaryOp(self, node):
-        node = self.generic_visit(node)
-        if node.loc != node.left.loc:
-            if not isinstance(node.left, Vector):
-                node.left = ComputedVector(node.left)
-            node.left = node.left.copy_to(node.loc)
-        if node.loc != node.right.loc:
-            if not isinstance(node.right, Vector):
-                node.right= ComputedVector(node.right)
-            node.right = node.right.copy_to(node.loc)
-        return node
+        self._locs = [main_memory]
 
     def visit_ComputedVector(self, node):
-        node.data = self.visit(node.data)
-        if node.loc != node.data.loc:
-            node.data = node.data.copy_to(node.loc)
+        outer_loc = self._locs[-1]
+        self._locs.append(node.loc)
+        self.generic_visit(node)
+        if node.loc != outer_loc:
+            node = CopiedVector(data=node, to=outer_loc)
+        self._locs.pop()
         return node
 
-    def visit_CopiedVector(self, node):
-        node.data = self.visit(node.data)
-        if not isinstance(node.data, ComputedVector):
-            node.data = ComputedVector(node.data)
-        return node
-
-    def visit_Return(self, node):
-        value = self.visit(node.value)
-        if value.loc != self._main_mem:
-            if not isinstance(node.value, Vector):
-                value = ComputedVector(node.value)
-            return value.copy_to(self._main_mem)
-        elif isinstance(value, BinaryOp):
-            return ComputedVector(value, loc=self._main_mem)
-        return value
-
-class RemoveRedundantVectors(NodeTransformer):
-    def visit_ComputedVector(self, node):
-        node.data = self.visit(node.data)
-        if isinstance(node.data, Vector) and node.loc == node.data.loc:
-            return node.data
-        else:
-            return node
 
 class AllocateIntermediates(NodeTransformer):
     def __init__(self, dtype, length):
         self.dtype = dtype
         self.length = length
-        self.allocated = []
 
     def visit_ComputedVector(self, node):
-        node.mem = node.loc.allocate(self.length, self.dtype)
-        self.allocated.append(node)
+        node.mem, ty = node.loc.allocate(self.length, self.dtype)
+        node.lift(params=[(SymbolRef(node.name, ty), node.mem)])
+        node.type = ty
         return self.generic_visit(node)
 
     def visit_CopiedVector(self, node):
-        node.mem = node.loc.allocate(self.length, self.dtype)
-        self.allocated.append(node)
+        node.mem, ty = node.loc.allocate(self.length, self.dtype)
+        node.lift(params=[(SymbolRef(node.name, ty), node.mem)])
+        node.type = ty
         return self.generic_visit(node)
 
-from ctree.visitors import NodeVisitor
 
 class GetWorkItems(NodeVisitor):
     def visit_BinaryOp(self, node):
@@ -223,7 +207,7 @@ class FindParallelism(NodeVisitor):
         left  = self.visit(node.left)
         right = self.visit(node.right)
         if left and right:
-            return {left, right} # XXX: type error on regular set. why?
+            return {left, right}
         elif left or right:
             return left or right
 
@@ -241,20 +225,44 @@ class FindParallelism(NodeVisitor):
         else:
             return node
 
+    def visit_FunctionDecl(self, node):
+        return [self.visit(stmt) for stmt in node.defn]
+
+
 class RefConverter(NodeTransformer):
-    def visit_BinaryOp(self, node):
-        node.left = self.visit(node.left)
-        if isinstance(node.left, Vector):
-            node.left = ArrayRef(SymbolRef(node.left.name), SymbolRef("i"))
+    class ToArrayRef(NodeTransformer):
+        def visit_ComputedVector(self, node):
+            return ArrayRef(SymbolRef(node.name), SymbolRef("i"))
+        def visit_CopiedVector(self, node):
+            return ArrayRef(SymbolRef(node.name), SymbolRef("i"))
+        def visit_Vector(self, node):
+            return ArrayRef(SymbolRef(node.name), SymbolRef("i"))
 
-        node.right = self.visit(node.right)
-        if isinstance(node.right, Vector):
-            node.right = ArrayRef(SymbolRef(node.right.name), SymbolRef("i"))
+    class ToParamDecl(NodeTransformer):
+        def visit_Vector(self, node):
+            return SymbolRef(node.name, node.type)
 
+    def visit_ComputedVector(self, node):
+        node.data = RefConverter.ToArrayRef().visit(node.data)
+        return node
+
+    def visit_FunctionDecl(self, node):
+        param_conv = RefConverter.ToParamDecl()
+        node.params = [param_conv.visit(p) for p in node.params]
+        node.defn = [self.visit(stmt) for stmt in node.defn]
         return node
 
 
-class KernelFinder(NodeTransformer):
+class KernelCall(CtreeNode):
+    _fields = ['args', 'kernel']
+    def __init__(self, name=None, args=None, kernel=None):
+        self.name = name
+        self.args = args or []
+        self.kernel = kernel
+
+
+class KernelOutliner(NodeTransformer):
+    _next_kernel_id = 0
     def __init__(self, context, dev_mem, queue):
         self.context = context
         self.dev_memory = dev_mem
@@ -262,13 +270,15 @@ class KernelFinder(NodeTransformer):
 
     def visit_ComputedVector(self, node):
         if node.loc == self.dev_memory:
-            fn, call = outline(node.data)
-            return call
+            print "LOC"
+            name = "outline%d" % KernelOutliner._next_kernel_id
+            KernelOutliner._next_kernel_id += 1
+            return outline(node.data, name=name)
         else:
             return node
 
 
-class AddCopyCommands(NodeTransformer):
+class LowerCopies(NodeTransformer):
     def __init__(self, length, dtype, main_mem, device_mem, queue):
         self.nBytes = length * dtype.itemsize
         self.main_mem = main_mem
@@ -282,12 +292,17 @@ class AddCopyCommands(NodeTransformer):
 
         if src.loc == self.main_mem and dst.loc == self.device_mem:
             # host to device
-            return clEnqueueWriteBuffer(self.queue.copy(), dst.name, True, 0, self.nBytes, src.name)
+            call = clEnqueueWriteBuffer(self.queue.copy(), dst.name, True, 0, self.nBytes, src.name)
         else:
             # device to host
-            return clEnqueueReadBuffer(self.queue.copy(), src.name, True, 0, self.nBytes, dst.name)
+            call = clEnqueueReadBuffer(self.queue.copy(), src.name, True, 0, self.nBytes, dst.name)
 
-def outline(tree, fn_name="outlined"):
+        assert dst.type is not None, str(dst)
+        call.lift(params=[(SymbolRef(dst.name, dst.type), dst.mem)])
+
+        return call
+
+def outline(tree, name="outlined"):
 
     class SymRefGatherer(NodeTransformer):
         def __init__(self):
@@ -295,11 +310,11 @@ def outline(tree, fn_name="outlined"):
             self.declared = set()
 
         def visit_SymbolRef(self, node):
-            if node.type:
+            if node.type or node.name == "i": # FIXME
                 self.declared.add(node.name)
             elif node not in self.signature and \
                  node.name not in self.declared:
-                self.signature.append(node.copy())
+                self.signature.append(node)
             return node
 
     symref_gatherer = SymRefGatherer()
@@ -309,10 +324,8 @@ def outline(tree, fn_name="outlined"):
     if not isinstance(tree, list):
         tree = [tree]
 
-    fn = FunctionDecl(None, fn_name, signature, tree)
-    call = FunctionCall(SymbolRef(fn_name), signature)
-
-    return fn, call
+    fn = FunctionDecl(None, name, signature, tree).set_kernel()
+    return KernelCall(name, signature, fn)
 
 
 
@@ -322,22 +335,42 @@ class Loopize(NodeTransformer):
 
     def visit_ComputedVector(self, node):
         i = SymbolRef("i", c_int())
-        for_stmt = For(Assign(i, Constant(0)), Lt(i.copy(), Constant(self.nElems)), PostInc(i.copy()), [
+        for_stmt = For(Assign(i, Constant(0)),
+                       Lt(i.copy(), Constant(self.nElems)),
+                       PostInc(i.copy()), [
             Assign( ArrayRef(SymbolRef(node.name), i.copy()),
                     self.visit(node.data) )
         ])
 
+        for_stmt._lift_params = node._lift_params
+
         return [CppComment("on %s" % node.loc), for_stmt]
 
-    def visit_Vector(self, node):
-        return ArrayRef(SymbolRef(node.name), SymbolRef("i"))
+
+class ArgZipper(NodeTransformer):
+    def visit_FunctionDecl(self, node):
+        self.extra_args = []
+        def process(elem):
+            if isinstance(elem, tuple):
+                sym, val = elem
+                self.extra_args.append(val)
+                if sym.name == 'answer':
+                    self.answer = val
+                return sym
+            else:
+                return elem
+        node.params = [process(e) for e in node.params]
+        return node
+
 
 class Memory(object):
     pass
 
 class MainMemory(Memory):
     def allocate(self, length, dtype):
-        return np.empty([length], dtype=dtype)
+        ty = np.ctypeslib.ndpointer(dtype)()
+        mem = np.empty([length], dtype=dtype)
+        return mem, ty
 
     def __str__(self):
         return "MainMemory"
@@ -347,13 +380,12 @@ class OclMemory(Memory):
         self.context = context
 
     def allocate(self, length, dtype):
-        return cl.clCreateBuffer(self.context, length * dtype.itemsize)
+        mem = cl.clCreateBuffer(self.context, length * dtype.itemsize)
+        ty = mem
+        return mem, ty
 
     def __str__(self):
         return "OclMemory<%s>" % [dev.name for dev in self.context.devices][0]
-
-# label binary ops with location
-BinaryOp.label = lambda self: "op: %s\\nloc: %s" % (self.op, getattr(self, 'loc', '?'))
 
 # ---------------------------------------------------------------------------
 # Specializer code - translator
@@ -364,10 +396,12 @@ class OpTranslator(LazySpecializedFunction):
         from ctree.tune import MinimizeTime
         from ctree.tune import IntegerParameter
         from ctree.tune import BooleanArrayParameter
-        from ctree.tune import EnumArrayParameter
+        from ctree.tune import IntegerArrayParameter
+
+        nMemorySpaces = 1 + len(cl.clGetDeviceIDs())
 
         params = [
-            EnumArrayParameter("locs", count=3, values=['main', 'ocl<1>']),
+            IntegerArrayParameter("locs", count=3, lower_bound=0, upper_bound=nMemorySpaces),
             BooleanArrayParameter("fusion", count=2),
             BooleanArrayParameter("distribute", count=1),
         ]
@@ -394,97 +428,112 @@ class OpTranslator(LazySpecializedFunction):
         arg_config, tuner_config = program_config
 
         # set up OpenCL context and memory spaces
-        context = cl.clCreateContextFromType()
-        mem_map = {
-            'main': MainMemory(),
-            'ocl<1>': OclMemory(context),
-        }
-        main_memory = mem_map['main']
-        dev_memory = mem_map['ocl<1>']
+        import pycl
+        context = pycl.clCreateContextFromType(pycl.CL_DEVICE_TYPE_ALL)
+        queues = [pycl.clCreateCommandQueue(context, dev) for dev in context.devices]
+        c_func = ElementwiseFunction(context, queues)
+
+        memories = [MainMemory()] + [OclMemory(q) for q in queues]
+        main_memory = memories[0]
+
+
+        # pull stuff out of autotuner
+        distribute_directives = tuner_config['distribute']
+        locs = [memories[loc] for loc in tuner_config['locs']]
+        fusion_directives = tuner_config['fusion']
+
+        with open('graph.00.dot', 'w') as f: f.write(py_ast.to_dot())
 
         # run basic conversions
         proj = PyBasicConversions().visit(py_ast)
-        fn = proj.find(FunctionDecl, name="py_op")
-        fn.return_type = None
+        with open('graph.01.dot', 'w') as f: f.write(proj.to_dot())
 
         # run platform-independent transformations
-        distribute_directives = tuner_config['distribute']
         proj = ApplyDistributiveProperty(distribute_directives).visit(proj)
-
-        # identify vectors
-        fn.defn = [VectorFinder().visit(fn.defn[0])]
+        with open('graph.02.dot', 'w') as f: f.write(proj.to_dot())
 
         # set parameter types
         ptrs = arg_config['ptrs']
-        for ty, param in zip(ptrs, fn.params):
-            param.type = ty()
+        proj = VectorFinder(ptrs, main_memory).visit(proj)
+        with open('graph.03.dot', 'w') as f: f.write(proj.to_dot())
 
-        locs = [mem_map[loc] for loc in tuner_config['locs']]
-        fusion_directives = tuner_config['fusion']
+        proj = InsertIntermediates(main_memory, locs).visit(proj)
+        with open('graph.04.dot', 'w') as f: f.write(proj.to_dot())
 
-        proj = LocationTagger(main_memory, locs).visit(proj)
-        proj = InsertIntermediates().visit(proj)
         proj = CopyInserter(main_memory).visit(proj)
-        proj = DoFusion(fusion_directives).visit(proj)
-        proj = RemoveRedundantVectors().visit(proj)
+        with open('graph.05.dot', 'w') as f: f.write(proj.to_dot())
 
-        assert isinstance(fn.defn[0], Vector)
+        proj = DoFusion(fusion_directives).visit(proj)
+        with open('graph.06.dot', 'w') as f: f.write(proj.to_dot())
 
         dtype, length = ptrs[0]._dtype_, arg_config['len']
-        allocator = AllocateIntermediates(dtype, length)
-        proj = allocator.visit(proj)
-        allocator.allocated[0].name = "ans"
+        proj = AllocateIntermediates(dtype, length).visit(proj)
+        with open('graph.07.dot', 'w') as f: f.write(proj.to_dot())
 
-        c_func = ElementwiseFunction()
+        py_op = proj.find(FunctionDecl, name="py_op")
+        schedules = FindParallelism().visit(py_op)
+        py_op.defn = parallelize_tasks(schedules)
+        with open('graph.08.dot', 'w') as f: f.write(proj.to_dot())
+
+        proj = RefConverter().visit(proj)
+        with open('graph.09.dot', 'w') as f: f.write(proj.to_dot())
+
+        #proj = LowerCopies(length, dtype, main_memory, dev_memory, queue.copy()).visit(proj)
+        #with open('graph.10.dot', 'w') as f: f.write(proj.to_dot())
+
+        proj = Loopize(length).visit(proj)
+        with open('graph.11.dot', 'w') as f: f.write(proj.to_dot())
+
+        zipper = ArgZipper()
+        proj = zipper.visit( Lifter().visit(proj) )
+        c_func.extra_args = zipper.extra_args
+        c_func.answer = zipper.answer
+        with open('graph.12.dot', 'w') as f: f.write(proj.to_dot())
+
+        """
+
+        assert isinstance(fn.defn[0], Vector)
 
         import pycl
 
         context = SymbolRef("context", pycl.cl_context())
         queue = SymbolRef("queue", pycl.cl_command_queue())
 
-        for a in allocator.allocated:
-            if isinstance(a.mem, np.ndarray):
-                ty = np.ctypeslib.ndpointer(a.mem.dtype)()
-            elif isinstance(a.mem, pycl.cl_mem):
-                ty = a.mem
-            fn.params.append(SymbolRef(a.name, ty))
 
-        schedules = FindParallelism().visit(fn.defn[0])
-        fn.defn = parallelize_tasks(schedules)
-        print "SCHEDULES", fn.defn
+
+        proj = KernelOutliner(context, dev_memory, queue).visit(proj)
 
         proj = RefConverter().visit(proj)
+        proj.find(CFile).body.insert(0, CppInclude("OpenCL/OpenCL.h"))
 
-        proj = AddCopyCommands(length, dtype, main_memory, dev_memory, queue.copy()).visit(proj)
-        proj = Loopize(length).visit(proj)
-
-        fn.params.append(context)
-        fn.params.append(queue)
-        proj.files[0].body.insert(0, CppInclude("OpenCL/OpenCL.h"))
+        nUserArgs = len(ptrs)
+        fn = proj.find(FunctionDecl)
+        fn.params[nUserArgs:], extra_args = zip(*fn.params[nUserArgs:])
+        fn.params += [context, queue]
+        c_func.extra_args = list(extra_args) + [c_func.context, c_func.queue]
 
         global n
         with open('graph.%d.dot' % n, 'w') as f:
             f.write(proj.to_dot())
-        #with open('prog.%d.c' % n, 'w') as f:
-        #    f.write(str(proj.files[0]))
         n += 1
+        """
 
-        c_func.intermediates = [a.mem for a in allocator.allocated]
+        fn = proj.find(FunctionDecl)
         return c_func.finalize("py_op", proj, fn.get_type())
 
 class ElementwiseFunction(ConcreteSpecializedFunction):
-    def __init__(self):
-        self.context = cl.clCreateContextFromType()
-        self.queue = cl.clCreateCommandQueue(self.context)
+    def __init__(self, context, queues):
+        self.context = context
+        self.queues = queues
 
     def finalize(self, entry_name, proj, typesig):
         self._c_function = self._compile(entry_name, proj, typesig)
         return self
 
     def __call__(self, *args):
-        full_args = list(args) + self.intermediates + [self.context, self.queue]
+        full_args = list(args) + self.extra_args
         self._c_function(*full_args)
-        return np.copy(self.intermediates[0])
+        return np.copy(self.answer)
 
 
 class Elementwise(object):

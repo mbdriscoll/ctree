@@ -32,14 +32,18 @@ def lower_case_underscore_to_camel_case(string):
     return class_.join('', map(class_.capitalize, string.split('_')))
 
 
-def flatten(obj_or_list_or_set):
+def flatten(obj):
     """Iterator for all objects arbitrarily nested in lists."""
-    if isinstance(obj_or_list_or_set, (set, list)):
-        for gen in map(flatten, obj_or_list_or_set):
+    if isinstance(obj, (set, list)):
+        for gen in map(flatten, obj):
+            for elem in gen:
+                yield elem
+    elif isinstance(obj, (dict)):
+        for gen in map(flatten, obj.itervalues()):
             for elem in gen:
                 yield elem
     else:
-        yield obj_or_list_or_set
+        yield obj
 
 
 def enumerate_flatten(obj_or_list):

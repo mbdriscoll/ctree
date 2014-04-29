@@ -180,13 +180,17 @@ class Lifter(NodeTransformer):
     def visit_FunctionDecl(self, node):
         if self.lift_params:
             for child in ast.walk(node):
-                node.params.extend( getattr(child, '_lift_params', []) )
+                if hasattr(child, '_lift_params'):
+                    node.params.extend(child._lift_params)
+                    del child._lift_params
         return self.generic_visit(node)
 
     def visit_CFile(self, node):
         if self.lift_includes:
             new_includes = []
             for child in ast.walk(node):
-                new_includes.extend(getattr(child, '_lift_includes', []))
+                if hasattr(child, '_lift_includes'):
+                    new_includes.extend(child._lift_includes)
+                    del child._lift_includes
             node.body = new_includes + node.body
         return self.generic_visit(node)

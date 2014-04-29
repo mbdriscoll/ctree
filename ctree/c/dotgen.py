@@ -45,3 +45,6 @@ class CDotGenLabeller(DotGenLabeller):
 
     def visit_BinaryOp(self, node):
         return type(node.op).__name__
+
+    def visit_UnaryOp(self, node):
+        return type(node.op).__name__

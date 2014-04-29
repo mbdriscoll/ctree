@@ -29,10 +29,10 @@ class TestLifter(CtreeTest):
 
     def test_two_params(self):
         inner0 = SymbolRef("foo")
-        inner0.lift(param=SymbolRef(inner0.name, c_int()))
+        inner0.lift(params=[SymbolRef(inner0.name, c_int())])
 
         inner1 = SymbolRef("bar")
-        inner1.lift(param=SymbolRef(inner1.name, c_double()))
+        inner1.lift(params=[SymbolRef(inner1.name, c_double())])
 
         tree = FunctionDecl(None, "fn", [], [
             Assign(inner0, Constant(123)),
@@ -50,7 +50,7 @@ class TestLifter(CtreeTest):
     def test_one_include(self):
         tree = CFile("generated", [deepcopy(get_two_ast)])
         stmt = tree.find(FunctionDecl).defn[0]
-        stmt.lift(include=CppInclude("stdio.h"))
+        stmt.lift(includes=[CppInclude("stdio.h")])
 
         tree = Lifter().visit(tree)
 
@@ -67,7 +67,7 @@ class TestLifter(CtreeTest):
         stmt0 = tree.find(FunctionDecl)
         stmt1 = stmt0.defn[0]
 
-        stmt0.lift(include=CppInclude("stdio.h"))
+        stmt0.lift(includes=[CppInclude("stdio.h")])
         stmt1.lift(includes=[CppInclude("stdlib.h"), CppInclude("float.h")])
 
         tree = Lifter().visit(tree)
