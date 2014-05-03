@@ -16,5 +16,5 @@ class CppDotLabeller(DotGenLabeller):
         else:
             return 'target: "%s"' % node.target
 
-    def visit_Comment(self, node):
-        return node.text.replace('"', r"\"")
+    def visit_CppComment(self, node):
+        return "// " + node.text.replace('"', r"\"")

@@ -17,7 +17,7 @@ class CppCodeGen(CodeGenVisitor):
             return '#include "%s"' % node.target
 
     def visit_CppComment(self, node):
-        return "// %s" % node.text
+        return "// " + ("\n" + self._tab() + "// ").join(node.text.splitlines())
 
     def visit_CppDefine(self, node):
         params = ", ".join(map(str, node.params))

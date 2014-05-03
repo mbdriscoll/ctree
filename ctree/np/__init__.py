@@ -6,13 +6,19 @@ from ctree.types import (
     register_type_codegenerators,
 )
 
+def codegen_ndptr(ndptr):
+    prefix = ""
+    if getattr(ndptr, "_global", False):
+        prefix += "__global "
+    return prefix + "%s*" % codegen_type(ndptr._dtype_.type())
+
 register_type_recognizers({
     np.ndarray: lambda obj: np.ctypeslib.as_ctypes(obj)
 })
 
 register_type_codegenerators({
     # pointers
-    np.ctypeslib._ndptr: lambda t: "%s*" % codegen_type(t._dtype_.type()),
+    np.ctypeslib._ndptr: codegen_ndptr,
 
     # boolean types
     np.bool8:            lambda t: "bool",

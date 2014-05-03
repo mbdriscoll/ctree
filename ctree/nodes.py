@@ -88,8 +88,12 @@ class CtreeNode(ast.AST):
     def lift(self, **kwargs):
         for key, val in kwargs.iteritems():
             attr = "_lift_%s" % key
-            setattr(self, attr, val)
+            setattr(self, attr, getattr(self, attr, []) + val)
             type(self)._fields.append(attr)
+
+    def __eq__(self, other):
+        """Two nodes are equal if their attributes are equal."""
+        return self.__dict__ == getattr(other, '__dict__', None)
 
 
 # ---------------------------------------------------------------------------

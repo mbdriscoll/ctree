@@ -123,14 +123,12 @@ class VectorFinder(NodeTransformer):
 
 
 class InsertIntermediates(NodeTransformer):
-    def __init__(self, main_memory, locs):
+    def __init__(self, main_memory):
         self._main_memory = main_memory
-        self._locs = iter(locs)
 
     def visit_BinaryOp(self, node):
         tree = self.generic_visit(node)
-        loc = self._locs.next()
-        return ComputedVector(tree, loc=loc)
+        return ComputedVector(tree, loc=node.loc)
 
     def visit_Return(self, node):
         answer = self.visit(node.value)
@@ -138,12 +136,24 @@ class InsertIntermediates(NodeTransformer):
         answer.loc = self._main_memory
         return answer
 
+    class AssertHasAllIntermediates(NodeVisitor):
+        def visit_BinaryOp(self, node):
+            assert not isinstance(node.left, BinaryOp)
+            assert not isinstance(node.right, BinaryOp)
+            self.generic_visit(node)
+
+    def visit(self, node):
+        proj = super(InsertIntermediates, self).visit(node)
+        InsertIntermediates.AssertHasAllIntermediates().visit(proj)
+        return proj
+
+BinaryOp.label = lambda self: "loc: %s" % getattr(self, 'loc', '?')
 
 class LocationTagger(NodeTransformer):
     def __init__(self, locs):
         self._locs = iter(locs)
 
-    def visit_ComputedVector(self, node):
+    def visit_BinaryOp(self, node):
         node.loc = self._locs.next()
         return self.generic_visit(node)
 
@@ -174,6 +184,15 @@ class CopyInserter(NodeTransformer):
         self._locs.pop()
         return node
 
+    def visit_Vector(self, node):
+        outer_loc = self._locs[-1]
+        self._locs.append(node.loc)
+        self.generic_visit(node)
+        if node.loc != outer_loc:
+            node = CopiedVector(data=node, to=outer_loc)
+        self._locs.pop()
+        return node
+
 
 class AllocateIntermediates(NodeTransformer):
     def __init__(self, dtype, length):
@@ -181,15 +200,15 @@ class AllocateIntermediates(NodeTransformer):
         self.length = length
 
     def visit_ComputedVector(self, node):
-        node.mem, ty = node.loc.allocate(self.length, self.dtype)
-        node.lift(params=[(SymbolRef(node.name, ty), node.mem)])
-        node.type = ty
+        node.mem, sym = node.loc.allocate(self.length, self.dtype, node.name)
+        node.lift(params=[(sym, node.mem)])
+        node.type = sym.type
         return self.generic_visit(node)
 
     def visit_CopiedVector(self, node):
-        node.mem, ty = node.loc.allocate(self.length, self.dtype)
-        node.lift(params=[(SymbolRef(node.name, ty), node.mem)])
-        node.type = ty
+        node.mem, sym = node.loc.allocate(self.length, self.dtype, node.name)
+        node.lift(params=[(sym, node.mem)])
+        node.type = sym.type
         return self.generic_visit(node)
 
 
@@ -230,21 +249,20 @@ class FindParallelism(NodeVisitor):
 
 
 class RefConverter(NodeTransformer):
-    class ToArrayRef(NodeTransformer):
-        def visit_ComputedVector(self, node):
-            return ArrayRef(SymbolRef(node.name), SymbolRef("i"))
-        def visit_CopiedVector(self, node):
-            return ArrayRef(SymbolRef(node.name), SymbolRef("i"))
-        def visit_Vector(self, node):
-            return ArrayRef(SymbolRef(node.name), SymbolRef("i"))
-
     class ToParamDecl(NodeTransformer):
         def visit_Vector(self, node):
             return SymbolRef(node.name, node.type)
+        def visit_ComputedVector(self, node):
+            return SymbolRef(node.name, node.type)
+        def visit_CopiedVector(self, node):
+            return SymbolRef(node.name, node.type)
 
-    def visit_ComputedVector(self, node):
-        node.data = RefConverter.ToArrayRef().visit(node.data)
-        return node
+    def visit_BinaryOp(self, node):
+        if isinstance(node.left, Vector):
+            node.left = ArrayRef(SymbolRef(node.left.name), SymbolRef("i"))
+        if isinstance(node.right, Vector):
+            node.right = ArrayRef(SymbolRef(node.right.name), SymbolRef("i"))
+        return self.generic_visit(node)
 
     def visit_FunctionDecl(self, node):
         param_conv = RefConverter.ToParamDecl()
@@ -254,82 +272,90 @@ class RefConverter(NodeTransformer):
 
 
 class KernelCall(CtreeNode):
-    _fields = ['args', 'kernel']
-    def __init__(self, name=None, args=None, kernel=None):
+    _fields = ['args', 'kernel', 'queue']
+    def __init__(self, location=None, name=None, global_size=0, local_size=0, args=None, kernel=None):
+        self.location = location
         self.name = name
-        self.args = args or []
+        self.global_size = global_size
+        self.local_size = local_size
+        self.args = args
         self.kernel = kernel
 
+        if isinstance(self.local_size, int):
+            self.local_size = Constant(self.local_size)
+        if isinstance(self.global_size, int):
+            self.global_size = Constant(self.global_size)
 
-class KernelOutliner(NodeTransformer):
-    _next_kernel_id = 0
-    def __init__(self, context, dev_mem, queue):
-        self.context = context
-        self.dev_memory = dev_mem
-        self.queue = queue
+    def label(self):
+        return "name: %s" % self.name
 
-    def visit_ComputedVector(self, node):
-        if node.loc == self.dev_memory:
-            print "LOC"
-            name = "outline%d" % KernelOutliner._next_kernel_id
-            KernelOutliner._next_kernel_id += 1
-            return outline(node.data, name=name)
-        else:
-            return node
+class LowerKernelCalls(NodeTransformer):
+    def visit_KernelCall(self, node):
+        args = []
+        for i, arg in enumerate(node.args):
+            size = SizeOf(SymbolRef(arg.name))
+            setter = clSetKernelArg(node.name, i, size, Ref(SymbolRef(arg.name)))
+            args.append(setter)
 
+        kernel_decl = SymbolRef(node.name, cl.cl_kernel())
+        kernel_symbol = kernel_decl.copy()
+        call = clEnqueueNDRangeKernel(node.location.symbol.copy(), kernel_symbol, work_dim=Constant(1), global_size=node.global_size, local_size=node.local_size)
 
-class LowerCopies(NodeTransformer):
-    def __init__(self, length, dtype, main_mem, device_mem, queue):
-        self.nBytes = length * dtype.itemsize
-        self.main_mem = main_mem
-        self.device_mem = device_mem
-        self.queue = queue
+        kernel = RefConverter().visit(node.kernel)
+        for param in kernel.params:
+            param.type = param.type.ptr_type
+        kernel.defn.insert(0, Assign(SymbolRef("i", c_int()), get_global_id(0)))
+        kernel_src = kernel.codegen()
+        kernel_comment = CppComment(kernel_src)
 
-    def visit_CopiedVector(self, node):
-        dst = node
-        src = node.data
-        assert src != dst, "Found a copy within same memory space."
+        context = node.location.queue.context
+        kernel_ptr = cl.clCreateProgramWithSource(context, kernel_src).build()[node.name]
+        call.lift(params=[(kernel_decl, kernel_ptr)])
 
-        if src.loc == self.main_mem and dst.loc == self.device_mem:
-            # host to device
-            call = clEnqueueWriteBuffer(self.queue.copy(), dst.name, True, 0, self.nBytes, src.name)
-        else:
-            # device to host
-            call = clEnqueueReadBuffer(self.queue.copy(), src.name, True, 0, self.nBytes, dst.name)
-
-        assert dst.type is not None, str(dst)
-        call.lift(params=[(SymbolRef(dst.name, dst.type), dst.mem)])
-
-        return call
+        return args + [call, kernel_comment]
 
 def outline(tree, name="outlined"):
-
-    class SymRefGatherer(NodeTransformer):
+    class VecGatherer(NodeTransformer):
         def __init__(self):
             self.signature = []
-            self.declared = set()
 
-        def visit_SymbolRef(self, node):
-            if node.type or node.name == "i": # FIXME
-                self.declared.add(node.name)
-            elif node not in self.signature and \
-                 node.name not in self.declared:
+        def visit_ComputedVector(self, node):
+            if node not in self.signature:
                 self.signature.append(node)
-            return node
+            return self.generic_visit(node)
 
-    symref_gatherer = SymRefGatherer()
-    tree = symref_gatherer.visit(tree)
-    signature = symref_gatherer.signature
+        def visit_CopiedVector(self, node):
+            if node not in self.signature:
+                self.signature.append(node)
+            return self.generic_visit(node)
+
+    vec_gatherer = VecGatherer()
+    tree = vec_gatherer.visit(tree)
+    signature = vec_gatherer.signature
 
     if not isinstance(tree, list):
         tree = [tree]
 
-    fn = FunctionDecl(None, name, signature, tree).set_kernel()
-    return KernelCall(name, signature, fn)
+    return FunctionDecl(None, name, signature, tree)
 
 
+class KernelOutliner(NodeTransformer):
+    def __init__(self, work_items):
+        self.work_items = work_items
 
-class Loopize(NodeTransformer):
+    def visit_ComputedVector(self, node):
+        if isinstance(node.loc, OclMemory):
+            fn = outline(Assign(node, node.data), "outline_%s" % node.name)
+            call = KernelCall(node.loc, fn.name, self.work_items, 1, fn.params, fn.set_kernel())
+            return call
+        else:
+            return node
+
+    def visit_CopiedVector(self, node):
+        return node
+
+
+class LowerLoopsAndCopies(NodeTransformer):
     def __init__(self, nElems):
         self.nElems = nElems
 
@@ -345,6 +371,37 @@ class Loopize(NodeTransformer):
         for_stmt._lift_params = node._lift_params
 
         return [CppComment("on %s" % node.loc), for_stmt]
+
+    def visit_CopiedVector(self, node):
+        dst = node
+        src = node.data
+
+        if isinstance(dst.loc, OclMemory): # host to device
+            cl_node = dst
+            queue_sym = dst.loc.symbol
+            call = clEnqueueWriteBuffer(queue_sym.copy(), dst.name, True, 0, dst.type.size, src.name)
+        elif isinstance(src.loc, OclMemory): # device to host
+            cl_node = src
+            queue_sym = src.loc.symbol
+            call = clEnqueueReadBuffer(queue_sym.copy(), src.name, True, 0, src.type.size, dst.name)
+        else:
+            raise ValueError("Copy between non-ocl devices.")
+
+        assert dst.type is not None, str(dst)
+
+        params = [(cl_node.loc.symbol, cl_node.loc.queue)]
+        if hasattr(dst, 'mem'):
+            params.append((SymbolRef(dst.name, dst.type), dst.mem))
+        if hasattr(src, 'mem'):
+            params.append((SymbolRef(src.name, src.type), src.mem))
+
+        call._lift_params = node._lift_params
+        call.lift(
+            includes=[CppInclude("OpenCL/OpenCL.h")],
+            params=params
+        )
+
+        return call
 
 
 class ArgZipper(NodeTransformer):
@@ -367,25 +424,29 @@ class Memory(object):
     pass
 
 class MainMemory(Memory):
-    def allocate(self, length, dtype):
+    def allocate(self, length, dtype, name):
         ty = np.ctypeslib.ndpointer(dtype)()
         mem = np.empty([length], dtype=dtype)
-        return mem, ty
+        return mem, SymbolRef(name, ty)
 
     def __str__(self):
         return "MainMemory"
 
 class OclMemory(Memory):
-    def __init__(self, context):
-        self.context = context
+    _next_cq_id = 0
+    def __init__(self, queue):
+        self.queue = queue
+        self.symbol = SymbolRef("queue%d" % self._next_cq_id, queue)
+        self._next_cq_id += 1
 
-    def allocate(self, length, dtype):
-        mem = cl.clCreateBuffer(self.context, length * dtype.itemsize)
-        ty = mem
-        return mem, ty
+    def allocate(self, length, dtype, name):
+        mem = cl.clCreateBuffer(self.queue.context, length * dtype.itemsize)
+        mem.ptr_type = np.ctypeslib.ndpointer(dtype)()
+        mem.ptr_type._global = True
+        return mem, SymbolRef(name, mem)
 
     def __str__(self):
-        return "OclMemory<%s>" % [dev.name for dev in self.context.devices][0]
+        return "OclMemory<%s>" % self.queue.device
 
 # ---------------------------------------------------------------------------
 # Specializer code - translator
@@ -435,7 +496,8 @@ class OpTranslator(LazySpecializedFunction):
 
         memories = [MainMemory()] + [OclMemory(q) for q in queues]
         main_memory = memories[0]
-
+        ptrs = arg_config['ptrs']
+        dtype, length = ptrs[0]._dtype_, arg_config['len']
 
         # pull stuff out of autotuner
         distribute_directives = tuner_config['distribute']
@@ -453,43 +515,48 @@ class OpTranslator(LazySpecializedFunction):
         with open('graph.02.dot', 'w') as f: f.write(proj.to_dot())
 
         # set parameter types
-        ptrs = arg_config['ptrs']
         proj = VectorFinder(ptrs, main_memory).visit(proj)
         with open('graph.03.dot', 'w') as f: f.write(proj.to_dot())
 
-        proj = InsertIntermediates(main_memory, locs).visit(proj)
+        proj = LocationTagger(locs).visit(proj)
         with open('graph.04.dot', 'w') as f: f.write(proj.to_dot())
 
-        proj = CopyInserter(main_memory).visit(proj)
+        proj = InsertIntermediates(main_memory).visit(proj)
         with open('graph.05.dot', 'w') as f: f.write(proj.to_dot())
 
-        proj = DoFusion(fusion_directives).visit(proj)
+        proj = CopyInserter(main_memory).visit(proj)
         with open('graph.06.dot', 'w') as f: f.write(proj.to_dot())
 
-        dtype, length = ptrs[0]._dtype_, arg_config['len']
-        proj = AllocateIntermediates(dtype, length).visit(proj)
+        proj = DoFusion(fusion_directives).visit(proj)
         with open('graph.07.dot', 'w') as f: f.write(proj.to_dot())
+
+        proj = AllocateIntermediates(dtype, length).visit(proj)
+        with open('graph.08.dot', 'w') as f: f.write(proj.to_dot())
 
         py_op = proj.find(FunctionDecl, name="py_op")
         schedules = FindParallelism().visit(py_op)
         py_op.defn = parallelize_tasks(schedules)
-        with open('graph.08.dot', 'w') as f: f.write(proj.to_dot())
-
-        proj = RefConverter().visit(proj)
         with open('graph.09.dot', 'w') as f: f.write(proj.to_dot())
 
-        #proj = LowerCopies(length, dtype, main_memory, dev_memory, queue.copy()).visit(proj)
-        #with open('graph.10.dot', 'w') as f: f.write(proj.to_dot())
+        proj = KernelOutliner(length).visit(proj)
+        with open('graph.10.dot', 'w') as f: f.write(proj.to_dot())
 
-        proj = Loopize(length).visit(proj)
+        proj = LowerKernelCalls().visit(proj)
         with open('graph.11.dot', 'w') as f: f.write(proj.to_dot())
+
+        proj = RefConverter().visit(proj)
+        with open('graph.12.dot', 'w') as f: f.write(proj.to_dot())
+
+        proj = LowerLoopsAndCopies(length).visit(proj)
+        with open('graph.13.dot', 'w') as f: f.write(proj.to_dot())
 
         zipper = ArgZipper()
         proj = zipper.visit( Lifter().visit(proj) )
         c_func.extra_args = zipper.extra_args
         c_func.answer = zipper.answer
-        with open('graph.12.dot', 'w') as f: f.write(proj.to_dot())
+        with open('graph.14.dot', 'w') as f: f.write(proj.to_dot())
 
+        print "PARAMS", [(p.name, p.type) for p in proj.find(FunctionDecl).params]
         """
 
         assert isinstance(fn.defn[0], Vector)

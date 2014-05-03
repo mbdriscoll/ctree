@@ -26,6 +26,7 @@ register_type_codegenerators({
     ctypes.c_char_p:  lambda t: "char*",
     ctypes.c_void_p:  lambda t: "void*",
     ctypes.c_bool:    lambda t: "bool",
+    ctypes.c_ulong:   lambda t: "size_t",
     types.NoneType:   lambda n: "void",
 
     _ctypes.Array:      lambda ct: "%s*" % codegen_type(ct._type_()),

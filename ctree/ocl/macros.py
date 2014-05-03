@@ -4,6 +4,7 @@ programs.
 """
 
 import ast
+from ctypes import c_size_t
 
 from ctree.c.nodes import SymbolRef, Block, Assign, FunctionCall
 from ctree.c.nodes import If, Eq, NotEq, Or, Not, Ref, Constant, String
@@ -75,3 +76,29 @@ def clEnqueueReadBuffer(queue, buf, blocking, offset, cb, ptr, num_events=0, evt
     if not isinstance(evt, ast.AST):          evt = NULL()
     return FunctionCall(SymbolRef('clEnqueueReadBuffer'), [
         queue, buf, blocking, offset, cb, ptr, num_events, event_list_ptr, evt])
+
+def clSetKernelArg(kernel, arg_index, arg_size, arg_value):
+    if isinstance(kernel, str): kernel = SymbolRef(kernel)
+    if isinstance(arg_index, int): arg_index = Constant(arg_index)
+    if isinstance(arg_size, int): arg_size = Constant(arg_size)
+    if isinstance(arg_value, str): arg_value = Ref(SymbolRef(arg_value))
+    return FunctionCall(SymbolRef("clSetKernelArg"),
+        [kernel, arg_index, arg_size, arg_value])
+
+def clEnqueueNDRangeKernel(queue, kernel, work_dim=1, work_offset=0, global_size=0, local_size=0):
+    assert isinstance(queue, SymbolRef)
+    assert isinstance(kernel, SymbolRef)
+    global_size_sym = SymbolRef('global_size', c_size_t())
+    local_size_sym = SymbolRef('local_size', c_size_t())
+    call = FunctionCall(SymbolRef("clEnqueueNDRangeKernel"), [
+        queue, kernel,
+        work_dim, work_offset,
+        Ref(global_size_sym.copy()), Ref(local_size_sym.copy()),
+        0, NULL(), NULL()
+    ])
+
+    return Block([
+        Assign(global_size_sym, Constant(global_size)),
+        Assign(local_size_sym, Constant(local_size)),
+        call
+    ])
