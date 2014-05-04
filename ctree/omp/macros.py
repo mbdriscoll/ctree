@@ -27,12 +27,12 @@ def parallelize_tasks(dag):
     2) sets, implying elements can be executed in parallel,
     3) ASTs, the contents themselves.
     """
-    if isinstance(dag, list):
+    if isinstance(dag, tuple):
         sched = []
         for node in dag:
             sched.extend(parallelize_tasks(node))
         return sched
-    elif isinstance(dag, set):
+    elif isinstance(dag, frozenset):
         sched = [OmpSection(body=parallelize_tasks(node)) for node in dag]
         return [OmpParallelSections(sections=sched)]
     else:

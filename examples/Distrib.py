@@ -226,26 +226,26 @@ class FindParallelism(NodeVisitor):
         left  = self.visit(node.left)
         right = self.visit(node.right)
         if left and right:
-            return {left, right}
+            return frozenset([left, right])
         elif left or right:
             return left or right
 
     def visit_ComputedVector(self, node):
         compute = self.visit(node.data)
         if compute:
-            return [compute, node]
+            return (compute, node)
         else:
             return node
 
     def visit_CopiedVector(self, node):
         copyin = self.visit(node.data)
         if copyin:
-            return [copyin, node]
+            return (copyin, node)
         else:
             return node
 
     def visit_FunctionDecl(self, node):
-        return [self.visit(stmt) for stmt in node.defn]
+        return tuple(self.visit(stmt) for stmt in node.defn)
 
 
 class RefConverter(NodeTransformer):
