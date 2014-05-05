@@ -106,11 +106,11 @@ class LazySpecializedFunction(object):
         self._tuner = self.get_tuning_driver()
 
     @staticmethod
-    def _hash_dict(o):
+    def _hash(o):
         if isinstance(o, dict):
-            return hash(frozenset(o.items()))
+            return hash(frozenset(LazySpecializedFunction._hash(item) for item in o.items()))
         else:
-            return hash(o)
+            return hash(str(o))
 
     def __call__(self, *args, **kwargs):
         """
@@ -131,8 +131,8 @@ class LazySpecializedFunction(object):
         log.info("tuner subconfig: %s", tuner_subconfig)
         log.info("arguments subconfig: %s", args_subconfig)
 
-        config_hash = hash((self._hash_dict(args_subconfig),
-                            self._hash_dict(tuner_subconfig)))
+        config_hash = hash((self._hash(args_subconfig),
+                            self._hash(tuner_subconfig)))
 
         if config_hash in self.concrete_functions:
             ctree.STATS.log("specialized function cache hit")

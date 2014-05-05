@@ -29,18 +29,19 @@ class TuningDriver(object):
         pass
 
 
-class NullTuningDriver(TuningDriver):
+class ConstantTuningDriver(TuningDriver):
     """
-    Provides a stream of None's, and ignores reports()s.
+    Provides a stream of the same config, and ignores reports()s.
     """
-    def __init__(self):
+    def __init__(self, config=None):
         """Do nothing."""
-        super(NullTuningDriver, self).__init__()
+        super(ConstantTuningDriver, self).__init__()
+        self._config = config
 
     def _get_configs(self):
         """Yield the empty configuration."""
         while True:
-            yield {}
+            yield self._config
 
     def report(self, *args, **kwargs):
         """Ignore reports."""

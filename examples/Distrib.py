@@ -132,8 +132,11 @@ class InsertIntermediates(NodeTransformer):
 
     def visit_Return(self, node):
         answer = self.visit(node.value)
+
+        if answer.loc != self._main_memory:
+            answer = CopiedVector(data=answer, to=self._main_memory)
+
         answer.name = "answer"
-        answer.loc = self._main_memory
         return answer
 
     class AssertHasAllIntermediates(NodeVisitor):
@@ -174,13 +177,22 @@ class DoFusion(NodeTransformer):
 class CopyInserter(NodeTransformer):
     def __init__(self, main_memory):
         self._locs = [main_memory]
+        self._copies = dict()
+
+    def visit_CopiedVector(self, node):
+        self._locs.append(node.data.loc)
+        node = self.generic_visit(node)
+        self._locs.pop()
+        return node
 
     def visit_ComputedVector(self, node):
         outer_loc = self._locs[-1]
         self._locs.append(node.loc)
         self.generic_visit(node)
         if node.loc != outer_loc:
-            node = CopiedVector(data=node, to=outer_loc)
+            if node not in self._copies:
+                self._copies[node] = CopiedVector(data=node, to=outer_loc)
+            node = self._copies[node]
         self._locs.pop()
         return node
 
@@ -189,7 +201,9 @@ class CopyInserter(NodeTransformer):
         self._locs.append(node.loc)
         self.generic_visit(node)
         if node.loc != outer_loc:
-            node = CopiedVector(data=node, to=outer_loc)
+            if node not in self._copies:
+                self._copies[node] = CopiedVector(data=node, to=outer_loc)
+            node = self._copies[node]
         self._locs.pop()
         return node
 
@@ -222,11 +236,18 @@ class GetWorkItems(NodeVisitor):
         return [node]
 
 class FindParallelism(NodeVisitor):
+    def __init__(self, parallelize_directives):
+        super(FindParallelism, self).__init__()
+        self._parallelize = iter(parallelize_directives)
+
     def visit_BinaryOp(self, node):
         left  = self.visit(node.left)
         right = self.visit(node.right)
         if left and right:
-            return frozenset([left, right])
+            if self._parallelize.next():
+                return frozenset([left, right])
+            else:
+                return (left, right)
         elif left or right:
             return left or right
 
@@ -295,6 +316,7 @@ class LowerKernelCalls(NodeTransformer):
         for i, arg in enumerate(node.args):
             size = SizeOf(SymbolRef(arg.name))
             setter = clSetKernelArg(node.name, i, size, Ref(SymbolRef(arg.name)))
+            setter.lift(params=arg._lift_params)
             args.append(setter)
 
         kernel_decl = SymbolRef(node.name, cl.cl_kernel())
@@ -306,13 +328,13 @@ class LowerKernelCalls(NodeTransformer):
             param.type = param.type.ptr_type
         kernel.defn.insert(0, Assign(SymbolRef("i", c_int()), get_global_id(0)))
         kernel_src = kernel.codegen()
-        kernel_comment = CppComment(kernel_src)
+        call.body.append(CppComment(kernel_src))
 
         context = node.location.queue.context
         kernel_ptr = cl.clCreateProgramWithSource(context, kernel_src).build()[node.name]
         call.lift(params=[(kernel_decl, kernel_ptr)])
 
-        return args + [call, kernel_comment]
+        return args + [call]
 
 def outline(tree, name="outlined"):
     class VecGatherer(NodeTransformer):
@@ -322,12 +344,12 @@ def outline(tree, name="outlined"):
         def visit_ComputedVector(self, node):
             if node not in self.signature:
                 self.signature.append(node)
-            return self.generic_visit(node)
+            return node
 
         def visit_CopiedVector(self, node):
             if node not in self.signature:
                 self.signature.append(node)
-            return self.generic_visit(node)
+            return node
 
     vec_gatherer = VecGatherer()
     tree = vec_gatherer.visit(tree)
@@ -376,12 +398,21 @@ class LowerLoopsAndCopies(NodeTransformer):
         dst = node
         src = node.data
 
-        if isinstance(dst.loc, OclMemory): # host to device
-            cl_node = dst
+        if isinstance(dst.loc, OclMemory) and \
+           isinstance(src.loc, OclMemory): # device to device
+            params = [
+                (src.loc.symbol, src.loc.queue),
+                (dst.loc.symbol, dst.loc.queue),
+            ]
+            queue_sym = dst.loc.symbol
+            call = clEnqueueCopyBuffer(queue_sym.copy(),
+                src.name, dst.name, 0, 0, dst.type.size)
+        elif isinstance(dst.loc, OclMemory): # host to device
+            params = [(dst.loc.symbol, dst.loc.queue)]
             queue_sym = dst.loc.symbol
             call = clEnqueueWriteBuffer(queue_sym.copy(), dst.name, True, 0, dst.type.size, src.name)
         elif isinstance(src.loc, OclMemory): # device to host
-            cl_node = src
+            params = [(src.loc.symbol, src.loc.queue)]
             queue_sym = src.loc.symbol
             call = clEnqueueReadBuffer(queue_sym.copy(), src.name, True, 0, src.type.size, dst.name)
         else:
@@ -389,7 +420,6 @@ class LowerLoopsAndCopies(NodeTransformer):
 
         assert dst.type is not None, str(dst)
 
-        params = [(cl_node.loc.symbol, cl_node.loc.queue)]
         if hasattr(dst, 'mem'):
             params.append((SymbolRef(dst.name, dst.type), dst.mem))
         if hasattr(src, 'mem'):
@@ -406,17 +436,23 @@ class LowerLoopsAndCopies(NodeTransformer):
 
 class ArgZipper(NodeTransformer):
     def visit_FunctionDecl(self, node):
-        self.extra_args = []
-        def process(elem):
-            if isinstance(elem, tuple):
-                sym, val = elem
-                self.extra_args.append(val)
+        params = []
+        param_names = set()
+        args = []
+        for pair in node.params:
+            if isinstance(pair, tuple):
+                sym, val = pair
+                if sym.name not in param_names:
+                    params.append(sym)
+                    param_names.add(sym.name)
+                    args.append(val)
                 if sym.name == 'answer':
                     self.answer = val
-                return sym
             else:
-                return elem
-        node.params = [process(e) for e in node.params]
+                params.append(pair)
+        node.params = params
+        self.extra_args = args
+
         return node
 
 
@@ -448,26 +484,61 @@ class OclMemory(Memory):
     def __str__(self):
         return "OclMemory<%s>" % self.queue.device
 
+class DotWriter(object):
+    def __init__(self):
+        self._next_id = 0
+
+    def write(self, node):
+        n = 99 - self._next_id
+        with open("graph.%02d.%02d.dot" % (n,100-n), 'w') as f:
+            f.write(node.to_dot())
+        self._next_id += 1
+
 # ---------------------------------------------------------------------------
 # Specializer code - translator
 
 class OpTranslator(LazySpecializedFunction):
     def get_tuning_driver(self):
-        from ctree.tune import BruteForceTuningDriver
+        from ctree.tune import BruteForceTuningDriver as TuningDriver
         from ctree.tune import MinimizeTime
         from ctree.tune import IntegerParameter
         from ctree.tune import BooleanArrayParameter
         from ctree.tune import IntegerArrayParameter
 
-        nMemorySpaces = 1 + len(cl.clGetDeviceIDs())
+        """
+        from ctree.opentuner.driver import OpenTunerDriver as TuningDriver
+        from opentuner.search.objective import MinimizeTime
+        from opentuner.search.manipulator import ConfigurationManipulator
+        from opentuner.search.manipulator import IntegerParameter
+        from opentuner.search.manipulator import BooleanArrayParameter
+        from opentuner.search.manipulator import IntegerArrayParameter
+        """
+
+        nMemorySpaces = len(cl.clGetDeviceIDs())
 
         params = [
-            IntegerArrayParameter("locs", count=3, lower_bound=0, upper_bound=nMemorySpaces),
-            BooleanArrayParameter("fusion", count=2),
-            BooleanArrayParameter("distribute", count=1),
+            BooleanArrayParameter("distribute", 3),
+            BooleanArrayParameter("fusion", 6),
+            BooleanArrayParameter("parallelize", 6),
+            IntegerArrayParameter("locs", 7, 0, nMemorySpaces),
         ]
 
-        return BruteForceTuningDriver(params, MinimizeTime())
+        """
+        manip = ConfigurationManipulator()
+        for param in params:
+            manip.add_parameter(param)
+        return TuningDriver(manipulator=manip, objective=MinimizeTime())
+        """
+
+        #return TuningDriver(params, MinimizeTime())
+
+        from ctree.tune import ConstantTuningDriver
+        return ConstantTuningDriver({
+            'locs': (1, 1, 1, 1, 1, 1, 1),
+            'fusion': (True, True, True, True, True, True, True),
+            'parallelize': (False, False, False, False, False, False, False),
+            'distribute': (True, True, True, True)
+        })
 
     def args_to_subconfig(self, args):
         """
@@ -487,6 +558,7 @@ class OpTranslator(LazySpecializedFunction):
         given in program_config.
         """
         arg_config, tuner_config = program_config
+        dot = DotWriter()
 
         # set up OpenCL context and memory spaces
         import pycl
@@ -503,87 +575,59 @@ class OpTranslator(LazySpecializedFunction):
         distribute_directives = tuner_config['distribute']
         locs = [memories[loc] for loc in tuner_config['locs']]
         fusion_directives = tuner_config['fusion']
+        parallelize_directives = tuner_config['parallelize']
 
-        with open('graph.00.dot', 'w') as f: f.write(py_ast.to_dot())
+        dot.write(py_ast)
 
         # run basic conversions
         proj = PyBasicConversions().visit(py_ast)
-        with open('graph.01.dot', 'w') as f: f.write(proj.to_dot())
+        dot.write(proj)
 
         # run platform-independent transformations
         proj = ApplyDistributiveProperty(distribute_directives).visit(proj)
-        with open('graph.02.dot', 'w') as f: f.write(proj.to_dot())
+        dot.write(proj)
 
         # set parameter types
         proj = VectorFinder(ptrs, main_memory).visit(proj)
-        with open('graph.03.dot', 'w') as f: f.write(proj.to_dot())
+        dot.write(proj)
 
         proj = LocationTagger(locs).visit(proj)
-        with open('graph.04.dot', 'w') as f: f.write(proj.to_dot())
+        dot.write(proj)
 
         proj = InsertIntermediates(main_memory).visit(proj)
-        with open('graph.05.dot', 'w') as f: f.write(proj.to_dot())
+        dot.write(proj)
 
         proj = CopyInserter(main_memory).visit(proj)
-        with open('graph.06.dot', 'w') as f: f.write(proj.to_dot())
+        dot.write(proj)
 
         proj = DoFusion(fusion_directives).visit(proj)
-        with open('graph.07.dot', 'w') as f: f.write(proj.to_dot())
+        dot.write(proj)
 
         proj = AllocateIntermediates(dtype, length).visit(proj)
-        with open('graph.08.dot', 'w') as f: f.write(proj.to_dot())
+        dot.write(proj)
 
         py_op = proj.find(FunctionDecl, name="py_op")
-        schedules = FindParallelism().visit(py_op)
+        schedules = FindParallelism(parallelize_directives).visit(py_op)
         py_op.defn = parallelize_tasks(schedules)
-        with open('graph.09.dot', 'w') as f: f.write(proj.to_dot())
+        dot.write(proj)
 
         proj = KernelOutliner(length).visit(proj)
-        with open('graph.10.dot', 'w') as f: f.write(proj.to_dot())
+        dot.write(proj)
 
         proj = LowerKernelCalls().visit(proj)
-        with open('graph.11.dot', 'w') as f: f.write(proj.to_dot())
+        dot.write(proj)
 
         proj = RefConverter().visit(proj)
-        with open('graph.12.dot', 'w') as f: f.write(proj.to_dot())
+        dot.write(proj)
 
         proj = LowerLoopsAndCopies(length).visit(proj)
-        with open('graph.13.dot', 'w') as f: f.write(proj.to_dot())
+        dot.write(proj)
 
         zipper = ArgZipper()
         proj = zipper.visit( Lifter().visit(proj) )
         c_func.extra_args = zipper.extra_args
         c_func.answer = zipper.answer
-        with open('graph.14.dot', 'w') as f: f.write(proj.to_dot())
-
-        print "PARAMS", [(p.name, p.type) for p in proj.find(FunctionDecl).params]
-        """
-
-        assert isinstance(fn.defn[0], Vector)
-
-        import pycl
-
-        context = SymbolRef("context", pycl.cl_context())
-        queue = SymbolRef("queue", pycl.cl_command_queue())
-
-
-
-        proj = KernelOutliner(context, dev_memory, queue).visit(proj)
-
-        proj = RefConverter().visit(proj)
-        proj.find(CFile).body.insert(0, CppInclude("OpenCL/OpenCL.h"))
-
-        nUserArgs = len(ptrs)
-        fn = proj.find(FunctionDecl)
-        fn.params[nUserArgs:], extra_args = zip(*fn.params[nUserArgs:])
-        fn.params += [context, queue]
-        c_func.extra_args = list(extra_args) + [c_func.context, c_func.queue]
-
-        global n
-        with open('graph.%d.dot' % n, 'w') as f:
-            f.write(proj.to_dot())
-        n += 1
-        """
+        dot.write(proj)
 
         fn = proj.find(FunctionDecl)
         return c_func.finalize("py_op", proj, fn.get_type())
@@ -621,22 +665,22 @@ class Elementwise(object):
 # ---------------------------------------------------------------------------
 # User code
 
-def py_op(a, b, c):
-    return a * (b + c)
+def py_op(a, b, c, d):
+    return (a + d) * (b + c)
 
 def main():
-    n = 12
+    n = 1234
     c_op = Elementwise(py_op)
 
     # doubling doubles
-    for i in range(160):
+    for i in range(2):
       a = np.arange(0*n, 1*n, dtype=np.float32())
       b = np.arange(1*n, 2*n, dtype=np.float32())
       c = np.arange(2*n, 3*n, dtype=np.float32())
       d = np.arange(3*n, 4*n, dtype=np.float32())
 
-      actual = c_op(a, b, c)
-      expected = py_op(a, b, c)
+      actual = c_op(a, b, c, d)
+      expected = py_op(a, b, c, d)
 
       np.testing.assert_array_equal(actual, expected)
 

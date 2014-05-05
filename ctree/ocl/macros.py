@@ -77,6 +77,20 @@ def clEnqueueReadBuffer(queue, buf, blocking, offset, cb, ptr, num_events=0, evt
     return FunctionCall(SymbolRef('clEnqueueReadBuffer'), [
         queue, buf, blocking, offset, cb, ptr, num_events, event_list_ptr, evt])
 
+def clEnqueueCopyBuffer(queue, src_buf, dst_buf, src_offset=0, dst_offset=0, cb=0):
+    if isinstance(src_buf, str):      src_buf = SymbolRef(src_buf)
+    if isinstance(dst_buf, str):      dst_buf = SymbolRef(dst_buf)
+    if isinstance(src_offset, int):   src_offset = Constant(src_offset)
+    if isinstance(dst_offset, int):   dst_offset = Constant(dst_offset)
+    if isinstance(cb, int):           cb = Constant(cb)
+
+    num_events = Constant(0)
+    event_list_ptr = NULL()
+    evt = NULL()
+
+    return FunctionCall(SymbolRef('clEnqueueCopyBuffer'), [
+        queue, src_buf, dst_buf, src_offset, dst_offset, cb, num_events, event_list_ptr, evt])
+
 def clSetKernelArg(kernel, arg_index, arg_size, arg_value):
     if isinstance(kernel, str): kernel = SymbolRef(kernel)
     if isinstance(arg_index, int): arg_index = Constant(arg_index)
