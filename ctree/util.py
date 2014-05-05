@@ -71,6 +71,8 @@ def highlight(code, language='c'):
         from pygments.lexers.compiled import CLexer as TheLexer
     elif language.lower() == 'diff':
         from pygments.lexers.text import DiffLexer as TheLexer
+    elif language.lower() == 'ini':
+        from pygments.lexers.text import IniLexer as TheLexer
     else:
         raise ValueError("Unrecognized highlight language: %s" % language)
 

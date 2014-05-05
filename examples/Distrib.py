@@ -530,7 +530,7 @@ class OpTranslator(LazySpecializedFunction):
         return TuningDriver(manipulator=manip, objective=MinimizeTime())
         """
 
-        #return TuningDriver(params, MinimizeTime())
+        return TuningDriver(params, MinimizeTime())
 
         from ctree.tune import ConstantTuningDriver
         return ConstantTuningDriver({
