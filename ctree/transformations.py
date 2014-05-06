@@ -190,8 +190,8 @@ class Lifter(NodeTransformer):
         if self.lift_includes:
             new_includes = []
             for child in ast.walk(node):
-                if hasattr(child, '_lift_includes'):
-                    new_includes.extend(child._lift_includes)
-                    #del child._lift_includes
-            node.body = new_includes + node.body
+                for include in getattr(child, '_lift_includes', []):
+                    if include not in new_includes:
+                        new_includes.append(include)
+            node.body = list(new_includes) + node.body
         return self.generic_visit(node)

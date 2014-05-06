@@ -23,8 +23,8 @@ def parallelize_tasks(dag):
     """
     Returns an AST that computes the entries in dag in parallel using
     omp sections. Dag must consist of:
-    1) lists, implying elements must be executed sequentially,
-    2) sets, implying elements can be executed in parallel,
+    1) tuples, implying elements must be executed sequentially,
+    2) frozensets, implying elements can be executed in parallel,
     3) ASTs, the contents themselves.
     """
     if isinstance(dag, tuple):

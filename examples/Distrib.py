@@ -107,6 +107,30 @@ class ApplyDistributiveProperty(NodeTransformer):
                 return Add(acd, bcd)
         return node
 
+
+class ApplyAssociativeProperty(NodeTransformer):
+    _supported_ops = (Op.Add, Op.Mul, Op.BitAnd)
+
+    def __init__(self, directives):
+        super(ApplyAssociativeProperty, self).__init__()
+        self._directives = iter(directives)
+
+    def visit_BinaryOp(self, node):
+        l = node.left  = self.visit(node.left)
+        r = node.right = self.visit(node.right)
+
+        if isinstance(node.op, self._supported_ops):
+            assoc_right = isinstance(l, BinaryOp) and type(node.op) == type(l.op)
+            assoc_left  = isinstance(r, BinaryOp) and type(node.op) == type(r.op)
+            if assoc_right and self._directives.next():
+                ll, lr = l.left, l.right
+                return BinaryOp(ll, node.op, BinaryOp(lr, node.op, r))
+            if assoc_left and self._directives.next():
+                rl, rr = r.left, r.right
+                return BinaryOp(BinaryOp(l, node.op, rl), node.op, rr)
+        return node
+
+
 class VectorFinder(NodeTransformer):
     def __init__(self, types, main_memory):
         self._cache = {}
@@ -239,6 +263,22 @@ class FindParallelism(NodeVisitor):
     def __init__(self, parallelize_directives):
         super(FindParallelism, self).__init__()
         self._parallelize = iter(parallelize_directives)
+        self._visited = [set()]
+
+    def scope(self):
+        return self
+
+    def in_scope(self, obj):
+        for scope in self._visited:
+            if obj in scope:
+                return True
+        return False
+
+    def __enter__(self):
+        self._visited.append(set())
+
+    def __exit__(self, *args):
+        self._visited.pop()
 
     def visit_BinaryOp(self, node):
         left  = self.visit(node.left)
@@ -247,9 +287,8 @@ class FindParallelism(NodeVisitor):
             if self._parallelize.next():
                 return frozenset([left, right])
             else:
-                return (left, right)
-        elif left or right:
-            return left or right
+                return tuple([left, right])
+        return left or right or None
 
     def visit_ComputedVector(self, node):
         compute = self.visit(node.data)
@@ -488,9 +527,9 @@ class DotWriter(object):
     def __init__(self):
         self._next_id = 0
 
-    def write(self, node):
+    def write(self, node, name=""):
         n = 99 - self._next_id
-        with open("graph.%02d.%02d.dot" % (n,100-n), 'w') as f:
+        with open("graph.%02d.%s.dot" % (n,name), 'w') as f:
             f.write(node.to_dot())
         self._next_id += 1
 
@@ -517,10 +556,11 @@ class OpTranslator(LazySpecializedFunction):
         nMemorySpaces = len(cl.clGetDeviceIDs())
 
         params = [
-            BooleanArrayParameter("distribute", 3),
-            BooleanArrayParameter("fusion", 6),
-            BooleanArrayParameter("parallelize", 6),
+            BooleanArrayParameter("parallelize", 7),
             IntegerArrayParameter("locs", 7, 0, nMemorySpaces),
+            BooleanArrayParameter("distribute", 4),
+            BooleanArrayParameter("fusion", 7),
+            BooleanArrayParameter("reassociate", 4),
         ]
 
         """
@@ -534,10 +574,11 @@ class OpTranslator(LazySpecializedFunction):
 
         from ctree.tune import ConstantTuningDriver
         return ConstantTuningDriver({
-            'locs': (1, 1, 1, 1, 1, 1, 1),
-            'fusion': (True, True, True, True, True, True, True),
-            'parallelize': (False, False, False, False, False, False, False),
-            'distribute': (True, True, True, True)
+            'locs': (0, 0, 1, 1, 0, 1, 1),
+            'fusion': (True, True, True, True, True, True),
+            'distribute': (True, True, True, True),
+            'reassociate': (True, True, True, True),
+            'parallelize': (True,) * 7
         })
 
     def args_to_subconfig(self, args):
@@ -560,6 +601,10 @@ class OpTranslator(LazySpecializedFunction):
         arg_config, tuner_config = program_config
         dot = DotWriter()
 
+        # hack yo
+        ComputedVector._next_id = 0
+        CopiedVector._next_id = 0
+
         # set up OpenCL context and memory spaces
         import pycl
         context = pycl.clCreateContextFromType(pycl.CL_DEVICE_TYPE_ALL)
@@ -573,6 +618,7 @@ class OpTranslator(LazySpecializedFunction):
 
         # pull stuff out of autotuner
         distribute_directives = tuner_config['distribute']
+        reassoc_directives = tuner_config['reassociate']
         locs = [memories[loc] for loc in tuner_config['locs']]
         fusion_directives = tuner_config['fusion']
         parallelize_directives = tuner_config['parallelize']
@@ -585,6 +631,9 @@ class OpTranslator(LazySpecializedFunction):
 
         # run platform-independent transformations
         proj = ApplyDistributiveProperty(distribute_directives).visit(proj)
+        dot.write(proj)
+
+        proj = ApplyAssociativeProperty(reassoc_directives).visit(proj)
         dot.write(proj)
 
         # set parameter types
@@ -604,12 +653,12 @@ class OpTranslator(LazySpecializedFunction):
         dot.write(proj)
 
         proj = AllocateIntermediates(dtype, length).visit(proj)
-        dot.write(proj)
+        dot.write(proj, "postintermed")
 
         py_op = proj.find(FunctionDecl, name="py_op")
         schedules = FindParallelism(parallelize_directives).visit(py_op)
         py_op.defn = parallelize_tasks(schedules)
-        dot.write(proj)
+        dot.write(proj, "postparallel")
 
         proj = KernelOutliner(length).visit(proj)
         dot.write(proj)
@@ -673,7 +722,7 @@ def main():
     c_op = Elementwise(py_op)
 
     # doubling doubles
-    for i in range(2):
+    for i in range(2000):
       a = np.arange(0*n, 1*n, dtype=np.float32())
       b = np.arange(1*n, 2*n, dtype=np.float32())
       c = np.arange(2*n, 3*n, dtype=np.float32())
