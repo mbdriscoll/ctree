@@ -20,5 +20,5 @@ try:
 
     llvm.core.load_library_permanently(libOpenCL)
 
-except:
-    log.warn("Failed to load OpenCL runtime.")
+except Exception as e:
+    log.warn("Failed to load OpenCL runtime. message %s" % e.message)

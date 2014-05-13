@@ -27,6 +27,16 @@ class DotManager(object):
         subprocess.check_output(["open", file_name])
 
     @staticmethod
+    def dot_ast_to_file(ast_node, file_name):
+        from  ctree.dotgen import to_dot
+
+        dot_text = to_dot(ast_node)
+        dot_output = DotManager.run_dot(dot_text)
+
+        with open(file_name, "wb") as f:
+            f.write(dot_output)
+
+    @staticmethod
     def dot_text_to_image(text):
         try:
             from IPython.display import Image
