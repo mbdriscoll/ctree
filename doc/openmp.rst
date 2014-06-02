@@ -28,7 +28,7 @@ Now, build clang/llvm::
         $ REQUIRES_RTTI=1 make
         $ make install
 
-Setup your environment variables in your shell configuration. On Mac OS X,
+Setup your environment variables (add this to your .bashrc or .zshrc) in your shell configuration. On Mac OS X,
 replace LD_LIBRARY_PATH with DYLD_LIBRARY_PATH.::
 
         PATH=/install/prefix/bin:$PATH
