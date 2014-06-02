@@ -34,11 +34,11 @@ Now, build clang/llvm::
 Setup your environment variables (add this to your .bashrc or .zshrc) in your shell configuration. On Mac OS X,
 replace LD_LIBRARY_PATH with DYLD_LIBRARY_PATH.::
 
-        PATH=/install/prefix/bin:$PATH
-        C_INCLUDE_PATH=/install/prefix/include:<OpenMP include path>:$C_INCLUDE_PATH
-        CPLUS_INCLUDE_PATH=/install/prefix/include:<OpenMP include path>:$CPLUS_INCLUDE_PATH
-        LIBRARY_PATH=/install/prefix/lib:<OpenMP library path>:$LIBRARY_PATH
-        LD_LIBRARY_PATH=/install/prefix/lib:<OpenMP library path>:$LD_LIBRARY_PATH
+        export PATH=/install/prefix/bin:$PATH
+        export C_INCLUDE_PATH=/install/prefix/include:<OpenMP include path>:$C_INCLUDE_PATH
+        export CPLUS_INCLUDE_PATH=/install/prefix/include:<OpenMP include path>:$CPLUS_INCLUDE_PATH
+        export LIBRARY_PATH=/install/prefix/lib:<OpenMP library path>:$LIBRARY_PATH
+        export LD_LIBRARY_PATH=/install/prefix/lib:<OpenMP library path>:$LD_LIBRARY_PATH
 
 Download and install the Intel OpenMP Runtime Library from
 `https://www.openmprtl.org/`, or by installing the
