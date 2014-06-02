@@ -55,7 +55,7 @@ Include the OpenMP RTL, for OSX with the evaluation Intel Compilers you can do::
 Download and checkout gentoo90's llvmpy branch with llvm-3.4 support and build
 it::
 
-        $ git clone -b llvm-3.4 https://github.com/gentoo90/llvmpy.git
+        $ git clone -b llvm-3.4 github.com/llvmpy/llvmpy.git
         $ cd llvmpy
         $ LLVM_CONFIG_PATH=YOUR_INSTALL_PATH/bin/llvm-config python setup.py install
 
