@@ -24,9 +24,9 @@ Now, build clang/llvm::
 
         $ mkdir build
         $ cd build
-        $ # Make a build directory
-        $ # mkdir /opt/llvm-omp
-        $ # chown username /opt/llvm-omp
+        $ # Make a build directory, i.e.
+        $ # sudo mkdir /opt/llvm-omp
+        $ # sudo chown username /opt/llvm-omp
         $ ../llvm/configure --enable-optimized --prefix=YOUR_INSTALL_PATH 
         $ REQUIRES_RTTI=1 make
         $ make install
