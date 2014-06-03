@@ -24,23 +24,26 @@ Now, build clang/llvm::
 
         $ mkdir build
         $ cd build
-        $ ../llvm/configure --enable-optimized --prefix=YOUR_INSTALL_PATH # i.e. /opt/llvm-omp
+        $ # Make a build directory, i.e.
+        $ # sudo mkdir /opt/llvm-omp
+        $ # sudo chown username /opt/llvm-omp
+        $ ../llvm/configure --enable-optimized --prefix=YOUR_INSTALL_PATH 
         $ REQUIRES_RTTI=1 make
         $ make install
 
-Setup your environment variables in your shell configuration. On Mac OS X,
+Setup your environment variables (add this to your .bashrc or .zshrc) in your shell configuration. On Mac OS X,
 replace LD_LIBRARY_PATH with DYLD_LIBRARY_PATH.::
 
-        PATH=/install/prefix/bin:$PATH
-        C_INCLUDE_PATH=/install/prefix/include:<OpenMP include path>:$C_INCLUDE_PATH
-        CPLUS_INCLUDE_PATH=/install/prefix/include:<OpenMP include path>:$CPLUS_INCLUDE_PATH
-        LIBRARY_PATH=/install/prefix/lib:<OpenMP library path>:$LIBRARY_PATH
-        LD_LIBRARY_PATH=/install/prefix/lib:<OpenMP library path>:$LD_LIBRARY_PATH
+        export PATH=/install/prefix/bin:$PATH
+        export C_INCLUDE_PATH=/install/prefix/include:<OpenMP include path>:$C_INCLUDE_PATH
+        export CPLUS_INCLUDE_PATH=/install/prefix/include:<OpenMP include path>:$CPLUS_INCLUDE_PATH
+        export LIBRARY_PATH=/install/prefix/lib:<OpenMP library path>:$LIBRARY_PATH
+        export LD_LIBRARY_PATH=/install/prefix/lib:<OpenMP library path>:$LD_LIBRARY_PATH
 
 Download and install the Intel OpenMP Runtime Library from
 `https://www.openmprtl.org/`, or by installing the
 `Intel Compilers
-<http://software.intel.com/en-us/intel-compilershttp://software.intel.com/en-us/intel-compilers>`_.
+<http://software.intel.com/en-us/intel-compilers>`_.
 You can use the evaluation version of the Intel compilers which will install
 the OpenMP runtime library.  After 30 days the compilers will cease to work but
 the runtime library will still be usable.
@@ -52,7 +55,7 @@ Include the OpenMP RTL, for OSX with the evaluation Intel Compilers you can do::
 Download and checkout gentoo90's llvmpy branch with llvm-3.4 support and build
 it::
 
-        $ git clone -b llvm-3.4 https://github.com/gentoo90/llvmpy.git
+        $ git clone -b llvm-3.4 github.com/llvmpy/llvmpy.git
         $ cd llvmpy
         $ LLVM_CONFIG_PATH=YOUR_INSTALL_PATH/bin/llvm-config python setup.py install
 
