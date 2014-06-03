@@ -19,9 +19,9 @@ try:
     if libiomp5 is None:
         arch, os = platform.architecture()
         if arch == '32bit':
-            libiomp5 = "/opt/intel/composerxe/ia32/libiomp5.so"
+            libiomp5 = "/opt/intel/composerxe/lib/ia32/libiomp5.so"
         else:
-            libiomp5 = "/opt/intel/composerxe/intel64/libiomp5.so"
+            libiomp5 = "/opt/intel/composerxe/lib/intel64/libiomp5.so"
     log.info("loading libiomp5 from %s" % libiomp5)
 
     import llvm.core
