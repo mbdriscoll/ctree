@@ -20,6 +20,13 @@ First, get the source code::
         $ git clone https://github.com/clang-omp/compiler-rt llvm/projects/compiler-rt
         $ git clone -b clang-omp https://github.com/clang-omp/clang llvm/tools/clang
 
+IMPORTANT: At this point you need to decide where you want to install your llvm.  For this example
+We will assume that it will be in /usr/local/llvm_build, for the next step do this from the command
+line, via::
+
+        $ export LLVM_BUILD_PATH=/usr/local/llvm_build  # Change this for your particular environment
+
+
 Now, build clang/llvm::
 
         $ mkdir build
@@ -27,18 +34,20 @@ Now, build clang/llvm::
         $ # Make a build directory, i.e.
         $ # sudo mkdir /opt/llvm-omp
         $ # sudo chown username /opt/llvm-omp
-        $ ../llvm/configure --enable-optimized --prefix=YOUR_INSTALL_PATH 
+        $ ../llvm/configure --enable-optimized --prefix=$LLVM_BUILD_PATH
         $ REQUIRES_RTTI=1 make
         $ make install
 
 Setup your environment variables (add this to your .bashrc or .zshrc) in your shell configuration. On Mac OS X,
 replace LD_LIBRARY_PATH with DYLD_LIBRARY_PATH.::
 
-        export PATH=/install/prefix/bin:$PATH
-        export C_INCLUDE_PATH=/install/prefix/include:<OpenMP include path>:$C_INCLUDE_PATH
-        export CPLUS_INCLUDE_PATH=/install/prefix/include:<OpenMP include path>:$CPLUS_INCLUDE_PATH
-        export LIBRARY_PATH=/install/prefix/lib:<OpenMP library path>:$LIBRARY_PATH
-        export LD_LIBRARY_PATH=/install/prefix/lib:<OpenMP library path>:$LD_LIBRARY_PATH
+        export LLVM_BUILD_PATH=/usr/local/llvm_build  # Change this for your particular environment
+        export OPENMP_RUNTIME_PATH=/usr/local/open_mp # Change this
+        export PATH=$LLVM_BUILD_PATH/bin:$PATH
+        export C_INCLUDE_PATH=$LLVM_BUILD_PATH/include:<OpenMP include path>:$C_INCLUDE_PATH
+        export CPLUS_INCLUDE_PATH=$LLVM_BUILD_PATH/include:<OpenMP include path>:$CPLUS_INCLUDE_PATH
+        export LIBRARY_PATH=$LLVM_BUILD_PATH/lib:<OpenMP library path>:$LIBRARY_PATH
+        export LD_LIBRARY_PATH=$LLVM_BUILD_PATH/lib:<OpenMP library path>:$LD_LIBRARY_PATH
 
 Download and install the Intel OpenMP Runtime Library from
 `https://www.openmprtl.org/`, or by installing the
@@ -55,7 +64,7 @@ Include the OpenMP RTL, for OSX with the evaluation Intel Compilers you can do::
 Download and checkout gentoo90's llvmpy branch with llvm-3.4 support and build
 it::
 
-        $ git clone -b llvm-3.4 github.com/llvmpy/llvmpy.git
+        $ git clone -b llvm-3.4 http://github.com/llvmpy/llvmpy.git
         $ cd llvmpy
         $ LLVM_CONFIG_PATH=YOUR_INSTALL_PATH/bin/llvm-config python setup.py install
 
