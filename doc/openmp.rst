@@ -70,6 +70,6 @@ it::
 
 Update your ~/.ctree.cfg to use the proper clang and the openmp RTL::
 
-        [jit]
+        [omp]
         CC = /Users/your_name/opt/llvm-omp-3.4/bin/clang
         CFLAGS = -march=native -O3 -fopenmp -I/opt/intel/composerxe/include

@@ -12,8 +12,16 @@ log = logging.getLogger(__name__)
 try:
     import ctypes
     import ctypes.util
+    import platform
 
     libiomp5 = ctypes.util.find_library("iomp5")
+    # Hack because python bug for ubuntu?
+    if libiomp5 is None:
+        arch, os = platform.architecture()
+        if arch == '32bit':
+            libiomp5 = "/opt/intel/composerxe/lib/ia32/libiomp5.so"
+        else:
+            libiomp5 = "/opt/intel/composerxe/lib/intel64/libiomp5.so"
     log.info("loading libiomp5 from %s" % libiomp5)
 
     import llvm.core
