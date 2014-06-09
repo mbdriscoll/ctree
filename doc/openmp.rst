@@ -9,7 +9,9 @@ Using OpenMP with ctree
 Dependencies
 ============
 
-On OSX, ensure that you have the XCode Command Line Tools installed `xcode-select --install`
+On OSX, ensure that you have the XCode Command Line Tools installed 
+
+        xcode-select --install
 
 Installing OpenMP/Clang
 ------------------
