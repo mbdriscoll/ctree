@@ -6,6 +6,11 @@ Using OpenMP with ctree
 ``ctree`` can be configured to use `Intel's version of Clang
 <http://clang-omp.github.io/>`_ with support for OpenMP.
 
+Dependencies
+============
+
+On OSX, ensure that you have the XCode Command Line Tools installed `xcode-select --install`
+
 Installing OpenMP/Clang
 ------------------
 
