@@ -78,9 +78,9 @@ class PyBasicConversions(NodeTransformer):
                 raise Exception("Cannot convert a for...range with %d args." % nArgs)
 
             # TODO allow any expressions castable to Long type
-            # assert stop.get_type()  == Long(), "Can only convert range's with stop values of Long type."
-            # assert start.get_type() == Long(), "Can only convert range's with start values of Long type."
-            # assert step.get_type()  == Long(), "Can only convert range's with step values of Long type."
+            assert stop.get_type()  == Long(), "Can only convert range's with stop values of Long type."
+            assert start.get_type() == Long(), "Can only convert range's with start values of Long type."
+            assert step.get_type()  == Long(), "Can only convert range's with step values of Long type."
 
             target = SymbolRef(node.target.id, Long())
             for_loop = For(
