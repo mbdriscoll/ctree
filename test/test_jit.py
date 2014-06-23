@@ -41,8 +41,9 @@ class TestJit(unittest.TestCase):
         submod = CFile("generated", [choose_ast]). \
             _compile(choose_ast.codegen(), mod.compilation_dir)
         mod._link_in(submod)
-        c_choose_fn = mod.get_callable(choose_ast.name,
-                                       choose_ast.get_type().as_ctype())
+
+        c_choose_fn = mod.get_callable(choose_ast.name, choose_ast.get_type().as_ctype())
+
         self.assertEqual(choose(0.2, 44, 122), c_choose_fn(0.2, 44, 122))
         self.assertEqual(choose(0.8, 44, 122), c_choose_fn(0.8, 44, 122))
         self.assertEqual(choose(0.3, 27, 39), c_choose_fn(0.3, 27, 39))

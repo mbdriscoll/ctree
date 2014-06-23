@@ -17,3 +17,12 @@ git clone https://github.com/clang-omp/llvm
 git clone https://github.com/clang-omp/compiler-rt llvm/projects/compiler-rt
 git clone -b clang-omp https://github.com/clang-omp/clang llvm/tools/clang
 
+
+Following seemed to work on Chick's macbook pro
+Alternative mac instructions: Using macports with omp support
+
+
+git clone https://github.com/clang-omp/llvm
+
+
+sudo LLVM_CONFIG_PATH=llvm-config-mp-3.4 python setup.py install
