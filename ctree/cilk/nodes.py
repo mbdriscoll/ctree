@@ -14,6 +14,6 @@ class CilkNode(CtreeNode):
         return CilkCodeGen(indent).visit(self)
 
     def _to_dot(self, _):
-        from ctree.cilk.dotgen import CilkDotGen
+        from ctree.cilk.dotgen import CilkDotLabeller
 
-        return CilkDotGen().visit(self)
+        return CilkDotLabeller().visit(self)

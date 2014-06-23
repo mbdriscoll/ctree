@@ -13,7 +13,7 @@ class SimdNode(CtreeNode):
 
         return SimdCodeGen(indent).visit(self)
 
-    def _to_dot(self, _):
-        from ctree.sse.dotgen import SimdDotGen
+    def label(self):
+        from ctree.sse.dotgen import SimdDotLabeller
 
-        return SimdDotGen().visit(self)
+        return SimdDotLabeller().visit(self)

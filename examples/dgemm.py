@@ -15,7 +15,6 @@ from ctree.c.types import *
 from ctree.simd.macros import *
 from ctree.simd.types import *
 from ctree.templates.nodes import StringTemplate
-from ctree.dotgen import to_dot
 from ctree.transformations import *
 from ctree.jit import LazySpecializedFunction
 from ctree.types import get_ctree_type

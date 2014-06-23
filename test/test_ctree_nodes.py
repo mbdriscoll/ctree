@@ -2,16 +2,10 @@ import unittest
 
 from ctree.nodes import *
 from ctree.c.nodes import *
-from ctree.c.types import Int
+import ctypes as ct
 
 
 class TestCtreeNode(unittest.TestCase):
-
-    def test_get_root(self):
-        a = SymbolRef('a')
-        b = SymbolRef('b')
-        root = Add(a, b)
-        self.assertEqual(a.get_root(), root)
 
     def test_bad_override_codegen(self):
         class BadNode(CtreeNode):
@@ -28,6 +22,6 @@ class TestCtreeNode(unittest.TestCase):
     def test_find_all_attr_error(self):
         tree = Add(SymbolRef('a'), Constant(10))
         try:
-            tree.find_all(SymbolRef, type=Int())
+            tree.find_all(SymbolRef, type=ct.c_int())
         except AttributeError:
             self.fail("find_all should not raise AttributeError")

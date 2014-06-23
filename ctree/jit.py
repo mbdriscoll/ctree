@@ -1,4 +1,8 @@
-"""just in time utilities"""
+"""
+Just-in-time compilation support.
+"""
+
+import abc
 import copy
 import shutil
 import tempfile
@@ -21,8 +25,14 @@ class JitModule(object):
     """
 
     def __init__(self):
-        self.compilation_dir = tempfile.mkdtemp(prefix="ctree-",
-                                                dir=tempfile.gettempdir())
+        import os
+
+        # write files to $TEMPDIR/ctree/run-XXXX
+        ctree_dir = os.path.join(tempfile.gettempdir(), "ctree")
+        if not os.path.exists(ctree_dir):
+            os.mkdir(ctree_dir)
+
+        self.compilation_dir = tempfile.mkdtemp(prefix="run-", dir=ctree_dir)
         self.ll_module = ll.Module.new('ctree')
         self.exec_engine = None
         log.info("temporary compilation directory is: %s",
@@ -57,31 +67,31 @@ class JitModule(object):
         return entry_point_typesig(c_func_ptr)
 
 
-class _ConcreteSpecializedFunction(object):
+class ConcreteSpecializedFunction(object):
     """
     A function backed by generated code.
     """
+    __metaclass__ = abc.ABCMeta
 
-    def __init__(self, entry_point_name, project, entry_point_typesig, extra_args=tuple()):
-        assert isinstance(project, Project), \
-            "Expected a Project but it got a %s." % type(project)
-        assert project.parent is None, \
-            "Expected null project.parent, but got: %s." % type(project.parent)
+    def _compile(self, entry_point_name, project_node, entry_point_typesig, **kwargs):
+        """
+        Returns a python callable.
+        """
+        assert isinstance(project_node, Project), \
+            "Expected a Project but it got a %s." % type(project_node)
 
-        VerifyOnlyCtreeNodes().visit(project)
+        VerifyOnlyCtreeNodes().visit(project_node)
 
-        self.module = project.codegen()
-        highlighted = highlight(str(self.module.ll_module), 'llvm')
+        self._module = project_node.codegen(**kwargs)
+
+        highlighted = highlight(str(self._module.ll_module), 'llvm')
         log.debug("full LLVM program is: <<<\n%s\n>>>" % highlighted)
-        self.fn = self.module.get_callable(entry_point_name,
-                                           entry_point_typesig)
-        self._extra_args = extra_args
 
+        return self._module.get_callable(entry_point_name, entry_point_typesig)
+
+    @abc.abstractmethod
     def __call__(self, *args, **kwargs):
-        assert not kwargs, \
-            "Passing kwargs to SpecializedFunction.__call__ isn't supported."
-
-        return self.fn(*(args + self._extra_args), **kwargs)
+        pass
 
 
 class LazySpecializedFunction(object):
@@ -90,18 +100,17 @@ class LazySpecializedFunction(object):
     code just-in-time.
     """
 
-    def __init__(self, py_ast, entry_point_name):
+    def __init__(self, py_ast):
         self.original_tree = py_ast
-        self.entry_point_name = entry_point_name
         self.concrete_functions = {}  # config -> callable map
         self._tuner = self.get_tuning_driver()
 
     @staticmethod
-    def _hash_dict(o):
+    def _hash(o):
         if isinstance(o, dict):
-            return hash(frozenset(o.items()))
+            return hash(frozenset(LazySpecializedFunction._hash(item) for item in o.items()))
         else:
-            return hash(o)
+            return hash(str(o))
 
     def __call__(self, *args, **kwargs):
         """
@@ -122,8 +131,8 @@ class LazySpecializedFunction(object):
         log.info("tuner subconfig: %s", tuner_subconfig)
         log.info("arguments subconfig: %s", args_subconfig)
 
-        config_hash = hash((self._hash_dict(args_subconfig),
-                            self._hash_dict(tuner_subconfig)))
+        config_hash = hash((self._hash(args_subconfig),
+                            self._hash(tuner_subconfig)))
 
         if config_hash in self.concrete_functions:
             ctree.STATS.log("specialized function cache hit")
@@ -131,17 +140,18 @@ class LazySpecializedFunction(object):
         else:
             ctree.STATS.log("specialized function cache miss")
             log.info("specialized function cache miss.")
-            translator_result = self.transform(
+
+            csf = self.transform(
                 copy.deepcopy(self.original_tree),
                 program_config
             )
 
-            self.concrete_functions[config_hash] = _ConcreteSpecializedFunction(
-                self.entry_point_name,
-                *translator_result
-            )
+            assert isinstance(csf , ConcreteSpecializedFunction), \
+                "Expected a ctree.jit.ConcreteSpecializedFunction, but got a %s." % type(csf)
 
-        return self.concrete_functions[config_hash](*args)
+            self.concrete_functions[config_hash] = csf
+
+        return self.concrete_functions[config_hash](*args, **kwargs)
 
     def report(self, *args, **kwargs):
         """
@@ -163,9 +173,9 @@ class LazySpecializedFunction(object):
         """
         Define the space of possible implementations.
         """
-        from ctree.tune import NullTuningDriver
+        from ctree.tune import ConstantTuningDriver
 
-        return NullTuningDriver()
+        return ConstantTuningDriver()
 
     def args_to_subconfig(self, args):
         """

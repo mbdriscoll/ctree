@@ -3,14 +3,17 @@ AST nodes for C constructs.
 """
 
 import os
+import types
 import subprocess
 
 import logging
 
 log = logging.getLogger(__name__)
 
+from ctypes import CFUNCTYPE
 from ctree.nodes import CtreeNode, File
 from ctree.util import singleton, highlight
+from ctree.types import get_ctype
 
 
 class CNode(CtreeNode):
@@ -21,18 +24,21 @@ class CNode(CtreeNode):
 
         return CCodeGen(indent).visit(self)
 
-    def _to_dot(self):
-        from ctree.c.dotgen import CDotGen
+    def label(self):
+        from ctree.c.dotgen import CDotGenLabeller
 
-        return CDotGen().visit(self)
+        return CDotGenLabeller().visit(self)
 
 
 class CFile(CNode, File):
     """Represents a .c file."""
+    _ext = "c"
 
     def __init__(self, name="generated", body=None, config_target='c'):
-        super(CFile, self).__init__(name, body)
-        self._ext = "c"
+        if not body:
+            body = []
+        CNode.__init__(self)
+        File.__init__(self, name, body)
         self.config_target = config_target
 
     def get_bc_filename(self):
@@ -82,11 +88,6 @@ class Statement(CNode):
 
 class Expression(CNode):
     """Cite me."""
-
-    def get_type(self):
-        from ctree.c.types import CTypeFetcher
-
-        return CTypeFetcher().visit(self)
 
 
 class Return(Statement):
@@ -165,6 +166,9 @@ class Constant(Literal):
         self.value = value
         super(Constant, self).__init__()
 
+    def get_type(self):
+        return get_ctype(self.value)
+
 
 class Block(Statement):
     """Cite me."""
@@ -173,6 +177,9 @@ class Block(Statement):
     def __init__(self, body=None):
         self.body = body if body else []
         super(Block, self).__init__()
+
+    def _requires_semicolon(self):
+        return False
 
 
 class String(Literal):
@@ -228,9 +235,6 @@ class SymbolRef(Literal):
         else:
             return SymbolRef(self.name)
 
-    def get_ctype(self):
-        return self.type.as_ctype()
-
 class FunctionDecl(Statement):
     """Cite me."""
     _fields = ['params', 'defn']
@@ -246,9 +250,25 @@ class FunctionDecl(Statement):
         super(FunctionDecl, self).__init__()
 
     def get_type(self):
-        from ctree.c.types import FuncType
-        arg_types = [p.get_type() for p in self.params]
-        return FuncType(self.return_type, arg_types)
+        type_sig = []
+
+        # return type
+        if self.return_type is None:
+            type_sig.append(self.return_type)
+        else:
+            assert not isinstance(self.return_type, types.TypeType), \
+                "Expected a ctypes instance or None, got %s (%s)." % \
+                    (self.return_type, type(self.return_type))
+            type_sig.append( type(self.return_type) )
+
+        # parameter types
+        for param in self.params:
+            assert not isinstance(param.type, types.TypeType), \
+                "Expected a ctypes instance or None, got %s (%s)." % \
+                    (param.type, type(param.type))
+            type_sig.append( type(param.type) )
+
+        return CFUNCTYPE(*type_sig)
 
     def set_inline(self, value=True):
         self.inline = value
@@ -260,14 +280,6 @@ class FunctionDecl(Statement):
 
     def set_kernel(self, value=True):
         self.kernel = value
-        return self
-
-    def set_typesig(self, func_type):
-        from ctree.c.types import FuncType
-        assert isinstance(func_type, FuncType)
-        self.return_type = func_type.return_type
-        for sym, ty in zip(self.params, func_type.arg_types):
-            sym.type = ty
         return self
 
 
@@ -290,6 +302,10 @@ class BinaryOp(Expression):
         self.op = op
         self.right = right
         super(BinaryOp, self).__init__()
+
+    def get_type(self):
+        # FIXME: integer promotions and stuff like that
+        return self.left.get_type()
 
 
 class AugAssign(Expression):
@@ -439,7 +455,7 @@ class Op:
         _c_str = "="
 
     class ArrayRef(_Op):
-        _c_str = "??"
+        _c_str = "[]"
 
 
 # ---------------------------------------------------------------------------

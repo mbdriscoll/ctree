@@ -47,3 +47,17 @@ To switch back to your default python installation, run::
 You can re-activate the virtualenv at any time using::
 
         source venv-2.7/bin/activate
+
+
+Cleaning the Folder of Temporary Files
+--------------------------------------
+
+If ``ctree`` is exiting uncleanly it may leave compilation directories in the temporary folder. If there are lots of them, ``rm`` may not be sufficient to remove them::
+
+    $ CTREE_TMP_DIR=/var/folders/k3/_z9txmtx3vd1t_64hbx9y4qr0000gn/T
+    $ rm -rf $CTREE_TMP_DIR/ctree-*
+    zsh: argument list too long: rm
+
+Use a command like the following to rememdy the situation::
+
+    $ find $CTREE_TMP_DIR -name "ctree-*" | xargs rm -rf

@@ -4,11 +4,12 @@ A set of basic transformers for python asts
 import os
 import ast
 
+from ctypes import c_long
+
 from ctree.nodes import Project, CtreeNode
 from ctree.c.nodes import Op, Constant, String, SymbolRef, BinaryOp, TernaryOp, Return
 from ctree.c.nodes import If, CFile, FunctionCall, FunctionDecl, For, Assign, AugAssign
 from ctree.c.nodes import Lt, PostInc, AddAssign, SubAssign, MulAssign, DivAssign
-from ctree.c.types import Long
 from ctree.visitors import NodeTransformer
 from ctree.util import flatten
 
@@ -78,11 +79,11 @@ class PyBasicConversions(NodeTransformer):
                 raise Exception("Cannot convert a for...range with %d args." % nArgs)
 
             # TODO allow any expressions castable to Long type
-            assert stop.get_type()  == Long(), "Can only convert range's with stop values of Long type."
-            assert start.get_type() == Long(), "Can only convert range's with start values of Long type."
-            assert step.get_type()  == Long(), "Can only convert range's with step values of Long type."
+            assert isinstance(stop.get_type(), c_long), "Can only convert range's with stop values of Long type."
+            assert isinstance(start.get_type(), c_long), "Can only convert range's with start values of Long type."
+            assert isinstance(step.get_type(), c_long), "Can only convert range's with step values of Long type."
 
-            target = SymbolRef(node.target.id, Long())
+            target = SymbolRef(node.target.id, c_long())
             for_loop = For(
                 Assign(target, start),
                 Lt(target.copy(), stop),
@@ -159,20 +160,6 @@ class PyBasicConversions(NodeTransformer):
         return Assign(target, value)
 
 
-class FixUpParentPointers(NodeTransformer):
-    """
-    Add parent pointers if they're missing.
-    """
-
-    def generic_visit(self, node):
-        for fieldname, value in ast.iter_fields(node):
-            for child in flatten(value):
-                if isinstance(child, CtreeNode):
-                    setattr(child, 'parent', node)
-                    self.visit(child)
-        return node
-
-
 class ResolveGeneratedPathRefs(NodeTransformer):
     """
     Converts any instances of ctree.nodes.GeneratedPathRef into strings containing the absolute path
@@ -186,3 +173,33 @@ class ResolveGeneratedPathRefs(NodeTransformer):
     def visit_GeneratedPathRef(self, node):
         self.count += 1
         return String(os.path.join(self.compilation_dir, node.target.get_filename()))
+
+
+class Lifter(NodeTransformer):
+    """
+    To aid in adding new includes or parameters during tree
+    traversals, users can store them with arbirary child nodes and call this
+    transformation to move them to the correct position.
+    """
+    def __init__(self, lift_params=True, lift_includes=True):
+        self.lift_params = lift_params
+        self.lift_includes = lift_includes
+
+    def visit_FunctionDecl(self, node):
+        if self.lift_params:
+            for child in ast.walk(node):
+                for param in getattr(child, '_lift_params', []):
+                    if param not in node.params:
+                        node.params.append(param)
+                    #del child._lift_params
+        return self.generic_visit(node)
+
+    def visit_CFile(self, node):
+        if self.lift_includes:
+            new_includes = []
+            for child in ast.walk(node):
+                for include in getattr(child, '_lift_includes', []):
+                    if include not in new_includes:
+                        new_includes.append(include)
+            node.body = list(new_includes) + node.body
+        return self.generic_visit(node)

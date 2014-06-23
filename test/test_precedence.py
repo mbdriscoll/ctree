@@ -2,7 +2,7 @@ import unittest
 
 from ctree.c.nodes import *
 from ctree.precedence import *
-from ctree.c.types import *
+import ctypes as ct
 
 
 class TestPrecedence(unittest.TestCase):
@@ -75,12 +75,12 @@ class TestPrecedence(unittest.TestCase):
 
     def test_cast1(self):
         a, b, c = self.args
-        tree = Add(Cast(Int(), a), b)
+        tree = Add(Cast(ct.c_int(), a), b)
         self._check(tree, "(int) a + b")
 
     def test_cast2(self):
         a, b, c = self.args
-        tree = Cast(Int(), Add(a, b))
+        tree = Cast(ct.c_int(), Add(a, b))
         self._check(tree, "(int) (a + b)")
 
 

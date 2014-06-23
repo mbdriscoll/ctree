@@ -7,7 +7,7 @@ The 'examples' directory needs to be in PYTHONPATH for these to pass.
 import unittest
 
 try:
-  import examples.ArrayDoubler
+  import examples
 except ImportError:
   HAVE_EXAMPLES = False
 else:
@@ -40,7 +40,6 @@ class TestAllExamples(unittest.TestCase):
         from examples import TuningSpecializer
         TuningSpecializer.main()
 
-    @unittest.skip("intermitten failures")
     def test_OclDoubler(self):
         from examples import OclDoubler
         OclDoubler.main()

@@ -9,9 +9,6 @@ class SimdType(CtreeType):
 
         return SimdCodeGen().visit(self)
 
-    def as_ctype(self):
-        raise NotImplementedError()
-
 
 class m256d(SimdType):
     pass

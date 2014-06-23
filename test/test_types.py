@@ -1,210 +1,87 @@
-import unittest
+import types
+import ctypes
 
-from ctree.c.nodes import *
-from ctree.c.types import *
-import numpy
+from ctree.types import (
+    get_ctype,
+    codegen_type,
+)
 
+from util import CtreeTest
 
-class TestTypeProperties(unittest.TestCase):
-    def test_float_equality(self):
-        self.assertEqual(Float(), Float())
+import ctree
+import ctree.c
+from ctree.c.nodes import SymbolRef, FunctionDecl
 
-    def test_unequality(self):
-        self.assertNotEqual(Float(), Int())
-
-
-class TestTypeFetcher(unittest.TestCase):
-    def _check(self, actual, expected):
-        self.assertEqual(actual, expected)
-
-    def test_string_type(self):
-        s = String("foo")
-        self._check(s.get_type(), Ptr(Char()))
-
-    def test_int_type(self):
-        n = Constant(123)
-        self._check(n.get_type(), Long())
-
-    def test_float_type(self):
-        n = Constant(123.4)
-        self._check(n.get_type(), Double())
-
-    def test_char_type(self):
-        n = Constant('b')
-        self._check(n.get_type(), Char())
-
-    def test_binop_add_intint(self):
-        a, b = Constant(1), Constant(2)
-        node = Add(a, b)
-        self._check(node.get_type(), Long())
-
-    def test_binop_add_floatfloat(self):
-        a, b = Constant(1.3), Constant(2.4)
-        node = Add(a, b)
-        self._check(node.get_type(), Double())
-
-    def test_binop_add_floatint(self):
-        a, b = Constant(1.3), Constant(2)
-        node = Add(a, b)
-        self._check(node.get_type(), Double())
-
-    def test_binop_add_intfloat(self):
-        a, b = Constant(1), Constant(2.3)
-        node = Add(a, b)
-        self._check(node.get_type(), Double())
-
-    def test_binop_add_charint(self):
-        a, b = Constant('b'), Constant(2)
-        node = Add(a, b)
-        self._check(node.get_type(), Long())
-
-    def test_binop_add_charfloat(self):
-        a, b = Constant('b'), Constant(2.3)
-        node = Add(a, b)
-        self._check(node.get_type(), Double())
-
-    def test_binop_compare_lessthan(self):
-        a, b = Constant('b'), Constant(2.3)
-        node = Lt(a, b)
-        self._check(node.get_type(), Int())
-
-    def test_binop_compare_comma(self):
-        a, b = Constant('b'), Constant(2.3)
-        node = Comma(a, b)
-        self._check(node.get_type(), Double())
-
-    def test_bad_constant(self):
-        class nothing:
-            pass
-
-        a = Constant(nothing())
-        with self.assertRaises(Exception):
-            self._check(a.get_type(), Int())
-
-    class Nothing:
-        pass
-
-    def test_bad_type_coversion(self):
-        with self.assertRaises(Exception):
-            get_ctree_type(self.Nothing)
-
-    def test_bad_obj_coversion(self):
-        with self.assertRaises(Exception):
-            get_ctree_type(self.Nothing())
-
-
-class BadType(CtreeType):
-    pass
-
-
-class GoodType(CtreeType):
-
-    def codegen(self):
-        pass
-
-    def as_ctypes(self):
-        pass
-
-
-class TestOverrideException(unittest.TestCase):
-
-    def test_no_codegen(self):
-        with self.assertRaises(Exception):
-            BadType().codegen()
-
-    def test_no_as_ctypes(self):
-        with self.assertRaises(Exception):
-            BadType().as_ctypes()
-
-    def test_with_codegen(self):
-        try:
-            GoodType().codegen()
-        except Exception:
-            self.fail("codegen should not raise exception.")
-
-    def test_with_as_ctypes(self):
-        try:
-            GoodType().as_ctypes()
-        except Exception:
-            self.fail("as_ctypes should not raise exception.")
-
-
-class TestIntegerPromote(unittest.TestCase):
-
-    def test_noop(self):
-        self.assertEqual(CTypeFetcher._integer_promote(Int()), Int())
-
-    def test_char(self):
-        self.assertEqual(CTypeFetcher._integer_promote(Char()), Int())
-
-    def test_short(self):
-        self.assertEqual(CTypeFetcher._integer_promote(Short()), Int())
-
-    def test_exception(self):
-        with self.assertRaises(Exception):
-            CTypeFetcher._integer_promote(Ptr())
-
-
-class TestUsualArithmeticConvert(unittest.TestCase):
-
-    def test_long_double(self):
-        self.assertEqual(
-            CTypeFetcher._usual_arithmetic_convert(LongDouble(), Int()),
-            LongDouble()
-        )
+class TestTypeRecognizer(CtreeTest):
+    def test_int(self):
+        ty = get_ctype(123)
+        self.assertIsInstance(ty, ctypes.c_long)
 
     def test_float(self):
-        self.assertEqual(
-            CTypeFetcher._usual_arithmetic_convert(Int(), Float()), Float()
-        )
+        ty = get_ctype(456.7)
+        self.assertIsInstance(ty, ctypes.c_double)
 
-    def test_promotion_ulong(self):
-        self.assertEqual(
-            CTypeFetcher._usual_arithmetic_convert(Int(), ULong()), ULong()
-        )
+    def test_char(self):
+        ty = get_ctype("c")
+        self.assertIsInstance(ty, ctypes.c_char)
 
-    def test_promotion_long(self):
-        self.assertEqual(
-            CTypeFetcher._usual_arithmetic_convert(Int(), Long()), Long()
-        )
+    def test_none(self):
+        ty = get_ctype(None)
+        self.assertIsInstance(ty, types.NoneType)
 
-    def test_promotion_uint(self):
-        self.assertEqual(
-            CTypeFetcher._usual_arithmetic_convert(UInt(), Int()), UInt()
-        )
+    def test_bool(self):
+        ty = get_ctype(True)
+        self.assertIsInstance(ty, ctypes.c_bool)
 
-    def test_promotion_int(self):
-        self.assertEqual(
-            CTypeFetcher._usual_arithmetic_convert(Char(), Int()), Int()
-        )
+    def test_string(self):
+        self.assertIsInstance(get_ctype("foo"),     ctypes.c_char_p)
+        self.assertIsInstance(get_ctype(""),        ctypes.c_char_p)
+        self.assertIsInstance(get_ctype("one two"), ctypes.c_char_p)
 
-    def test_promotion_Char(self):
-        self.assertEqual(
-            CTypeFetcher._usual_arithmetic_convert(Char(), Char()), Int()
-        )
+    def test_bad_type(self):
+        class Bad(object): pass
+        with self.assertRaises(ValueError):
+            ty = get_ctype(Bad())
 
 
-class TestPtr(unittest.TestCase):
-
-    def test_ctype(self):
-        p = Ptr(Char())
-        self.assertEqual(p.as_ctype(), ctypes.POINTER(ctypes.c_char))
-
-
-class TestNdPointer(unittest.TestCase):
-
-    def test_get_base_type(self):
-        ndp = NdPointer(numpy.double)
-        self.assertEqual(ndp.get_base_type(), Double())
-
-    def test_to(self):
-        arr = numpy.ndarray((2, 2), numpy.float32)
-        ndp = NdPointer.to(arr)
-        self.assertEqual(ndp, NdPointer(numpy.float32, 2, (2, 2)))
-
-
-class TestNPTypeResolver(unittest.TestCase):
+class TestTypeCodeGen(CtreeTest):
+    def test_int(self):
+        tree = SymbolRef("i", ctypes.c_int())
+        self._check_code(tree, "int i")
 
     def test_long(self):
-        type = NumpyTypeResolver.resolve(numpy.int64)
-        self.assertEqual(type, Long())
+        tree = SymbolRef("i", ctypes.c_long())
+        self._check_code(tree, "long i")
+
+    def test_float(self):
+        tree = SymbolRef("i", ctypes.c_double())
+        self._check_code(tree, "double i")
+
+    def test_char(self):
+        tree = SymbolRef("i", ctypes.c_char())
+        self._check_code(tree, "char i")
+
+    def test_none(self):
+        tree = SymbolRef("i", ctypes.c_void_p())
+        self._check_code(tree, "void* i")
+
+    def test_bool(self):
+        tree = SymbolRef("i", ctypes.c_bool())
+        self._check_code(tree, "bool i")
+
+    def test_string(self):
+        tree = SymbolRef("i", ctypes.c_char_p())
+        self._check_code(tree, "char* i")
+
+    def test_pointer(self):
+        tree = SymbolRef("i", ctypes.POINTER(ctypes.c_double)())
+        self._check_code(tree, "double* i")
+
+    def test_none(self):
+        tree = FunctionDecl(None, "foo", ())
+        self._check_code(tree, "void foo()")
+
+    def test_bad_type(self):
+        class Bad(object): pass
+        with self.assertRaises(ValueError):
+            SymbolRef("i", Bad()).codegen()

@@ -1,15 +1,14 @@
 """
-DOT generation for Cilk.
+DOT labeller for Cilk.
 """
 
-from ctree.dotgen import DotGenVisitor
+from ctree.dotgen import DotGenLabeller
 
 # ---------------------------------------------------------------------------
-# DOT generator
+# DOT labeller
 
-
-class CilkDotGen(DotGenVisitor):
+class CilkDotLabeller(DotGenLabeller):
     """
-    Visitor to generator DOT.
+    Visitor to label DOT nodes.
     """
     pass

@@ -4,7 +4,6 @@ from textwrap import dedent
 from ctree.c.nodes import *
 from ctree.analyses import *
 from ctree.frontend import get_ast
-from ctree.dotgen import to_dot
 
 from ctree.util import flatten, enumerate_flatten
 
@@ -107,4 +106,4 @@ class TestListFlattening(unittest.TestCase):
 class TestFlatteningDotGen(unittest.TestCase):
     def test_lol_1(self):
         tree = Block([[a, b]])
-        to_dot(tree)
+        tree.to_dot()

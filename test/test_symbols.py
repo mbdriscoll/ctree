@@ -1,8 +1,7 @@
 import unittest
-import ctypes
 
 from ctree.c.nodes import *
-from ctree.c.types import Int
+import ctypes as ct
 
 
 class TestSymbols(unittest.TestCase):
@@ -37,8 +36,8 @@ class TestSymbols(unittest.TestCase):
         self._check(ref, "__global foo")
 
     def test_unique(self):
-        ref1 = SymbolRef.unique("foo", Int())
-        ref2 = SymbolRef.unique("foo", Int())
+        ref1 = SymbolRef.unique("foo", ct.c_int())
+        ref2 = SymbolRef.unique("foo", ct.c_int())
         self.assertNotEqual(ref1.codegen(), ref2.codegen())
 
     def test_copy(self):
@@ -47,16 +46,12 @@ class TestSymbols(unittest.TestCase):
         self._check(ref1, ref2.codegen(()))
 
     def test_copy_without_declare(self):
-        ref1 = SymbolRef("foo", Int())
+        ref1 = SymbolRef("foo", ct.c_int())
         ref2 = ref1.copy()
         self._check(ref2, "foo")
 
     def test_copy_with_declare(self):
-        ref1 = SymbolRef("foo", Int())
+        ref1 = SymbolRef("foo", ct.c_int())
         ref2 = ref1.copy(declare=True)
         self._check(ref2, "int foo")
 
-
-    def test_get_ctype(self):
-        ref = SymbolRef("foo", Int())
-        self.assertEqual(ref.get_ctype(), ctypes.c_int)

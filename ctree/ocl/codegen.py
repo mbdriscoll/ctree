@@ -29,5 +29,5 @@ class OclCodeGen(CodeGenVisitor):
     def visit_cl_kernel(self, node):
         return "cl_kernel"
 
-    def visit_cl_mem(self, node):
-        return "cl_mem"
+    def visit_cl_buffer(self, node):
+        return "cl_buffer"

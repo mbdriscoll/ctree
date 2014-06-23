@@ -26,10 +26,10 @@ class TemplateNode(CtreeNode):
 
         return TemplateCodeGen(indent).visit(self)
 
-    def _to_dot(self):
-        from ctree.templates.dotgen import TemplateDotGen
+    def label(self):
+        from ctree.templates.dotgen import TemplateDotLabeller
 
-        return TemplateDotGen().visit(self)
+        return TemplateDotLabeller().visit(self)
 
     def _requires_semicolon(self):
         return False

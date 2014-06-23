@@ -24,6 +24,7 @@ install:
 
   # coverage and doc generator
   - pip install numpy Sphinx coveralls coverage nose pygments
+  - pip install --pre pycl
   - nosetests --version
   - coverage --version
 
