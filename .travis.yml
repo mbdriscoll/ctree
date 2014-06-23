@@ -31,6 +31,7 @@ install:
   # install llvmpy
   - git clone git://github.com/llvmpy/llvmpy.git ${HOME}/llvmpy
   - cd ${HOME}/llvmpy
+  - git checkout 749b518b90140b64aa711f33460525222339e000
   - LLVM_CONFIG_PATH=/usr/bin/llvm-config-$LLVM_VERSION python setup.py install
 
   # install opentuner
