@@ -47,7 +47,8 @@ install:
   - git clone https://github.com/mbdriscoll/opentuner.git ${HOME}/opentuner
   - cd ${HOME}/opentuner
   - sudo apt-get install `cat debian-packages-deps | tr '\n' ' '`
-  - "if [[ \"x$PYTHON_VERSION\" -eq \"x(2.7)\" ]]; then pip install -r python-packages; fi"
+    # - "if [[ \"x$PYTHON_VERSION\" -eq \"x(2.7)\" ]]; then pip install -r python-packages; fi"
+  - pip install -r python-packages
   - export PYTHONPATH=`pwd`:$PYTHONPATH
 
   # install ctree via setup.py
