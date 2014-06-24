@@ -90,3 +90,6 @@ after_success:
 
   # commit new docs to ctree-docs
   - git push origin gh-pages
+
+notifications:
+  slack: ucb-sejits:cPZxBunxagWZ763mcsIXOV0W
