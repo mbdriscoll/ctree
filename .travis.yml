@@ -41,7 +41,7 @@ install:
   - git clone -b llvm-3.4 git://github.com/llvmpy/llvmpy.git ${HOME}/llvmpy
   - cd ${HOME}/llvmpy
   - git checkout ce696c9b4ecc237b0ed89e71873e6f89f6aad449
-  - LLVM_CONFIG_PATH=/usr/bin/llvm-config-$LLVM_VERSION python setup.py install
+  - python setup.py install
 
   # install opentuner
   - git clone https://github.com/mbdriscoll/opentuner.git ${HOME}/opentuner
