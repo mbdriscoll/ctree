@@ -80,7 +80,11 @@ class OpTranslator(LazySpecializedFunction):
         kernel = OclFile("kernel", [apply_one, apply_kernel])
 
         control = StringTemplate(r"""
+        #ifdef APPLE
         #include <OpenCL/opencl.h>
+        #else
+        #include <CL/cl.h>
+        #endif
         void apply_all(cl_command_queue queue, cl_kernel kernel, cl_mem buf) {
             size_t global = $n;
             size_t local = 32;

@@ -2,8 +2,8 @@ language: python
 
 python:
   - "2.7"
-  - "3.2"
-  - "3.3"
+  # - "3.2"
+  # - "3.3"
 
 env:
   global:
@@ -21,7 +21,7 @@ before_install:
   - if [ ${TRAVIS_PYTHON_VERSION:0:1} == "2" ]; then export PATH=/home/travis/miniconda/bin:$PATH; else export PATH=/home/travis/miniconda3/bin:$PATH; fi
   - conda update --yes conda
   # Setup environment
-  - conda create -n travisci --yes python=${TRAVIS_PYTHON_VERSION:0:3} llvm numpy
+  - conda create -n travisci --yes python=${TRAVIS_PYTHON_VERSION:0:3} llvm numpy setuptools nose pygments
   - source activate travisci
   - sudo apt-get update -qq
   - sudo apt-get install -qq fglrx=2:8.960-0ubuntu1 opencl-headers
@@ -32,34 +32,35 @@ install:
   - export PYTHON_VERSION=$(python -c 'import sys; print(sys.version_info[0:2])')
 
   # coverage and doc generator
-  - pip install numpy Sphinx coveralls coverage nose pygments
-  - pip install --pre pycl
+  - pip install Sphinx coveralls coverage
   - nosetests --version
   - coverage --version
 
   # install llvmpy
-  - git clone -b llvm-3.4 git://github.com/llvmpy/llvmpy.git ${HOME}/llvmpy
-  - cd ${HOME}/llvmpy
-  - git checkout ce696c9b4ecc237b0ed89e71873e6f89f6aad449
+  - git clone -b llvm-3.4 git://github.com/llvmpy/llvmpy.git ${TRAVIS_BUILD_DIR}/llvmpy
+  - cd ${TRAVIS_BUILD_DIR}/llvmpy
+  - python setup.py install
+
+  # install pycl
+  - git clone git://github.com/ucb-sejits/pycl.git ${TRAVIS_BUILD_DIR}/pycl
+  - cd ${TRAVIS_BUILD_DIR}/pycl
   - python setup.py install
 
   # install opentuner
-  - git clone https://github.com/mbdriscoll/opentuner.git ${HOME}/opentuner
-  - cd ${HOME}/opentuner
+  - git clone https://github.com/mbdriscoll/opentuner.git ${TRAVIS_BUILD_DIR}/opentuner
+  - cd ${TRAVIS_BUILD_DIR}/opentuner
   - sudo apt-get install `cat debian-packages-deps | tr '\n' ' '`
-    # - "if [[ \"x$PYTHON_VERSION\" -eq \"x(2.7)\" ]]; then pip install -r python-packages; fi"
-  - pip install -r python-packages
+  - "if [[ \"x$PYTHON_VERSION\" -eq \"x(2.7)\" ]]; then pip install -r python-packages; fi"
   - export PYTHONPATH=`pwd`:$PYTHONPATH
 
   # install ctree via setup.py
   - cd ${TRAVIS_BUILD_DIR}
-  - pip install setuptools
   - python setup.py install
 
 script:
 
   # run test suite from home directory to verify installation
-  - cd ${HOME}
+  - cd ${TRAVIS_BUILD_DIR}
   - nosetests --where=${TRAVIS_BUILD_DIR}/test
 
   # run test suite again from build dir to get coverage info
