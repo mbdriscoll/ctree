@@ -53,6 +53,7 @@ install:
 
   # install ctree via setup.py
   - cd ${TRAVIS_BUILD_DIR}
+  - pip install setuptools
   - python setup.py install
 
 script:
