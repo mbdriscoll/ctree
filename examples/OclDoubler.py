@@ -80,7 +80,7 @@ class OpTranslator(LazySpecializedFunction):
         kernel = OclFile("kernel", [apply_one, apply_kernel])
 
         control = StringTemplate(r"""
-        #ifdef APPLE
+        #ifdef __APPLE__
         #include <OpenCL/opencl.h>
         #else
         #include <CL/cl.h>

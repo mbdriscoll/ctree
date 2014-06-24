@@ -11,7 +11,7 @@ class TestJit(unittest.TestCase):
             _compile(identity_ast.codegen(), mod.compilation_dir)
         mod._link_in(submod)
         c_identity_fn = mod.get_callable(identity_ast.name,
-                                         identity_ast.get_type().as_ctype())
+                                         identity_ast.get_type())
         self.assertEqual(identity(1), c_identity_fn(1))
         self.assertEqual(identity(12), c_identity_fn(12))
         self.assertEqual(identity(123), c_identity_fn(123))
