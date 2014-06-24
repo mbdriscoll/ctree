@@ -10,7 +10,7 @@ env:
     # encrypted OAuth token so Travis can commit docs back to Github
     - secure: "QBB2KT4EFUdSkH9fjo5J/02zuZlD0FbVsKwYJgW6c4INp1UY/nx0nrsgjPSZQMD2HBztdfEZInugoVrOJwXBzWJ5Ioc19T9oYhnzaIF6oJRo1mTYDhragvdwiLfb0AyylGq7bgP4lgoMBtE1Oxauf0rKVEYiVeEhvHJup/di6A4="
   matrix:
-    - LLVM_VERSION=3.3
+    - LLVM_VERSION=3.4
 
 before_install:
 
@@ -29,7 +29,7 @@ install:
   - coverage --version
 
   # install llvmpy
-  - git clone git://github.com/llvmpy/llvmpy.git ${HOME}/llvmpy
+  - git clone -b llvm-3.4 git://github.com/llvmpy/llvmpy.git ${HOME}/llvmpy
   - cd ${HOME}/llvmpy
   - git checkout ce696c9b4ecc237b0ed89e71873e6f89f6aad449
   - LLVM_CONFIG_PATH=/usr/bin/llvm-config-$LLVM_VERSION python setup.py install
