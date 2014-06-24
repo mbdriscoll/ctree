@@ -1,14 +1,13 @@
 """
-DOT generation for OpenMP.
+DOT labeller for OpenMP.
 """
 
-from ctree.dotgen import DotGenVisitor
+from ctree.dotgen import DotGenLabeller
 
 # ---------------------------------------------------------------------------
 # DOT generator
 
-
-class OmpDotGen(DotGenVisitor):
+class OmpDotLabeller(DotGenLabeller):
     """
     Visitor to generator DOT.
     """

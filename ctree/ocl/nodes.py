@@ -14,22 +14,22 @@ class OclNode(CtreeNode):
 
         return OclCodeGen(indent).visit(self)
 
-    def _to_dot(self, indent=0):
+    def label(self, indent=0):
         """generate dot element for this node"""
-        from ctree.ocl.dotgen import OclDotGen
+        from ctree.ocl.dotgen import OclDotLabeller
 
-        return OclDotGen().visit(self)
+        return OclDotLabeller().visit(self)
 
 
 class OclFile(OclNode, File):
     """Represents a .cl file."""
+    _ext = "cl"
 
     def __init__(self, name="generated", body=None):
         if not body:
             body = []
         #TODO: Inspect complains about 2 args to __init__
         super(OclFile, self).__init__(name, body)
-        self._ext = "cl"
 
     def _compile(self, program_text, compilation_dir):
         """

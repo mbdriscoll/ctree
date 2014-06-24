@@ -5,6 +5,7 @@ The ctree package
 """
 from __future__ import print_function
 
+
 # ---------------------------------------------------------------------------
 # explicit version check
 
@@ -54,10 +55,12 @@ if sys.version_info.major == 2:
 else:
     from io import StringIO as Memfile
 
+from ctree.util import highlight
+
 CONFIGFILE = Memfile()
 CONFIG.write(CONFIGFILE)
 CONFIG_TXT = CONFIGFILE.getvalue()
-LOG.info("using configuration:\n%s", CONFIG_TXT)
+LOG.info("using configuration:\n%s", highlight(CONFIG_TXT, language='ini'))
 CONFIGFILE.close()
 
 
@@ -88,6 +91,10 @@ class Counter(object):
 
 STATS = Counter()
 atexit.register(STATS.report)
+
+# Registries for type-based logic in extension packages.
+_TYPE_CODEGENERATORS = {}
+_TYPE_RECOGNIZERS = {}
 
 import ast
 import inspect

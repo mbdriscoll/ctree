@@ -4,7 +4,6 @@ from textwrap import dedent
 
 from ctree.templates.nodes import StringTemplate, FileTemplate
 from ctree.c.nodes import Constant, While
-from ctree.dotgen import to_dot
 
 import fixtures
 
@@ -33,7 +32,7 @@ class TestStringTemplates(unittest.TestCase):
             'one': Constant(1),
             'two': Constant(2),
         })
-        dot = to_dot(tree)
+        dot = tree.to_dot()
 
     def test_indent_0(self):
         d = {'cond': Constant(1)}
@@ -152,4 +151,4 @@ class TestFileTemplates(unittest.TestCase):
         from ctree.c.nodes import String
         path = os.path.join(*(fixtures.__path__ + ["templates", "printf.tmpl.c"]))
         tree = FileTemplate(path, {'fmt': String('Hello, world!')})
-        to_dot(tree)
+        tree.to_dot()

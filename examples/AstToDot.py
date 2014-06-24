@@ -8,20 +8,18 @@ Usage:
 The resulting file can be viewed with a visualizer like Graphiz.
 """
 
+from ctypes import *
 from ctree.nodes import *
 from ctree.c.nodes import *
-from ctree.c.types import *
-
-from ctree.dotgen import to_dot
 
 
 def main():
     stmt0 = Assign(SymbolRef('foo'), Constant(123.4))
-    stmt1 = FunctionDecl(Float(), SymbolRef("bar"), [
-        SymbolRef("spam", Int()), SymbolRef("eggs", Long())], [String("baz")])
-    stmt3 = [[SymbolRef("AAAAA")]]
+    stmt1 = FunctionDecl(c_float(), SymbolRef("bar"), [
+        SymbolRef("spam", c_int()), SymbolRef("eggs", c_long())], [String("baz")])
+    stmt3 = [[SymbolRef("abc")]]
     tree = CFile("myfile", [stmt0, stmt1, stmt3])
-    print (to_dot(tree))
+    print (tree.to_dot())
 
 
 if __name__ == '__main__':

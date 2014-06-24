@@ -1,3 +1,9 @@
+import unittest
+import difflib
+import textwrap
+
+from ctree.util import highlight
+
 class PreventImport(object):
     """
     Context manager that overrides the builtin __import__ method.
@@ -31,3 +37,25 @@ class PreventImport(object):
 
     def __exit__(self, excp, traceback, value):
         __builtins__['__import__'] = self.__import__
+
+
+class CtreeTest(unittest.TestCase):
+    def _check_code(self, actual="", expected=""):
+        if not isinstance(actual, str):
+            actual = textwrap.dedent( str(actual) )
+        if not isinstance(expected, str):
+            expected = textwrap.dedent( str(expected) )
+
+        actual   = textwrap.dedent(str(actual))
+        expected = textwrap.dedent(str(expected))
+
+        if actual != expected:
+            actual_display = (actual + ("\n" if actual[-1] != "\n" else "")).splitlines(True)
+            expected_display = expected.splitlines(True)
+            diff_gen = difflib.unified_diff(
+                actual_display, expected_display,
+                "<actual>", "<expected>")
+            diff = "".join(diff_gen)
+            print highlight(diff, language='diff')
+
+        self.assertEqual(actual, expected)

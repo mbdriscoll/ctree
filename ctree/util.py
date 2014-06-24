@@ -32,14 +32,18 @@ def lower_case_underscore_to_camel_case(string):
     return class_.join('', map(class_.capitalize, string.split('_')))
 
 
-def flatten(obj_or_list):
+def flatten(obj):
     """Iterator for all objects arbitrarily nested in lists."""
-    if isinstance(obj_or_list, list):
-        for gen in map(flatten, obj_or_list):
+    if isinstance(obj, (set, list)):
+        for gen in map(flatten, obj):
+            for elem in gen:
+                yield elem
+    elif isinstance(obj, (dict)):
+        for gen in map(flatten, obj.itervalues()):
             for elem in gen:
                 yield elem
     else:
-        yield obj_or_list
+        yield obj
 
 
 def enumerate_flatten(obj_or_list):
@@ -56,17 +60,21 @@ def highlight(code, language='c'):
     """Syntax-highlight code using pygments, if installed."""
     try:
         from pygments.formatters.terminal256 import Terminal256Formatter
-        from pygments.lexers.compiled import CLexer
-        from pygments.lexers.asm import LlvmLexer
         from pygments import highlight
     except ImportError:
         log.info("install pygments for syntax-highlighted output.")
         return code
 
-    if   language.lower() == 'llvm': lexer = LlvmLexer()
-    elif language.lower() == 'c':    lexer = CLexer()
+    if   language.lower() == 'llvm':
+        from pygments.lexers.asm import LlvmLexer as TheLexer
+    elif language.lower() == 'c':
+        from pygments.lexers.compiled import CLexer as TheLexer
+    elif language.lower() == 'diff':
+        from pygments.lexers.text import DiffLexer as TheLexer
+    elif language.lower() == 'ini':
+        from pygments.lexers.text import IniLexer as TheLexer
     else:
         raise ValueError("Unrecognized highlight language: %s" % language)
 
     style = ctree.CONFIG.get('log', 'pygments_style')
-    return highlight(code, lexer, Terminal256Formatter(style=style))
+    return highlight(code, TheLexer(), Terminal256Formatter(style=style))

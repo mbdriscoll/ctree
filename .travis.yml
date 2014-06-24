@@ -10,12 +10,21 @@ env:
     # encrypted OAuth token so Travis can commit docs back to Github
     - secure: "QBB2KT4EFUdSkH9fjo5J/02zuZlD0FbVsKwYJgW6c4INp1UY/nx0nrsgjPSZQMD2HBztdfEZInugoVrOJwXBzWJ5Ioc19T9oYhnzaIF6oJRo1mTYDhragvdwiLfb0AyylGq7bgP4lgoMBtE1Oxauf0rKVEYiVeEhvHJup/di6A4="
   matrix:
-    - LLVM_VERSION=3.3
+    - LLVM_VERSION=3.4
 
 before_install:
 
+  # Install Miniconda
+  - if [ ${TRAVIS_PYTHON_VERSION:0:1} == "2" ]; then wget http://repo.continuum.io/miniconda/Miniconda-3.5.2-Linux-x86_64.sh -O miniconda.sh; else wget http://repo.continuum.io/miniconda/Miniconda3-3.5.2-Linux-x86_64.sh -O miniconda.sh; fi
+  - chmod +x miniconda.sh
+  - ./miniconda.sh -b
+  - if [ ${TRAVIS_PYTHON_VERSION:0:1} == "2" ]; then export PATH=/home/travis/miniconda/bin:$PATH; else export PATH=/home/travis/miniconda3/bin:$PATH; fi
+  - conda update --yes conda
+  # Setup environment
+  - conda create -n travisci --yes python=${TRAVIS_PYTHON_VERSION:0:3} llvm numpy
+  - source activate travisci
   - sudo apt-get update -qq
-  - sudo apt-get install -qq llvm-$LLVM_VERSION
+  - sudo apt-get install -qq fglrx=2:8.960-0ubuntu1 opencl-headers
 
 
 install:
@@ -24,23 +33,27 @@ install:
 
   # coverage and doc generator
   - pip install numpy Sphinx coveralls coverage nose pygments
+  - pip install --pre pycl
   - nosetests --version
   - coverage --version
 
   # install llvmpy
-  - git clone git://github.com/llvmpy/llvmpy.git ${HOME}/llvmpy
+  - git clone -b llvm-3.4 git://github.com/llvmpy/llvmpy.git ${HOME}/llvmpy
   - cd ${HOME}/llvmpy
-  - LLVM_CONFIG_PATH=/usr/bin/llvm-config-$LLVM_VERSION python setup.py install
+  - git checkout ce696c9b4ecc237b0ed89e71873e6f89f6aad449
+  - python setup.py install
 
   # install opentuner
   - git clone https://github.com/mbdriscoll/opentuner.git ${HOME}/opentuner
   - cd ${HOME}/opentuner
   - sudo apt-get install `cat debian-packages-deps | tr '\n' ' '`
-  - "if [[ \"x$PYTHON_VERSION\" -eq \"x(2.7)\" ]]; then pip install -r python-packages; fi"
+    # - "if [[ \"x$PYTHON_VERSION\" -eq \"x(2.7)\" ]]; then pip install -r python-packages; fi"
+  - pip install -r python-packages
   - export PYTHONPATH=`pwd`:$PYTHONPATH
 
   # install ctree via setup.py
   - cd ${TRAVIS_BUILD_DIR}
+  - pip install setuptools
   - python setup.py install
 
 script:
@@ -88,3 +101,6 @@ after_success:
 
   # commit new docs to ctree-docs
   - git push origin gh-pages
+
+notifications:
+  slack: ucb-sejits:cPZxBunxagWZ763mcsIXOV0W

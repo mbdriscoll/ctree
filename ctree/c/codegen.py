@@ -4,7 +4,7 @@ Code generator for C constructs.
 
 from ctree.codegen import CodeGenVisitor
 from ctree.c.nodes import Op
-from ctree.c.types import Ptr, get_ctree_type
+from ctree.types import codegen_type
 from ctree.precedence import UnaryOp, BinaryOp, TernaryOp, Cast
 from ctree.precedence import get_precedence, is_left_associative
 
@@ -14,14 +14,11 @@ class CCodeGen(CodeGenVisitor):
     Manages generation of C code.
     """
 
-    def _requires_parentheses(self, node):
+    def _requires_parentheses(self, parent, node):
         """
-        Return True if the current precedence is less than the
-        parent precedence.  If the precedences are equal, check whether the
-        node's orientation to the parent matches associativity.  If it doesn't,
-        enclose with parentheses.
+        Returns node as a string, optionally with parentheses around it if
+        needed to enforce precendence rules.
         """
-        parent = getattr(node, 'parent', None)
         if isinstance(node, (UnaryOp, BinaryOp, TernaryOp)) and\
                 isinstance(parent, (UnaryOp, BinaryOp, TernaryOp, Cast)):
             prec = get_precedence(node)
@@ -48,35 +45,39 @@ class CCodeGen(CodeGenVisitor):
             s += "static "
         if node.inline:
             s += "inline "
-        s += "%s %s(%s)" % (node.return_type, node.name, params)
+        s += "%s %s(%s)" % (codegen_type(node.return_type), node.name, params)
         if node.defn:
             s += " %s" % self._genblock(node.defn)
         return s
 
     def visit_UnaryOp(self, node):
+        op  = self._parenthesize(node, node.op)
+        arg = self._parenthesize(node, node.arg)
         if isinstance(node.op, (Op.PostInc, Op.PostDec)):
-            s = "%s %s" % (node.arg, node.op)
+            return "%s %s" % (arg, op)
         else:
-            s = "%s %s" % (node.op, node.arg)
-        return self._parentheses(node) % s
+            return "%s %s" % (op, arg)
 
     def visit_BinaryOp(self, node):
+        left  = self._parenthesize(node, node.left)
+        right = self._parenthesize(node, node.right)
         if isinstance(node.op, Op.ArrayRef):
-            s = "%s[%s]" % (node.left, node.right)
+            return "%s[%s]" % (left, right)
         else:
-            s = "%s %s %s" % (node.left, node.op, node.right)
-        return self._parentheses(node) % s
+            return "%s %s %s" % (left, node.op, right)
 
     def visit_AugAssign(self, node):
         return "%s %s= %s" % (node.target, node.op, node.value)
 
     def visit_TernaryOp(self, node):
-        s = "%s ? %s : %s" % (node.cond, node.then, node.elze)
-        return self._parentheses(node) % s
+        cond = self._parenthesize(node, node.cond)
+        then = self._parenthesize(node, node.then)
+        elze = self._parenthesize(node, node.elze)
+        return "%s ? %s : %s" % (cond, then, elze)
 
     def visit_Cast(self, node):
-        s = "(%s) %s" % (node.type, node.value)
-        return self._parentheses(node) % s
+        value = self._parenthesize(node, node.value)
+        return "(%s) %s" % (codegen_type(node.type), value)
 
     def visit_Constant(self, node):
         if isinstance(node.value, str):
@@ -92,8 +93,8 @@ class CCodeGen(CodeGenVisitor):
             s += "__local "
         if node._const:
             s += "const "
-        if node.type:
-            s += "%s " % node.type
+        if node.type is not None:
+            s += "%s " % codegen_type(node.type)
         return "%s%s" % (s, node.name)
 
     def visit_Block(self, node):
@@ -135,53 +136,6 @@ class CCodeGen(CodeGenVisitor):
     def visit_CFile(self, node):
         stmts = self._genblock(node.body, insert_curly_brackets=False, increase_indent=False)
         return '// <file: %s>%s' % (node.get_filename(), stmts)
-
-    def visit_Void(self, node):
-        return "void"
-
-    def visit_Char(self, node):
-        return "char"
-
-    def visit_UChar(self, node):
-        return "unsigned char"
-
-    def visit_Short(self, node):
-        return "short"
-
-    def visit_UShort(self, node):
-        return "unsigned short"
-
-    def visit_Int(self, node):
-        return "int"
-
-    def visit_UInt(self, node):
-        return "unsigned int"
-
-    def visit_Long(self, node):
-        return "long"
-
-    def visit_ULong(self, node):
-        return "unsigned long"
-
-    def visit_Float(self, node):
-        return "float"
-
-    def visit_Double(self, node):
-        return "double"
-
-    def visit_LongDouble(self, node):
-        return "long double"
-
-    def visit_Ptr(self, node):
-        base = node.base_type.codegen()
-        return "%s*" % base
-
-    def visit_NdPointer(self, node):
-        inner_type = get_ctree_type(node.ptr._dtype_)
-        return "%s" % Ptr(inner_type).codegen()
-
-    def visit_FILE(self, node):
-        return "FILE"
 
     def visit_ArrayDef(self, node):
         body = ", ".join(map(str, node.body))

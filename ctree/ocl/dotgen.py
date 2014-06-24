@@ -2,12 +2,12 @@
 DOT generation for OpenCL.
 """
 
-from ctree.dotgen import DotGenVisitor
+from ctree.dotgen import DotGenLabeller
 
 
-class OclDotGen(DotGenVisitor):
+class OclDotLabeller(DotGenLabeller):
     """
     Visitor to generator DOT.
     """
-    def label_OclFile(self, node):
+    def visit_OclFile(self, node):
         return node.get_filename()
