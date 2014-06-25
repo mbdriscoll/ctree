@@ -60,3 +60,45 @@ class TestOclMacros(unittest.TestCase):
         tree = clReleaseMemObject(SymbolRef('device_object'))
         self.assertEqual(tree.codegen(), "clReleaseMemObject(device_object)")
 
+    def test_clEnqueueWriteBuffer(self):
+        tree = clEnqueueWriteBuffer(SymbolRef('tmp'), 'buf', False, 0, 0,
+                                    'ptr', 0, None, None)
+        self.assertEqual(
+            tree.codegen(),
+            "clEnqueueWriteBuffer(tmp, buf, 0, 0, 0, ptr, 0, NULL, NULL)"
+        )
+
+    def test_clEnqueueReadBuffer(self):
+        tree = clEnqueueReadBuffer(SymbolRef('tmp'), 'buf', False, 0, 0,
+                                    'ptr', 0, None, None)
+        self.assertEqual(
+            tree.codegen(),
+            "clEnqueueReadBuffer(tmp, buf, 0, 0, 0, ptr, 0, NULL, NULL)"
+        )
+
+    def test_clEnqueueCopyBuffer(self):
+        tree = clEnqueueCopyBuffer(SymbolRef('tmp'), 'a', 'b', 0, 0, 0)
+        self.assertEqual(
+            tree.codegen(),
+            "clEnqueueCopyBuffer(tmp, a, b, 0, 0, 0, 0, NULL, NULL)"
+        )
+
+    def test_clSetKernelArg(self):
+        tree = clSetKernelArg('kernel', 1, 1024, 'arg')
+        self.assertEqual(
+            tree.codegen(),
+            "clSetKernelArg(kernel, 1, 1024, & arg)"
+        )
+
+    def test_clEnqueueNDRangeKernel(self):
+        tree = clEnqueueNDRangeKernel(SymbolRef('tmp'), SymbolRef('kernel'),
+                                      1, 0, 0, 0)
+        self.assertEqual(
+            tree.codegen(),
+            """{
+    size_t global_size = 0;
+    size_t local_size = 0;
+    clEnqueueNDRangeKernel(tmp, kernel, 1, 0, & global_size, & local_size, 0, NULL, NULL);
+}"""
+        )
+
