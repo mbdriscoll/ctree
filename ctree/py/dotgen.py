@@ -29,3 +29,6 @@ class PyDotLabeller(DotGenLabeller):
 
     def visit_Name(self, node):
         return "id: %s" % node.id
+
+    def visit_Attribute(self, node):
+        return "attr: %s" % node.attr
