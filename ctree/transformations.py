@@ -8,7 +8,7 @@ from ctypes import c_long
 
 from ctree.nodes import Project, CtreeNode
 from ctree.c.nodes import Op, Constant, String, SymbolRef, BinaryOp, TernaryOp, Return
-from ctree.c.nodes import If, CFile, FunctionCall, FunctionDecl, For, Assign, AugAssign
+from ctree.c.nodes import If, CFile, FunctionCall, FunctionDecl, For, Assign, AugAssign, ArrayRef
 from ctree.c.nodes import Lt, PostInc, AddAssign, SubAssign, MulAssign, DivAssign
 from ctree.visitors import NodeTransformer
 from ctree.util import flatten
@@ -29,12 +29,30 @@ class PyBasicConversions(NodeTransformer):
     """
     Convert constructs with obvious C analogues.
     """
+    def __init__(self,names_dict={}, constants_dict={}):
+        self.names_dict = names_dict
+        self.constants_dict =constants_dict
+
     PY_OP_TO_CTREE_OP = {
         ast.Add: Op.Add,
         ast.Mod: Op.Mod,
         ast.Mult: Op.Mul,
         ast.Sub: Op.Sub,
+        ast.Div: Op.Div,
         ast.Lt: Op.Lt,
+        ast.Gt: Op.Gt,
+        ast.LtE: Op.LtE,
+        ast.GtE: Op.GtE,
+        ast.BitAnd: Op.BitAnd,
+        ast.BitOr: Op.BitOr,
+        ast.Eq: Op.Eq,
+        ast.NotEq: Op.NotEq,
+        ast.Not: Op.Not,
+        ast.And: Op.And,
+        ast.Or: Op.Or,
+        ast.BitXor: Op.BitXor,
+        ast.LShift: Op.BitShL,
+        ast.RShift: Op.BitShR,
         # TODO list the rest
     }
 
@@ -45,6 +63,10 @@ class PyBasicConversions(NodeTransformer):
         return String(node.s)
 
     def visit_Name(self, node):
+        if node.id in self.constants_dict:
+            return Constant(self.constants_dict[node.id])
+        if node.id in self.names_dict:
+            return SymbolRef(self.names_dict[node.id])
         return SymbolRef(node.id)
 
     def visit_BinOp(self, node):
@@ -159,6 +181,13 @@ class PyBasicConversions(NodeTransformer):
         value = self.visit(node.value)
         return Assign(target, value)
 
+    def visit_Subscript(self, node):
+        if isinstance(node.slice,ast.Index):
+            value = self.visit(node.value)
+            index = self.visit(node.slice.value)
+            return ArrayRef(value,index)
+        else:
+            return node
 
 class ResolveGeneratedPathRefs(NodeTransformer):
     """
