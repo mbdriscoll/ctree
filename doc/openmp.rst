@@ -32,29 +32,18 @@ We will assume that it will be in /usr/local/llvm_build, for the next step do th
 line, via::
 
         $ export LLVM_BUILD_PATH=/usr/local/llvm_build  # Change this for your particular environment
+        $ mkdir $LLVM_BUILD_PATH
 
+Depending on the location of LLVM_BUILD_PATH it may be necessary to use sudo with the mkdir command above, and
+in that case you may also want to make that directory owned by someone other than root
 
 Now, build clang/llvm::
 
         $ mkdir build
         $ cd build
-        $ # Make a build directory, i.e.
-        $ # sudo mkdir /opt/llvm-omp
-        $ # sudo chown username /opt/llvm-omp
         $ ../llvm/configure --enable-optimized --prefix=$LLVM_BUILD_PATH
         $ REQUIRES_RTTI=1 make
         $ make install
-
-Setup your environment variables (add this to your .bashrc or .zshrc) in your shell configuration. On Mac OS X,
-replace LD_LIBRARY_PATH with DYLD_LIBRARY_PATH.::
-
-        export LLVM_BUILD_PATH=/usr/local/llvm_build  # Change this for your particular environment
-        export OPENMP_RUNTIME_PATH=/usr/local/open_mp # Change this
-        export PATH=$LLVM_BUILD_PATH/bin:$PATH
-        export C_INCLUDE_PATH=$LLVM_BUILD_PATH/include:<OpenMP include path>:$C_INCLUDE_PATH
-        export CPLUS_INCLUDE_PATH=$LLVM_BUILD_PATH/include:<OpenMP include path>:$CPLUS_INCLUDE_PATH
-        export LIBRARY_PATH=$LLVM_BUILD_PATH/lib:<OpenMP library path>:$LIBRARY_PATH
-        export LD_LIBRARY_PATH=$LLVM_BUILD_PATH/lib:<OpenMP library path>:$LD_LIBRARY_PATH
 
 Download and install the Intel OpenMP Runtime Library from
 `https://www.openmprtl.org/`, or by installing the
@@ -64,9 +53,44 @@ You can use the evaluation version of the Intel compilers which will install
 the OpenMP runtime library.  After 30 days the compilers will cease to work but
 the runtime library will still be usable.
 
-Include the OpenMP RTL, for OSX with the evaluation Intel Compilers you can do::
+Setup your environment variables for a linux system (add this to your .bashrc or .zshrc) in your shell configuration.::
+        export LLVM_BUILD_PATH=/usr/local/llvm_build  # Change this for your particular environment
+        export OPENMP_RUNTIME_PATH=/usr/local/open_mp # Change this
 
-        DYLD_LIBRARY_PATH=/opt/intel/composerxe/lib:$DYLD_LIBRARY_PATH
+        export LLVM_BUILD_PATH=/usr/local/llvm-omp
+        export OPENMP_RUNTIME_PATH=/opt/intel/composerxe
+
+        export LD_LIBRARY_PATH=/opt/intel/composerxe/lib
+
+        export CPLUS_INCLUDE_PATH=/usr/include/:/usr/include/c++
+        export C_INCLUDE_PATH=/usr/include/:/usr/include/c++
+
+        export PATH=$LLVM_BUILD_PATH/bin:$PATH
+        export C_INCLUDE_PATH=$LLVM_BUILD_PATH/include:$OPENMP_RUNTIME_PATH/include:$C_INCLUDE_PATH
+        export CPLUS_INCLUDE_PATH=$LLVM_BUILD_PATH/include:$OPENMP_RUNTIME_PATH/include:$CPLUS_INCLUDE_PATH
+        export LIBRARY_PATH=$LLVM_BUILD_PATH/lib:<OpenMP library path>:$LIBRARY_PATH
+        export LD_LIBRARY_PATH=$LLVM_BUILD_PATH/lib:<OpenMP library path>:$LD_LIBRARY_PATH
+
+On Mac OS X, replace LD_LIBRARY_PATH with DYLD_LIBRARY_PATH.::
+
+        export LLVM_BUILD_PATH=/usr/local/llvm_build  # Change this for your particular environment
+        export OPENMP_RUNTIME_PATH=/usr/local/open_mp # Change this
+
+        export LLVM_BUILD_PATH=/usr/local/llvm-omp
+        export OPENMP_RUNTIME_PATH=/opt/intel/composerxe
+
+        export LD_LIBRARY_PATH=/opt/intel/composerxe/lib
+
+        export CPLUS_INCLUDE_PATH=/usr/include/:/usr/include/c++
+        export C_INCLUDE_PATH=/usr/include/:/usr/include/c++
+
+        export PATH=$LLVM_BUILD_PATH/bin:$PATH
+        export C_INCLUDE_PATH=$LLVM_BUILD_PATH/include:$OPENMP_RUNTIME_PATH/include:$C_INCLUDE_PATH
+        export CPLUS_INCLUDE_PATH=$LLVM_BUILD_PATH/include:$OPENMP_RUNTIME_PATH/include:$CPLUS_INCLUDE_PATH
+        export LIBRARY_PATH=$LLVM_BUILD_PATH/lib:<OpenMP library path>:$LIBRARY_PATH
+        export LD_LIBRARY_PATH=$LLVM_BUILD_PATH/lib:<OpenMP library path>:$LD_LIBRARY_PATH
+
+        export DYLD_LIBRARY_PATH=/opt/intel/composerxe/lib:$DYLD_LIBRARY_PATH
 
 Download and checkout gentoo90's llvmpy branch with llvm-3.4 support and build
 it::
