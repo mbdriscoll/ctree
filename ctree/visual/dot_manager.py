@@ -7,17 +7,12 @@ class DotManager(object):
 
     @staticmethod
     def dot_ast_to_image(ast_node):
-        from  ctree.dotgen import to_dot
-
-        dot_text = to_dot(ast_node)
-
+        dot_text = ast_node.to_dot()
         return DotManager.dot_text_to_image(dot_text)
 
     @staticmethod
     def dot_ast_to_browser(ast_node, file_name):
-        from  ctree.dotgen import to_dot
-
-        dot_text = to_dot(ast_node)
+        dot_text = ast_node.to_dot()
         dot_output = DotManager.run_dot(dot_text)
 
         with open(file_name, "wb") as f:
@@ -28,9 +23,7 @@ class DotManager(object):
 
     @staticmethod
     def dot_ast_to_file(ast_node, file_name):
-        from  ctree.dotgen import to_dot
-
-        dot_text = to_dot(ast_node)
+        dot_text = ast_node.to_dot()
         dot_output = DotManager.run_dot(dot_text)
 
         with open(file_name, "wb") as f:
