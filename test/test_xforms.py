@@ -59,8 +59,8 @@ class TestStripDocstrings(unittest.TestCase):
 
 
 class TestBasicConversions(unittest.TestCase):
-    def _check(self, py_ast, expected_c_ast):
-        actual_c_ast = PyBasicConversions().visit(py_ast)
+    def _check(self, py_ast, expected_c_ast, names_dict ={}, constants_dict={}):
+        actual_c_ast = PyBasicConversions(names_dict, constants_dict).visit(py_ast)
         self.assertEqual(str(actual_c_ast), str(expected_c_ast))
 
     def test_num_float(self):
@@ -235,3 +235,19 @@ class TestBasicConversions(unittest.TestCase):
                             ast.Num(3))
         c_ast = Assign(SymbolRef('i'), Constant(3))
         self._check(py_ast, c_ast)
+
+    def test_namesDict(self):
+        py_ast = ast.Name('i',ast.Load())
+        c_ast = SymbolRef('d')
+        self._check(py_ast,c_ast,names_dict={'i':'d'})
+
+    def test_constantsDict(self):
+        py_ast = ast.Name('i',ast.Load())
+        c_ast = Constant(234)
+        self._check(py_ast,c_ast,constants_dict={'i':234})
+
+    def test_Subscript(self):
+        py_ast = ast.Subscript(value=ast.Name('i',ast.Load()),
+                               slice=ast.Index(value=ast.Num(n=1), ctx=ast.Load()))
+        c_ast = ArrayRef(SymbolRef('i'),Constant(1))
+        self._check(py_ast,c_ast)
