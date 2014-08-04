@@ -20,5 +20,8 @@ pip install git+https://github.com/ucb-sejits/pycl
 
 pip install pygments numpy nose sphinx
 
+# For using our DOT viewers
+# brew install graphviz
+
 pip install git+https://github.com/ucb-sejits/ctree
 ```
