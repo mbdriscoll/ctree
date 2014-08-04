@@ -18,7 +18,7 @@ brew install llvm34 --with-clang --rtti
 LLVM_CONFIG_PATH=llvm-config-3.4 pip install git+https://github.com/llvmpy/llvmpy.git@llvm-3.4
 pip install git+https://github.com/ucb-sejits/pycl
 
-pip install pygments numpy nose
+pip install pygments numpy nose sphinx
 
 pip install git+https://github.com/ucb-sejits/ctree
 ```
