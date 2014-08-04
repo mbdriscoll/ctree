@@ -10,10 +10,8 @@ See the [website](http://ucb-sejits.github.io/ctree/) or [documentation](https:/
 
 Quick install
 -------------
-To get up a running quickly on OSX, follow these commands.
-
+### OSX
 This installation will not support use of OpenMP.
-
 ```shell
 brew tap homebrew/versions
 brew install llvm34 --with-clang --rtti
