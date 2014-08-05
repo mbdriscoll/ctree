@@ -25,3 +25,35 @@ pip install pygments numpy nose sphinx
 
 pip install git+https://github.com/ucb-sejits/ctree
 ```
+
+OpenMP Support
+--------------
+After following the quick install steps above, run this.
+```shell
+brew tap ucb-sejits/sejits
+brew install --HEAD ucb-sejits/sejits/libomp ucb-sejits/sejits/clang-omp
+```
+Then, append to your `~/.ctree.cfg`.
+```
+[omp]
+CC = /usr/local/opt/clang-omp/bin/clang
+CFLAGS = -march=native -O3 -fopenmp
+```
+
+To test, try running the OpenMP specializer example.
+```shell
+PYTHONPATH=`pwd` python examples/OmpSpecializer.py
+```
+If all goes well, you should see an output containing
+```shell
+...
+Hello from thread 0 of 4.
+Hello from thread 1 of 4.
+Hello from thread 3 of 4.
+Hello from thread 2 of 4.
+Done.
+INFO:ctree:execution statistics: (((
+  specialized function call: 1
+  specialized function cache miss: 1
+)))
+```
