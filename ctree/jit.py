@@ -73,7 +73,8 @@ class ConcreteSpecializedFunction(object):
     """
     __metaclass__ = abc.ABCMeta
 
-    def _compile(self, entry_point_name, project_node, entry_point_typesig, **kwargs):
+    def _compile(self, entry_point_name, project_node, entry_point_typesig,
+                 **kwargs):
         """
         Returns a python callable.
         """
@@ -108,7 +109,9 @@ class LazySpecializedFunction(object):
     @staticmethod
     def _hash(o):
         if isinstance(o, dict):
-            return hash(frozenset(LazySpecializedFunction._hash(item) for item in o.items()))
+            return hash(frozenset(
+                LazySpecializedFunction._hash(item) for item in o.items()
+            ))
         else:
             return hash(str(o))
 
@@ -146,8 +149,9 @@ class LazySpecializedFunction(object):
                 program_config
             )
 
-            assert isinstance(csf , ConcreteSpecializedFunction), \
-                "Expected a ctree.jit.ConcreteSpecializedFunction, but got a %s." % type(csf)
+            assert isinstance(csf, ConcreteSpecializedFunction), \
+                "Expected a ctree.jit.ConcreteSpecializedFunction, \
+                 but got a %s." % type(csf)
 
             self.concrete_functions[config_hash] = csf
 
