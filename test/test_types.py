@@ -27,7 +27,7 @@ class TestTypeRecognizer(CtreeTest):
 
     def test_none(self):
         ty = get_ctype(None)
-        self.assertIsInstance(ty, types.NoneType)
+        self.assertIsInstance(ty, type(None))
 
     def test_bool(self):
         ty = get_ctype(True)

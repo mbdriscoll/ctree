@@ -56,6 +56,6 @@ class CtreeTest(unittest.TestCase):
                 actual_display, expected_display,
                 "<actual>", "<expected>")
             diff = "".join(diff_gen)
-            print highlight(diff, language='diff')
+            print(highlight(diff, language='diff'))
 
         self.assertEqual(actual, expected)

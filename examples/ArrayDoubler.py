@@ -69,7 +69,7 @@ class OpTranslator(LazySpecializedFunction):
         apply_one.params[0].type = inner_type
 
         entry_point_typesig = tree.find(FunctionDecl, name="apply_all").get_type()
-        print "FUNCTYPE", entry_point_typesig._restype_, entry_point_typesig._argtypes_
+        print("FUNCTYPE", entry_point_typesig._restype_, entry_point_typesig._argtypes_)
 
         proj = Project([tree])
         return ArrayFn().finalize("apply_all", proj, entry_point_typesig)
