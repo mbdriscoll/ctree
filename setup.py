@@ -45,7 +45,7 @@ data_file_list = make_data_file_list("ctree/tools/generators/templates", "ctree/
 
 setup(
     name='ctree',
-    version='0.95a1',
+    version='0.95a2',
 
     packages=[
         'ctree',
