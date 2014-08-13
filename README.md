@@ -32,6 +32,7 @@ After following the quick install steps above, run this.
 ```shell
 brew tap ucb-sejits/sejits
 brew install --HEAD ucb-sejits/sejits/libomp ucb-sejits/sejits/clang-omp
+LLVM_CONFIG_PATH=/usr/local/Cellar/clang-omp/HEAD/bin/llvm-config pip install git+https://github.com/llvmpy/llvmpy.git@llvm-3.4
 ```
 Then, append to your `~/.ctree.cfg`.
 ```

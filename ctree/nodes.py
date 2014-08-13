@@ -86,7 +86,7 @@ class CtreeNode(ast.AST):
                 yield node
 
     def lift(self, **kwargs):
-        for key, val in kwargs.iteritems():
+        for key, val in kwargs.items():
             attr = "_lift_%s" % key
             setattr(self, attr, getattr(self, attr, []) + val)
             type(self)._fields.append(attr)
