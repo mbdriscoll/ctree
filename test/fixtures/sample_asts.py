@@ -5,6 +5,8 @@ A collection of pre-built ASTs for use in testing.
 from ctypes import *
 from ctree.c.nodes import *
 from ctree.cpp.nodes import *
+import ctree.np
+ctree.np  # Make PEP8 Happy
 
 
 # ---------------------------------------------------------------------------
@@ -31,6 +33,7 @@ SAMPLE_ASTS.append((identity, identity_ast))
 
 # ---------------------------------------------------------------------------
 # greatest common divisor
+
 
 def gcd(a, b):
     if b == 0:
