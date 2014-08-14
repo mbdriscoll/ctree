@@ -5,6 +5,7 @@ log = logging.getLogger(__name__)
 from textwrap import dedent
 
 import ctree
+import time
 
 
 def singleton(cls):
@@ -65,7 +66,7 @@ def highlight(code, language='c'):
         log.info("install pygments for syntax-highlighted output.")
         return code
 
-    if   language.lower() == 'llvm':
+    if language.lower() == 'llvm':
         from pygments.lexers.asm import LlvmLexer as TheLexer
     elif language.lower() == 'c':
         from pygments.lexers.compiled import CLexer as TheLexer
@@ -78,3 +79,12 @@ def highlight(code, language='c'):
 
     style = ctree.CONFIG.get('log', 'pygments_style')
     return highlight(code, TheLexer(), Terminal256Formatter(style=style))
+
+
+class Timer:
+    def __enter__(self):
+        self.start = time.clock()
+        return self
+
+    def __exit__(self, *args):
+        self.interval = time.clock() - self.start

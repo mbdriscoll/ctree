@@ -43,7 +43,7 @@ class GreeterTranslator(LazySpecializedFunction):
                                     omp_get_thread_num(), omp_get_num_threads()),
                          ]
             ),
-        ])
+        ], 'omp')
         # entry_point_typesig = tree.find(FunctionDecl, name="hello").get_type().as_ctype()
         entry_type = CFUNCTYPE(None)
 

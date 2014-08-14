@@ -43,7 +43,7 @@ class DotGenVisitor(NodeVisitor):
     See http://en.wikipedia.org/wiki/DOT_(graph_description_language)
     """
     def __init__(self):
-        self._visited = set()
+        self._visited = []
 
     @staticmethod
     def _qualified_name(obj):
@@ -63,7 +63,7 @@ class DotGenVisitor(NodeVisitor):
         if node in self._visited:
             return ""
         else:
-            self._visited.add(node)
+            self._visited.append(node)
 
         # label this node
         out_string = 'n%s [label="%s"];\n' % (id(node), self.label(node))

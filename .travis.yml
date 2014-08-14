@@ -2,8 +2,8 @@ language: python
 
 python:
   - "2.7"
-  # - "3.2"
-  # - "3.3"
+  - "3.3"
+  # - "3.4"
 
 env:
   global:
@@ -21,7 +21,7 @@ before_install:
   - if [ ${TRAVIS_PYTHON_VERSION:0:1} == "2" ]; then export PATH=/home/travis/miniconda/bin:$PATH; else export PATH=/home/travis/miniconda3/bin:$PATH; fi
   - conda update --yes conda
   # Setup environment
-  - conda create -n travisci --yes python=${TRAVIS_PYTHON_VERSION:0:3} llvm numpy setuptools nose pygments Sphinx coverage
+  - conda create -n travisci --yes python=${TRAVIS_PYTHON_VERSION:0:3} llvm numpy pip
   - source activate travisci
   - sudo apt-get update -qq
   - sudo apt-get install -qq fglrx=2:8.960-0ubuntu1 opencl-headers
@@ -32,7 +32,7 @@ install:
   - export PYTHON_VERSION=$(python -c 'import sys; print(sys.version_info[0:2])')
 
   # coverage and doc generator
-  - pip install Sphinx coveralls coverage
+  - pip install Sphinx coveralls coverage setuptools nose pygments
   - nosetests --version
   - coverage --version
 

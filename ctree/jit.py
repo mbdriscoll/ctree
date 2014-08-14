@@ -73,7 +73,8 @@ class ConcreteSpecializedFunction(object):
     """
     __metaclass__ = abc.ABCMeta
 
-    def _compile(self, entry_point_name, project_node, entry_point_typesig, **kwargs):
+    def _compile(self, entry_point_name, project_node, entry_point_typesig,
+                 **kwargs):
         """
         Returns a python callable.
         """
@@ -108,7 +109,9 @@ class LazySpecializedFunction(object):
     @staticmethod
     def _hash(o):
         if isinstance(o, dict):
-            return hash(frozenset(LazySpecializedFunction._hash(item) for item in o.items()))
+            return hash(frozenset(
+                LazySpecializedFunction._hash(item) for item in o.items()
+            ))
         else:
             return hash(str(o))
 
@@ -141,13 +144,22 @@ class LazySpecializedFunction(object):
             ctree.STATS.log("specialized function cache miss")
             log.info("specialized function cache miss.")
 
-            csf = self.transform(
+            tree = self.transform(
                 copy.deepcopy(self.original_tree),
                 program_config
             )
 
-            assert isinstance(csf , ConcreteSpecializedFunction), \
-                "Expected a ctree.jit.ConcreteSpecializedFunction, but got a %s." % type(csf)
+            try:
+                csf = self.finalize(tree, program_config)
+            except NotImplementedError:
+                log.warn("""Your lazy specailized function has not implemented
+                         finalize, assuming your output to transform is a
+                         concrete specialized function.""")
+                csf = tree
+
+            assert isinstance(csf, ConcreteSpecializedFunction), \
+                "Expected a ctree.jit.ConcreteSpecializedFunction, \
+                 but got a %s." % type(csf)
 
             self.concrete_functions[config_hash] = csf
 
@@ -166,6 +178,13 @@ class LazySpecializedFunction(object):
         """
         Convert the AST 'tree' into a C AST, optionally taking advantage of the
         actual runtime arguments.
+        """
+        raise NotImplementedError()
+
+    def finalize(self, tree, program_config):
+        """
+        This function will be passed the result of transform.  The specializer
+        should return an ConcreteSpecializedFunction.
         """
         raise NotImplementedError()
 
