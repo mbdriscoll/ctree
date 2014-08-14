@@ -144,18 +144,21 @@ class LazySpecializedFunction(object):
             ctree.STATS.log("specialized function cache miss")
             log.info("specialized function cache miss.")
 
-            tree = self.transform(
+            transform_result = self.transform(
                 copy.deepcopy(self.original_tree),
                 program_config
             )
 
             try:
-                csf = self.finalize(tree, program_config)
+                try:
+                    csf = self.finalize(*transform_result)
+                except TypeError:
+                    csf = self.finalize(transform_result, program_config)
             except NotImplementedError:
                 log.warn("""Your lazy specailized function has not implemented
                          finalize, assuming your output to transform is a
                          concrete specialized function.""")
-                csf = tree
+                csf = transform_result
 
             assert isinstance(csf, ConcreteSpecializedFunction), \
                 "Expected a ctree.jit.ConcreteSpecializedFunction, \

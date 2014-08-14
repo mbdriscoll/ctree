@@ -139,4 +139,4 @@ class CCodeGen(CodeGenVisitor):
 
     def visit_ArrayDef(self, node):
         body = ", ".join(map(str, node.body))
-        return "{ %s }" % body
+        return "%s[%s] = { %s }" % (node.target, node.size, body)
