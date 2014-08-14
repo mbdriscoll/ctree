@@ -342,9 +342,11 @@ class Cast(Expression):
 
 class ArrayDef(Expression):
     """doc"""
-    _fields = ['body']
+    _fields = ['target', 'size', 'body']
 
-    def __init__(self, body=None):
+    def __init__(self, target=None, size=None, body=None):
+        self.target = target
+        self.size = size
         self.body = body if body else []
         super(ArrayDef, self).__init__()
 
