@@ -45,7 +45,7 @@ data_file_list = make_data_file_list("ctree/tools/generators/templates", "ctree/
 
 setup(
     name='ctree',
-    version='0.95a2',
+    version='0.95a3',
     description='A C-family AST implementation designed to be an IR for DSL compilers.',
 
     packages=[
