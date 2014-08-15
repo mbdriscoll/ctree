@@ -49,7 +49,6 @@ after_success:
     for non ucb-sejits/ctree builds.'; exit 0; fi
   - if [[ "x$PYTHON_VERSION" != "x(2, 7)" ]]; then echo 'Not Python 2.7; skipping doc
     build.'; exit 0; fi
-  - source deactivate
   - coveralls
   - make -C doc html
   - git clone "https://github.com/ucb-sejits/ctree-docs.git" ${HOME}/ctree-docs
