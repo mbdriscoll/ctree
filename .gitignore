@@ -58,3 +58,6 @@ venv-*
 # opentuner stuff
 opentuner.db
 opentuner.log
+
+# rope library
+.ropeproject
