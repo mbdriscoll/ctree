@@ -150,7 +150,10 @@ class LazySpecializedFunction(object):
             )
 
             try:
-                csf = self.finalize(*transform_result)
+                try:
+                    csf = self.finalize(*transform_result)
+                except TypeError:
+                    csf = self.finalize(transform_result, program_config)
             except NotImplementedError:
                 log.warn("""Your lazy specailized function has not implemented
                          finalize, assuming your output to transform is a
