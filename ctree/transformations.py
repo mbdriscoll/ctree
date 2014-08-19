@@ -53,6 +53,8 @@ class PyBasicConversions(NodeTransformer):
         ast.BitXor: Op.BitXor,
         ast.LShift: Op.BitShL,
         ast.RShift: Op.BitShR,
+        ast.Is: Op.Eq,
+        ast.IsNot: Op. NotEq
         # TODO list the rest
     }
 
@@ -72,7 +74,7 @@ class PyBasicConversions(NodeTransformer):
     def visit_BinOp(self, node):
         lhs = self.visit(node.left)
         rhs = self.visit(node.right)
-        op = self.PY_OP_TO_CTREE_OP[type(node.op)]()
+        op = self.PY_OP_TO_CTREE_OP.get(type(node.op), type(node.op))()
         return BinaryOp(lhs, op, rhs)
 
     def visit_Return(self, node):
@@ -135,7 +137,8 @@ class PyBasicConversions(NodeTransformer):
         assert len(node.ops) == 1, \
             "PyBasicConversions doesn't support Compare nodes with more than one operator."
         lhs = self.visit(node.left)
-        op = self.PY_OP_TO_CTREE_OP[type(node.ops[0])]()
+
+        op = self.PY_OP_TO_CTREE_OP.get(type(node.ops[0]),type(node.ops[0]))()
         rhs = self.visit(node.comparators[0])
         return BinaryOp(lhs, op, rhs)
 
@@ -207,7 +210,7 @@ class ResolveGeneratedPathRefs(NodeTransformer):
 class Lifter(NodeTransformer):
     """
     To aid in adding new includes or parameters during tree
-    traversals, users can store them with arbirary child nodes and call this
+    traversals, users can store them with arbitrary child nodes and call this
     transformation to move them to the correct position.
     """
     def __init__(self, lift_params=True, lift_includes=True):
