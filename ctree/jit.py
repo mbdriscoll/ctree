@@ -144,10 +144,21 @@ class LazySpecializedFunction(object):
             ctree.STATS.log("specialized function cache miss")
             log.info("specialized function cache miss.")
 
-            csf = self.transform(
+            transform_result = self.transform(
                 copy.deepcopy(self.original_tree),
                 program_config
             )
+
+            try:
+                try:
+                    csf = self.finalize(*transform_result)
+                except TypeError:
+                    csf = self.finalize(transform_result, program_config)
+            except NotImplementedError:
+                log.warn("""Your lazy specailized function has not implemented
+                         finalize, assuming your output to transform is a
+                         concrete specialized function.""")
+                csf = transform_result
 
             assert isinstance(csf, ConcreteSpecializedFunction), \
                 "Expected a ctree.jit.ConcreteSpecializedFunction, \
@@ -170,6 +181,13 @@ class LazySpecializedFunction(object):
         """
         Convert the AST 'tree' into a C AST, optionally taking advantage of the
         actual runtime arguments.
+        """
+        raise NotImplementedError()
+
+    def finalize(self, tree, program_config):
+        """
+        This function will be passed the result of transform.  The specializer
+        should return an ConcreteSpecializedFunction.
         """
         raise NotImplementedError()
 

@@ -21,12 +21,20 @@ class CtreeNode(ast.AST):
     def __init__(self):
         """Initialize a new AST Node."""
         super(CtreeNode, self).__init__()
+        self.deleted = False
 
     def __str__(self):
         return self.codegen()
 
     def codegen(self, indent=0):
         raise Exception("Node class %s should override codegen()" % type(self))
+
+    def delete(self):
+        self.codegen = self.no_code_gen
+        self.deleted = True
+
+    def no_code_gen(self, *args):
+        return ""
 
     def to_dot(self):
         """Retrieve the AST in DOT format for vizualization."""
@@ -86,7 +94,7 @@ class CtreeNode(ast.AST):
                 yield node
 
     def lift(self, **kwargs):
-        for key, val in kwargs.iteritems():
+        for key, val in kwargs.items():
             attr = "_lift_%s" % key
             setattr(self, attr, getattr(self, attr, []) + val)
             type(self)._fields.append(attr)

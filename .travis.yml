@@ -1,90 +1,56 @@
 language: python
-
 python:
-  - "2.7"
-  # - "3.2"
-  # - "3.3"
-
+  - '2.7'
+  - '3.3'
 env:
   global:
-    # encrypted OAuth token so Travis can commit docs back to Github
-    - secure: "QBB2KT4EFUdSkH9fjo5J/02zuZlD0FbVsKwYJgW6c4INp1UY/nx0nrsgjPSZQMD2HBztdfEZInugoVrOJwXBzWJ5Ioc19T9oYhnzaIF6oJRo1mTYDhragvdwiLfb0AyylGq7bgP4lgoMBtE1Oxauf0rKVEYiVeEhvHJup/di6A4="
+  - secure: QBB2KT4EFUdSkH9fjo5J/02zuZlD0FbVsKwYJgW6c4INp1UY/nx0nrsgjPSZQMD2HBztdfEZInugoVrOJwXBzWJ5Ioc19T9oYhnzaIF6oJRo1mTYDhragvdwiLfb0AyylGq7bgP4lgoMBtE1Oxauf0rKVEYiVeEhvHJup/di6A4=
   matrix:
-    - LLVM_VERSION=3.4
-
+  - LLVM_VERSION=3.4
 before_install:
-
-  # Install Miniconda
-  - if [ ${TRAVIS_PYTHON_VERSION:0:1} == "2" ]; then wget http://repo.continuum.io/miniconda/Miniconda-3.5.2-Linux-x86_64.sh -O miniconda.sh; else wget http://repo.continuum.io/miniconda/Miniconda3-3.5.2-Linux-x86_64.sh -O miniconda.sh; fi
+  - if [ ${TRAVIS_PYTHON_VERSION:0:1} == "2" ]; then wget http://repo.continuum.io/miniconda/Miniconda-3.5.2-Linux-x86_64.sh
+    -O miniconda.sh; else wget http://repo.continuum.io/miniconda/Miniconda3-3.5.2-Linux-x86_64.sh
+    -O miniconda.sh; fi
   - chmod +x miniconda.sh
   - ./miniconda.sh -b
-  - if [ ${TRAVIS_PYTHON_VERSION:0:1} == "2" ]; then export PATH=/home/travis/miniconda/bin:$PATH; else export PATH=/home/travis/miniconda3/bin:$PATH; fi
+  - if [ ${TRAVIS_PYTHON_VERSION:0:1} == "2" ]; then export PATH=/home/travis/miniconda/bin:$PATH;
+    else export PATH=/home/travis/miniconda3/bin:$PATH; fi
   - conda update --yes conda
-  # Setup environment
-  - conda create -n travisci --yes python=${TRAVIS_PYTHON_VERSION:0:3} llvm numpy setuptools nose pygments Sphinx coverage
+  - conda create -n travisci --yes python=${TRAVIS_PYTHON_VERSION:0:3} llvm numpy pip
   - source activate travisci
   - sudo apt-get update -qq
   - sudo apt-get install -qq fglrx=2:8.960-0ubuntu1 opencl-headers
-
-
 install:
-  # make 'x.y' version string
   - export PYTHON_VERSION=$(python -c 'import sys; print(sys.version_info[0:2])')
-
-  # coverage and doc generator
-  - pip install Sphinx coveralls coverage
+  - pip install Sphinx coveralls coverage setuptools nose pygments
   - nosetests --version
   - coverage --version
-
-  # install llvmpy
   - git clone -b llvm-3.4 git://github.com/llvmpy/llvmpy.git ${TRAVIS_BUILD_DIR}/llvmpy
   - cd ${TRAVIS_BUILD_DIR}/llvmpy
   - python setup.py install
-
-  # install pycl
   - git clone git://github.com/ucb-sejits/pycl.git ${TRAVIS_BUILD_DIR}/pycl
   - cd ${TRAVIS_BUILD_DIR}/pycl
   - python setup.py install
-
-  # install opentuner
   - git clone https://github.com/mbdriscoll/opentuner.git ${TRAVIS_BUILD_DIR}/opentuner
   - cd ${TRAVIS_BUILD_DIR}/opentuner
   - sudo apt-get install `cat debian-packages-deps | tr '\n' ' '`
-  - "if [[ \"x$PYTHON_VERSION\" -eq \"x(2.7)\" ]]; then pip install -r python-packages; fi"
+  - if [[ "x$PYTHON_VERSION" -eq "x(2.7)" ]]; then pip install -r python-packages; fi
   - export PYTHONPATH=`pwd`:$PYTHONPATH
-
-  # install ctree via setup.py
   - cd ${TRAVIS_BUILD_DIR}
   - python setup.py install
-
 script:
-
-  # run test suite from home directory to verify installation
   - cd ${TRAVIS_BUILD_DIR}
   - nosetests --where=${TRAVIS_BUILD_DIR}/test
-
-  # run test suite again from build dir to get coverage info
   - cd ${TRAVIS_BUILD_DIR}
-  - nosetests --verbose --with-coverage --cover-package=ctree --cover-min-percentage=90 --cover-erase
-
-
+  - nosetests --verbose --with-coverage --cover-package=ctree --cover-min-percentage=90
+    --cover-erase
 after_success:
-
-  # return early if not building ucb-sejits/ctree
-  - "if [[ \"x${TRAVIS_REPO_SLUG}\" != 'xucb-sejits/ctree' ]]; then echo 'skipping coveralls/sphinx for non ucb-sejits/ctree builds.'; exit 0; fi"
-
-  # only build docs using Python 2.7
-  - "if [[ \"x$PYTHON_VERSION\" != \"x(2, 7)\" ]]; then echo 'Not Python 2.7; skipping doc build.'; exit 0; fi"
-
-  # Deactivate conda env
-  - source deactivate
-  # publish coverage report
+  - if [[ "x${TRAVIS_REPO_SLUG}" != 'xucb-sejits/ctree' ]]; then echo 'skipping coveralls/sphinx
+    for non ucb-sejits/ctree builds.'; exit 0; fi
+  - if [[ "x$PYTHON_VERSION" != "x(2, 7)" ]]; then echo 'Not Python 2.7; skipping doc
+    build.'; exit 0; fi
   - coveralls
-
-  # build documentation
   - make -C doc html
-
-  # merge documentation
   - git clone "https://github.com/ucb-sejits/ctree-docs.git" ${HOME}/ctree-docs
   - cd ${HOME}/ctree-docs
   - git fetch origin gh-pages
@@ -92,18 +58,19 @@ after_success:
   - rsync -a ${TRAVIS_BUILD_DIR}/doc/_build/html/ ./
   - git add .
   - git status
-
-  # commit documentation
   - git config --global user.name 'Ctree Doc Bot'
   - git config --global user.email 'mbdriscoll+ctreeoauth@gmail.com'
   - git commit -m "Updating documentation from Travis Build ${TRAVIS_BUILD_ID}."
-
-  # set up oauth for push
   - git config credential.helper "store --file=.git/credentials"
   - echo "https://${GH_TOKEN}:x-oauth-basic@github.com" > .git/credentials
-
-  # commit new docs to ctree-docs
   - git push origin gh-pages
-
 notifications:
   slack: ucb-sejits:cPZxBunxagWZ763mcsIXOV0W
+deploy:
+  provider: pypi
+  user: leonardt
+  password:
+    secure: SMiyQflUvfG0M8bR07Sri8VXnPSFKprNxA3RF7sljk99Aj9BuuuBRLkcOhkYtIRYfgHUSEnFeYYe+rb8y6BV/LnulCQiw9bCIqmPY9IYGy63DNjUGxh65MyO9HDjwz4hi+4endwZTXaUL3X4de9Xk3NnDhHISiLd7WymR9YQ7eE=
+  on:
+    tags: true
+    repo: ucb-sejits/ctree

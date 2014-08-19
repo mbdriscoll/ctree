@@ -256,14 +256,14 @@ class FunctionDecl(Statement):
         if self.return_type is None:
             type_sig.append(self.return_type)
         else:
-            assert not isinstance(self.return_type, types.TypeType), \
+            assert not isinstance(self.return_type, type), \
                 "Expected a ctypes instance or None, got %s (%s)." % \
                     (self.return_type, type(self.return_type))
             type_sig.append( type(self.return_type) )
 
         # parameter types
         for param in self.params:
-            assert not isinstance(param.type, types.TypeType), \
+            assert not isinstance(param.type, type), \
                 "Expected a ctypes instance or None, got %s (%s)." % \
                     (param.type, type(param.type))
             type_sig.append( type(param.type) )
@@ -342,9 +342,11 @@ class Cast(Expression):
 
 class ArrayDef(Expression):
     """doc"""
-    _fields = ['body']
+    _fields = ['target', 'size', 'body']
 
-    def __init__(self, body=None):
+    def __init__(self, target=None, size=None, body=None):
+        self.target = target
+        self.size = size
         self.body = body if body else []
         super(ArrayDef, self).__init__()
 
