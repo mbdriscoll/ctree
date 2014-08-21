@@ -40,7 +40,8 @@ class CodeGenVisitor(NodeVisitor):
 
     def _parenthesize(self, parent, child):
         """A format string that includes parentheses if needed."""
-        if self._requires_parentheses(parent, child):
+        if self._requires_parentheses(parent, child) or \
+                child._force_parentheses is True:
             return "(%s)" % child
         else:
             return "%s" % child
