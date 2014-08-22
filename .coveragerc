@@ -4,5 +4,6 @@ omit =
     */site-packages/nose/*
     */opentuner/opentuner/*
     */test/*
-    ctree/tools/*
-    ctree/visual/*
+    */ctree/tools/*
+    */ctree/visual/*
+    */ctree/metrics/*

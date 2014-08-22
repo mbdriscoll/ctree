@@ -38,6 +38,7 @@ class CppComment(CppNode):
 
 
 class CppDefine(CppNode):
+    _fields = ['name', 'params', 'body']
 
     def __init__(self, name=None, params=None, body=None):
         self.name = name
