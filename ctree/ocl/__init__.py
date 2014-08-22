@@ -41,3 +41,13 @@ register_type_codegenerators({
     pycl.cl_kernel:         lambda t: "cl_kernel",
     pycl.cl_mem:            lambda t: "cl_mem",
 })
+
+
+device_context_map = {}
+
+def get_context_from_device(device):
+    try:
+        return device_context_map[device.vendor_id]
+    except KeyError:
+        device_context_map[device.vendor_id] = pycl.clCreateContext([device])
+        return device_context_map[device.vendor_id]
