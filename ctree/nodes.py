@@ -22,6 +22,7 @@ class CtreeNode(ast.AST):
         """Initialize a new AST Node."""
         super(CtreeNode, self).__init__()
         self.deleted = False
+        self._force_parentheses = False
 
     def __str__(self):
         return self.codegen()

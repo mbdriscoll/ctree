@@ -354,6 +354,9 @@ class ArrayDef(Expression):
 @singleton
 class Op:
     class _Op(object):
+        def __init__(self):
+            self._force_parentheses = False
+
         def __str__(self):
             return self._c_str
 
