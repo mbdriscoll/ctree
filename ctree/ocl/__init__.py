@@ -43,11 +43,15 @@ register_type_codegenerators({
 })
 
 
-device_context_map = {}
+devices_context_queue_map = {}
 
-def get_context_from_device(device):
+
+def get_context_and_queue_from_devices(devices):
+    key = tuple(device.vendor_id for device in devices)
     try:
-        return device_context_map[device.vendor_id]
+        return devices_context_queue_map[key]
     except KeyError:
-        device_context_map[device.vendor_id] = pycl.clCreateContext([device])
-        return device_context_map[device.vendor_id]
+        context = pycl.clCreateContext(devices)
+        queue = pycl.clCreateCommandQueue(context)
+        devices_context_queue_map[key] = (context, queue)
+        return devices_context_queue_map[key]
