@@ -64,6 +64,7 @@ after_success:
   - git config credential.helper "store --file=.git/credentials"
   - echo "https://${GH_TOKEN}:x-oauth-basic@github.com" > .git/credentials
   - git push origin gh-pages
+  - cd ${TRAVIS_BUILD_DIR}
 notifications:
   slack: ucb-sejits:cPZxBunxagWZ763mcsIXOV0W
 deploy:
