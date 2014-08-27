@@ -73,4 +73,5 @@ deploy:
     secure: SMiyQflUvfG0M8bR07Sri8VXnPSFKprNxA3RF7sljk99Aj9BuuuBRLkcOhkYtIRYfgHUSEnFeYYe+rb8y6BV/LnulCQiw9bCIqmPY9IYGy63DNjUGxh65MyO9HDjwz4hi+4endwZTXaUL3X4de9Xk3NnDhHISiLd7WymR9YQ7eE=
   on:
     tags: true
+    all_branches: true
     repo: ucb-sejits/ctree
