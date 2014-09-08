@@ -1,10 +1,9 @@
 from examples.stencil_grid.stencil_kernel import *
 from examples.stencil_grid.stencil_grid import StencilGrid
-
+from ctree.util import Timer
 import sys
 import numpy
 import math
-import time
 
 width = int(sys.argv[2])
 height = int(sys.argv[3])
@@ -55,15 +54,6 @@ for x in range(0, width):
 gaussian1 = gaussian(stdev_d, radius*2)
 gaussian2 = gaussian(stdev_s, 256)
 
-
-class Timer:
-    def __enter__(self):
-        self.start = time.clock()
-        return self
-
-    def __exit__(self, *args):
-        self.end = time.clock()
-        self.interval = self.end - self.start
 
 kernel.kernel(in_grid, gaussian1, gaussian2, out_grid)
 
