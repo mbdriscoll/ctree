@@ -50,6 +50,8 @@ after_success:
   - if [[ "x$PYTHON_VERSION" != "x(2, 7)" ]]; then echo 'Not Python 2.7; skipping doc
     build.'; exit 0; fi
   - coveralls
+  - if [[ "x${TRAVIS_BRNACH}" != 'master' ]]; then echo 'skipping sphinx
+    for non master_branch.'; exit 0; fi
   - make -C doc html
   - git clone "https://github.com/ucb-sejits/ctree-docs.git" ${HOME}/ctree-docs
   - cd ${HOME}/ctree-docs
