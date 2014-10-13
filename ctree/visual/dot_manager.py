@@ -22,7 +22,7 @@ class DotManager(object):
         dot_text = ast_node.to_dot()
         dot_output = DotManager.run_dot(dot_text, file_name=file_name)
 
-        subprocess.check_output(["open", file_name])
+        check_output(["open", file_name])
 
     @staticmethod
     def dot_ast_to_file(ast_node, file_name):
