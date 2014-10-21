@@ -3,17 +3,14 @@ A set of basic transformers for python asts
 """
 import os
 import ast
-
 from ctypes import c_long
 
-from ctree.nodes import Project, CtreeNode
+from ctree.nodes import Project
 from ctree.c.nodes import Op, Constant, String, SymbolRef, BinaryOp, TernaryOp, Return
-from ctree.c.nodes import If, CFile, FunctionCall, FunctionDecl, For, Assign, AugAssign, ArrayRef
-from ctree.c.nodes import Lt, PostInc, AddAssign, SubAssign, MulAssign, DivAssign, BitXorAssign
-
+from ctree.c.nodes import If, CFile, FunctionCall, FunctionDecl, For, Assign, ArrayRef
+from ctree.c.nodes import Lt, AddAssign
 import ctree.c.nodes
 from ctree.visitors import NodeTransformer
-from ctree.util import flatten
 
 
 class PyCtxScrubber(NodeTransformer):
