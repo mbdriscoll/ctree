@@ -59,12 +59,17 @@ def get_local_size(id):
     return FunctionCall(SymbolRef('get_local_size'), [Constant(id)])
 
 
+def get_global_size(id):
+    return FunctionCall(SymbolRef('get_global_size'), [Constant(id)])
+
+
 def get_num_groups(id):
     return FunctionCall(SymbolRef('get_num_groups'), [Constant(id)])
 
 
 def clReleaseMemObject(arg):
     return FunctionCall(SymbolRef('clReleaseMemObject'), [arg])
+
 
 def clEnqueueWriteBuffer(queue, buf, blocking, offset, cb, ptr, num_events=0, evt_list_ptr=None, evt=None):
     if     isinstance(buf, str):              buf = SymbolRef(buf)
