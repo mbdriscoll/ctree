@@ -38,6 +38,9 @@ def CL_SUCCESS():
 def CLK_LOCAL_MEM_FENCE():
     return SymbolRef("CLK_LOCAL_MEM_FENCE")
 
+def CLK_GLOBAL_MEM_FENCE():
+    return SymbolRef("CLK_GLOBAL_MEM_FENCE")
+
 
 def barrier(arg):
     return FunctionCall(SymbolRef('barrier'), [arg])
