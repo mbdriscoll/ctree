@@ -2,13 +2,19 @@
 Parses the python AST below, transforms it to C, JITs it, and runs it.
 """
 
+import logging
+
 logging.basicConfig(level=20)
 
-import ctypes as ct
-
 import numpy as np
+import ctypes as ct
 import pycl as cl
+
+import ctree.np
+from ctree.c.nodes import *
+from ctree.cpp.nodes import *
 from ctree.ocl.nodes import *
+from ctree.ocl.types import *
 from ctree.ocl.macros import *
 from ctree.templates.nodes import StringTemplate
 from ctree.transformations import *
@@ -16,6 +22,7 @@ from ctree.frontend import get_ast
 from ctree.jit import LazySpecializedFunction
 from ctree.jit import ConcreteSpecializedFunction
 
+from ctree import browser_show_ast
 
 # ---------------------------------------------------------------------------
 # Specializer code
