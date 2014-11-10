@@ -22,6 +22,8 @@ from ctree.frontend import get_ast
 from ctree.jit import LazySpecializedFunction
 from ctree.jit import ConcreteSpecializedFunction
 
+from ctree import browser_show_ast
+
 # ---------------------------------------------------------------------------
 # Specializer code
 
@@ -60,7 +62,7 @@ class OpTranslator(LazySpecializedFunction):
         A = program_config[0]
         len_A = np.prod(A._shape_)
         inner_type = A._dtype_.type()
-
+        # browser_show_ast(py_ast,'tmp.png')
         apply_one = PyBasicConversions().visit(py_ast.body[0])
         apply_one.return_type = inner_type
         apply_one.params[0].type = inner_type

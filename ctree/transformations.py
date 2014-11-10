@@ -3,15 +3,14 @@ A set of basic transformers for python asts
 """
 import os
 import ast
-
 from ctypes import c_long
 
-from ctree.nodes import Project, CtreeNode
+from ctree.nodes import Project
 from ctree.c.nodes import Op, Constant, String, SymbolRef, BinaryOp, TernaryOp, Return
-from ctree.c.nodes import If, CFile, FunctionCall, FunctionDecl, For, Assign, AugAssign, ArrayRef
-from ctree.c.nodes import Lt, PostInc, AddAssign, SubAssign, MulAssign, DivAssign
+from ctree.c.nodes import If, CFile, FunctionCall, FunctionDecl, For, Assign, ArrayRef
+from ctree.c.nodes import Lt, AddAssign
+import ctree.c.nodes
 from ctree.visitors import NodeTransformer
-from ctree.util import flatten
 
 
 class PyCtxScrubber(NodeTransformer):
@@ -165,15 +164,24 @@ class PyBasicConversions(NodeTransformer):
         op = type(node.op)
         target = self.visit(node.target)
         value = self.visit(node.value)
-        if op is ast.Add:
-            return AddAssign(target, value)
-        elif op is ast.Sub:
-            return SubAssign(target, value)
-        elif op is ast.Mult:
-            return MulAssign(target, value)
-        elif op is ast.Div:
-            return DivAssign(target, value)
-        # TODO: Error?
+        # if op is ast.Add:
+        #     return AddAssign(target, value)
+        # elif op is ast.Sub:
+        #     return SubAssign(target, value)
+        # elif op is ast.Mult:
+        #     return MulAssign(target, value)
+        # elif op is ast.Div:
+        #     return DivAssign(target, value)
+        # elif op is ast.BitXor:
+        #     return BitXorAssign(target, value)
+        # # TODO: Error?
+        lookup = {
+            ast.Add: 'AddAssign', ast.Sub: 'SubAssign', ast.Mult: 'MulAssign', ast.Div: 'DivAssign',
+            ast.BitAnd: 'BitAndAssign', ast.BitOr: 'BitOrAssign', ast.BitXor: 'BitXorAssign',
+            ast.LShift: 'BitShLAssign', ast.RShift: 'BitShRAssign'
+        }
+        if op in lookup:
+            return getattr(ctree.c.nodes, lookup[op])(target, value)
         return node
 
     def visit_Assign(self, node):
