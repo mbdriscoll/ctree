@@ -6,9 +6,9 @@ import ast
 from ctypes import c_long
 
 from ctree.nodes import Project
-from ctree.c.nodes import Op, Constant, String, SymbolRef, BinaryOp, TernaryOp, Return
-from ctree.c.nodes import If, CFile, FunctionCall, FunctionDecl, For, Assign, ArrayRef
-from ctree.c.nodes import Lt, AddAssign
+from ctree.c.nodes import Op, Constant, String, SymbolRef, BinaryOp, TernaryOp, \
+    Return, If, CFile, FunctionCall, FunctionDecl, For, Assign, ArrayRef, Lt, \
+    AddAssign, SubAssign, MulAssign, DivAssign, UnaryOp
 import ctree.c.nodes
 from ctree.visitors import NodeTransformer
 
@@ -55,6 +55,13 @@ class PyBasicConversions(NodeTransformer):
         ast.Is: Op.Eq,
         ast.IsNot: Op. NotEq
         # TODO list the rest
+    }
+
+    PY_UOP_TO_CTREE_UOP = {
+        'UAdd': Op.Add,
+        'USub': Op.Sub,
+        'Not': Op.Not,
+        'Invert': Op.BitNot
     }
 
     def visit_Num(self, node):
