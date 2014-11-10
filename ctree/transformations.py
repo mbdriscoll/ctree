@@ -83,6 +83,11 @@ class PyBasicConversions(NodeTransformer):
         op = self.PY_OP_TO_CTREE_OP.get(type(node.op), type(node.op))()
         return BinaryOp(lhs, op, rhs)
 
+    def visit_UnaryOp(self, node):
+        op = self.PY_UOP_TO_CTREE_UOP[node.op.__class__.__name__]()
+        operand = self.visit(node.operand)
+        return UnaryOp(op, operand)
+
     def visit_Return(self, node):
         if hasattr(node, 'value'):
             return Return(self.visit(node.value))
