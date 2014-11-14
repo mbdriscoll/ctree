@@ -83,7 +83,10 @@ class CCodeGen(CodeGenVisitor):
         if isinstance(node.value, str):
             return "'%s'" % node.value[0]
         else:
-            return str(node.value)
+            s = str(node.value)
+            if type(node.value) is float:
+                return s + "f"
+            return s
 
     def visit_SymbolRef(self, node):
         s = ""
