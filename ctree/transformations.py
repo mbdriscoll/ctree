@@ -3,12 +3,12 @@ A set of basic transformers for python asts
 """
 import os
 import ast
-from ctypes import c_long
+from ctypes import c_long, c_float
 
 from ctree.nodes import Project
 from ctree.c.nodes import Op, Constant, String, SymbolRef, BinaryOp, TernaryOp, \
     Return, If, CFile, FunctionCall, FunctionDecl, For, Assign, ArrayRef, Lt, \
-    AddAssign, SubAssign, MulAssign, DivAssign, UnaryOp
+    AddAssign, SubAssign, MulAssign, DivAssign, UnaryOp, Cast
 import ctree.c.nodes
 from ctree.visitors import NodeTransformer
 
@@ -160,6 +160,8 @@ class PyBasicConversions(NodeTransformer):
     def visit_Call(self, node):
         args = [self.visit(a) for a in node.args]
         fn = self.visit(node.func)
+        if (fn.name == 'float'):
+            return Cast(c_float(), args[0])
         return FunctionCall(fn, args)
 
     def visit_FunctionDef(self, node):
