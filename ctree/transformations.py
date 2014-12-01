@@ -173,6 +173,18 @@ class PyBasicConversions(NodeTransformer):
             return MulAssign(target, value)
         elif op is ast.Div:
             return DivAssign(target, value)
+        elif op is ast.BitXor:
+            return BitXorAssign(target, value)
+        elif op is ast.BitAnd:
+            return BitAndAssign(target, value)
+        elif op is ast.BitOr:
+            return BitOrAssign(target, value)
+        elif op is ast.Mod:
+            return ModAssign(target, value)
+        elif op is ast.LShift:
+            return BitShLAssign(target, value)
+        elif op is ast.RShift:
+            return BitShRAssign(target, value)
         # TODO: Error?
         return node
 
