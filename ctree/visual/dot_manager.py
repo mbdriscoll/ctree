@@ -1,4 +1,7 @@
+import tempfile
+
 __author__ = 'Chick Markley'
+
 
 class DotManager(object):
     """
@@ -11,12 +14,17 @@ class DotManager(object):
         return DotManager.dot_text_to_image(dot_text)
 
     @staticmethod
-    def dot_ast_to_browser(ast_node, file_name):
+    def dot_ast_to_browser(ast_node, file_name=None):
         dot_text = ast_node.to_dot()
         dot_output = DotManager.run_dot(dot_text)
 
-        with open(file_name, "wb") as f:
-            f.write(dot_output)
+        if file_name is None:
+            with tempfile.NamedTemporaryFile(mode='wb', suffix=".png", delete=False) as f:
+                f.write(dot_output)
+                file_name = f.name
+        else:
+            with open(file_name, "wb") as f:
+                f.write(dot_output)
 
         import subprocess
         subprocess.check_output(["open", file_name])
@@ -44,7 +52,16 @@ class DotManager(object):
         # mostly copied from sphinx.ext.graphviz.render_dot
         import os
         from subprocess import Popen, PIPE
-        from sphinx.util.osutil import EPIPE, EINVAL
+        try:
+            from sphinx.util.osutil import EPIPE, EINVAL
+        except ImportError:
+            EPIPE, EINVAL = None, None
+            raise RuntimeError(
+                """
+                graphical display of ASTs requires that the sphinx
+                package be installed.
+                """
+            )
 
         if not options:
             options = []
@@ -52,15 +69,25 @@ class DotManager(object):
         if file_name:
             dot_args += ['>',file_name]
 
-        if os.name == 'nt':
-            # Avoid opening shell window.
-            # * https://github.com/tkf/ipython-hierarchymagic/issues/1
-            # * http://stackoverflow.com/a/2935727/727827
-            p = Popen(dot_args, stdout=PIPE, stdin=PIPE, stderr=PIPE,
-                      creationflags=0x08000000)
-        else:
-            p = Popen(dot_args, stdout=PIPE, stdin=PIPE, stderr=PIPE)
+        p = None
+        try:
+            if os.name == 'nt':
+                # Avoid opening shell window.
+                # * https://github.com/tkf/ipython-hierarchymagic/issues/1
+                # * http://stackoverflow.com/a/2935727/727827
+                p = Popen(dot_args, stdout=PIPE, stdin=PIPE, stderr=PIPE,
+                          creationflags=0x08000000)
+            else:
+                p = Popen(dot_args, stdout=PIPE, stdin=PIPE, stderr=PIPE)
+        except OSError:
+            raise RuntimeError(
+                """
+                Attempting to generate AST image. most likely dot (available through graphviz) is not installed
+                or is not in your path
+                """
+            )
         went_wrong = False
+        stdout, stderr = None, None  # for PEP-8
         try:
             # Graphviz may close standard input when an error occurs,
             # resulting in a broken pipe on communicate()

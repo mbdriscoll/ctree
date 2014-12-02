@@ -117,7 +117,7 @@ def ipython_show_ast(tree):
     return DotManager.dot_ast_to_image(tree)
 
 
-def browser_show_ast(tree, file_name):
+def browser_show_ast(tree, file_name=None):
     """
     convenience method to display an AST in ipython
     converts tree in place to a dot format
