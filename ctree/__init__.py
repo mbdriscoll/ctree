@@ -113,13 +113,15 @@ def ipython_show_ast(tree):
     converts tree in place to a dot format
     then renders that into a png file
     """
+    import ctree.dotgen
     return DotManager.dot_ast_to_image(tree)
 
 
-def browser_show_ast(tree, file_name):
+def browser_show_ast(tree, file_name=None):
     """
     convenience method to display an AST in ipython
     converts tree in place to a dot format
     then renders that into a png file
     """
+    import ctree.dotgen
     return DotManager.dot_ast_to_browser(tree, file_name)

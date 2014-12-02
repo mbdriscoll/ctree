@@ -50,6 +50,8 @@ after_success:
   - if [[ "x$PYTHON_VERSION" != "x(2, 7)" ]]; then echo 'Not Python 2.7; skipping doc
     build.'; exit 0; fi
   - coveralls
+  - if [[ "x${TRAVIS_BRNACH}" != 'master' ]]; then echo 'skipping sphinx
+    for non master_branch.'; exit 0; fi
   - make -C doc html
   - git clone "https://github.com/ucb-sejits/ctree-docs.git" ${HOME}/ctree-docs
   - cd ${HOME}/ctree-docs
@@ -64,6 +66,7 @@ after_success:
   - git config credential.helper "store --file=.git/credentials"
   - echo "https://${GH_TOKEN}:x-oauth-basic@github.com" > .git/credentials
   - git push origin gh-pages
+  - cd ${TRAVIS_BUILD_DIR}
 notifications:
   slack: ucb-sejits:cPZxBunxagWZ763mcsIXOV0W
 deploy:
@@ -73,4 +76,5 @@ deploy:
     secure: SMiyQflUvfG0M8bR07Sri8VXnPSFKprNxA3RF7sljk99Aj9BuuuBRLkcOhkYtIRYfgHUSEnFeYYe+rb8y6BV/LnulCQiw9bCIqmPY9IYGy63DNjUGxh65MyO9HDjwz4hi+4endwZTXaUL3X4de9Xk3NnDhHISiLd7WymR9YQ7eE=
   on:
     tags: true
+    all_branches: true
     repo: ucb-sejits/ctree
