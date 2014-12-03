@@ -251,3 +251,23 @@ class TestBasicConversions(unittest.TestCase):
                                slice=ast.Index(value=ast.Num(n=1), ctx=ast.Load()))
         c_ast = ArrayRef(SymbolRef('i'),Constant(1))
         self._check(py_ast,c_ast)
+
+    def test_UnaryAdd(self):
+        py_ast = ast.UnaryOp(ast.UAdd(), ast.Name('i', ast.Load()))
+        c_ast = Add(SymbolRef('i'))
+        self._check(py_ast, c_ast)
+
+    def test_UnarySub(self):
+        py_ast = ast.UnaryOp(ast.USub(), ast.Name('i', ast.Load()))
+        c_ast = Sub(SymbolRef('i'))
+        self._check(py_ast, c_ast)
+
+    def test_UnaryNot(self):
+        py_ast = ast.UnaryOp(ast.Not(), ast.Name('i', ast.Load()))
+        c_ast = Not(SymbolRef('i'))
+        self._check(py_ast, c_ast)
+
+    def test_UnaryInvert(self):
+        py_ast = ast.UnaryOp(ast.Invert(), ast.Name('i', ast.Load()))
+        c_ast = BitNot(SymbolRef('i'))
+        self._check(py_ast, c_ast)
