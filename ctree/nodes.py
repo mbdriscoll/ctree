@@ -3,6 +3,7 @@ Defines the hierarchy of AST nodes.
 """
 
 import logging
+import os.path
 
 log = logging.getLogger(__name__)
 
@@ -12,6 +13,7 @@ import collections
 from ctree.codegen import CodeGenVisitor
 from ctree.dotgen import DotGenVisitor, DotGenLabeller
 from ctree.util import flatten
+import ctree
 
 
 class CtreeNode(ast.AST):
@@ -122,18 +124,22 @@ class Project(CommonNode):
     """Holds a list files."""
     _fields = ['files']
 
-    def __init__(self, files=None):
+    def __init__(self, files=None, compilation_sub_dir=''):
         self.files = files if files else []
+        self.compilation_sub_dir = compilation_sub_dir
         super(Project, self).__init__()
 
-    def codegen(self, indent=0):
+    def codegen(self, indent=0, compilation_dir = ''):
         """
         Code generates each file in the project and links their
         bytecode together to get the master bytecode file.
         """
         from ctree.jit import JitModule
+        compile_to = ctree.CONFIG.get('jit','COMPILE_PATH')
+        if not os.path.exists(compile_to):
+            os.mkdir(compile_to)
 
-        module = JitModule()
+        module = JitModule(compilation_dir=compilation_dir)
 
         # now that we have a concrete compilation dir, resolve references to it
         from ctree.transformations import ResolveGeneratedPathRefs
@@ -164,7 +170,7 @@ class File(CommonNode):
         """Convert this substree into program text (a string)."""
         raise Exception("%s should override codegen()." % type(self))
 
-    def _compile(self, program_text, compilation_dir):
+    def _compile(self, program_text, compilation_sub_dir):
         """Construct an LLVM module with the translated contents of this file."""
         raise Exception("%s should override _compile()." % type(self))
 

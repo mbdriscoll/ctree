@@ -6,6 +6,10 @@ import abc
 import copy
 import shutil
 import tempfile
+import os
+import hashlib
+import string
+import re
 
 import ctree
 from ctree.nodes import Project
@@ -24,15 +28,23 @@ class JitModule(object):
     Manages compilation of multiple ASTs.
     """
 
-    def __init__(self):
-        import os
-
+    def __init__(self, compilation_dir = None):
+        '''compilation_dir specifies the name of the subfolder under COMPILE_PATH'''
         # write files to $TEMPDIR/ctree/run-XXXX
-        ctree_dir = os.path.join(tempfile.gettempdir(), "ctree")
-        if not os.path.exists(ctree_dir):
-            os.mkdir(ctree_dir)
+        compile_to = os.path.expanduser(ctree.CONFIG.get('jit','COMPILE_PATH'))
 
-        self.compilation_dir = tempfile.mkdtemp(prefix="run-", dir=ctree_dir)
+        # makes sure that directories exists, otherwise creates
+        if not compile_to:
+            compile_to = os.path.join(tempfile.gettempdir(), "ctree")
+
+        if compilation_dir:
+            self.compilation_dir = os.path.join(compile_to, compilation_dir)
+        else:
+            self.compilation_dir = tempfile.mkdtemp(prefix="run-", dir=compile_to)
+        if not os.path.exists(self.compilation_dir):
+            os.makedirs(self.compilation_dir)
+
+        logging.log('compiling to %s'%self.compilation_dir)
         self.ll_module = ll.Module.new('ctree')
         self.exec_engine = None
         log.info("temporary compilation directory is: %s",
@@ -114,6 +126,18 @@ class LazySpecializedFunction(object):
             ))
         else:
             return hash(str(o))
+
+
+    def config_to_dirname(self, program_config):
+        """Returns the subdirectory name under .compiled/funcname"""
+        # fixes the directory names and squishes invalid chars
+        forbidden_chars = r"""/\?%*:|"<>()' """
+        replace_table = string.maketrans(forbidden_chars, '_'*len(forbidden_chars))
+        config_path = re.sub("_+","_", str(program_config).translate(replace_table))
+        path = os.path.join(self.__class__.__name__, config_path)
+        return path
+
+    #TODO: implement some kind of hashing
 
     def __call__(self, *args, **kwargs):
         """
