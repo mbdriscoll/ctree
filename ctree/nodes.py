@@ -124,10 +124,11 @@ class Project(CommonNode):
     """Holds a list files."""
     _fields = ['files']
 
-    def __init__(self, files=None, compilation_sub_dir=''):
+    def __init__(self, files=None, indent=0, compilation_dir = ''):
         self.files = files if files else []
-        self.compilation_sub_dir = compilation_sub_dir
         super(Project, self).__init__()
+        self.compilation_dir = compilation_dir
+        self.indent = indent
 
     def codegen(self, indent=0, compilation_dir = ''):
         """
@@ -139,22 +140,28 @@ class Project(CommonNode):
         if not os.path.exists(compile_to):
             os.mkdir(compile_to)
 
-        module = JitModule(compilation_dir=compilation_dir)
+        self._module = JitModule(compilation_dir=compilation_dir)
 
         # now that we have a concrete compilation dir, resolve references to it
         from ctree.transformations import ResolveGeneratedPathRefs
 
-        resolver = ResolveGeneratedPathRefs(module.compilation_dir)
+        resolver = ResolveGeneratedPathRefs(self._module.compilation_dir)
         self.files = [resolver.visit(f) for f in self.files]
         if resolver.count:
             log.info("automatically resolved %d GeneratedPathRef node(s).", resolver.count)
 
         # transform all files into llvm modules and link them into the master module
         for f in self.files:
-            submodule = f._compile(f.codegen(), module.compilation_dir)
+            submodule = f._compile(f.codegen(), self._module.compilation_dir)
             if submodule:
-                module._link_in(submodule)
-        return module
+                self._module._link_in(submodule)
+        return self._module
+
+    @property
+    def module(self):
+        if self._module:
+            return self._module
+        return self.codegen(indent=self.indent, compilation_dir=self.compilation_dir)
 
 
 class File(CommonNode):

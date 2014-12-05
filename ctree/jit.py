@@ -44,7 +44,7 @@ class JitModule(object):
         if not os.path.exists(self.compilation_dir):
             os.makedirs(self.compilation_dir)
 
-        logging.log('compiling to %s'%self.compilation_dir)
+        log.info('compiling to %s'%self.compilation_dir)
         self.ll_module = ll.Module.new('ctree')
         self.exec_engine = None
         log.info("temporary compilation directory is: %s",
@@ -137,7 +137,7 @@ class LazySpecializedFunction(object):
         path = os.path.join(self.__class__.__name__, config_path)
         return path
 
-    #TODO: implement some kind of hashing
+    #TODO: implement some kind of hashing for versioning
 
     def __call__(self, *args, **kwargs):
         """
@@ -158,8 +158,9 @@ class LazySpecializedFunction(object):
         log.info("tuner subconfig: %s", tuner_subconfig)
         log.info("arguments subconfig: %s", args_subconfig)
 
-        config_hash = hash((self._hash(args_subconfig),
-                            self._hash(tuner_subconfig)))
+        # config_hash = hash((self._hash(args_subconfig),
+        #                     self._hash(tuner_subconfig)))
+        config_hash = self.config_to_dirname((args_subconfig, tuner_subconfig))
 
         if config_hash in self.concrete_functions:
             ctree.STATS.log("specialized function cache hit")
