@@ -28,6 +28,7 @@ class OclFile(OclNode, File):
     def __init__(self, name="generated", body=None):
         if not body:
             body = []
+        self.kernel_name = None
         #TODO: Inspect complains about 2 args to __init__
         super(OclFile, self).__init__(name, body)
 
