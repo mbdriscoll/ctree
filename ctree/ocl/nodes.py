@@ -37,13 +37,15 @@ class OclFile(OclNode, File):
         """
         import os
         cl_src_file = os.path.join(compilation_dir, self.get_filename())
-        log.info("file for generated OpenCL: %s" % cl_src_file)
-        log.info("generated OpenCL code: (((\n%s\n)))" % program_text)
+        if not os.path.exists(cl_src_file):
+            log.info("file for generated OpenCL: %s" % cl_src_file)
+            log.info("generated OpenCL code: (((\n%s\n)))" % program_text)
 
-        # write program text to C file
-        with open(cl_src_file, 'w') as cl_file:
-            cl_file.write(program_text)
-
+            # write program text to C file
+            with open(cl_src_file, 'w') as cl_file:
+                cl_file.write(program_text)
+        else:
+            log.info("OpenCL file already generated")
         import llvm.core
 
         return llvm.core.Module.new("empty cl module")
