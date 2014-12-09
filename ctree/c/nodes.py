@@ -46,7 +46,6 @@ class CFile(CNode, File):
         return "%s.bc" % self.name
 
     def _compile(self, program_text, compilation_dir):
-        print(compilation_dir)
         c_src_file = os.path.join(compilation_dir, self.get_filename())
         ll_bc_file = os.path.join(compilation_dir, self.get_bc_filename())
         if not os.path.exists(c_src_file):
