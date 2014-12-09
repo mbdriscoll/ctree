@@ -12,7 +12,8 @@ log = logging.getLogger(__name__)
 
 from ctypes import CFUNCTYPE
 from ctree.nodes import CtreeNode, File
-from ctree.util import singleton, highlight
+import ctree
+from ctree.util import singleton, highlight, truncate
 from ctree.types import get_ctype
 
 
@@ -45,28 +46,32 @@ class CFile(CNode, File):
         return "%s.bc" % self.name
 
     def _compile(self, program_text, compilation_dir):
-        import ctree
-        from ctree.util import truncate
-
+        print(compilation_dir)
         c_src_file = os.path.join(compilation_dir, self.get_filename())
         ll_bc_file = os.path.join(compilation_dir, self.get_bc_filename())
-        log.info("file for generated C: %s", c_src_file)
-        log.info("file for generated LLVM: %s", ll_bc_file)
+        if not os.path.exists(c_src_file):
+            # write program text to C file
+            with open(c_src_file, 'w') as c_file:
+                c_file.write(program_text)
+            log.info("file for generated C: %s", c_src_file)
+            # syntax-highlight and print C program
+            highlighted = highlight(program_text, 'c')
+            log.info("generated C program: (((\n%s\n)))", highlighted)
 
-        # syntax-highlight and print C program
-        highlighted = highlight(program_text, 'c')
-        log.info("generated C program: (((\n%s\n)))", highlighted)
+        else:
+            log.info("C program already generated")
 
-        # write program text to C file
-        with open(c_src_file, 'w') as c_file:
-            c_file.write(program_text)
+        if not os.path.exists(ll_bc_file):
+            log.info("file for generated LLVM: %s", ll_bc_file)
+            # call clang to generate LLVM bitcode file
+            CC = ctree.CONFIG.get(self.config_target, 'CC')
+            CFLAGS = ctree.CONFIG.get(self.config_target, 'CFLAGS')
+            compile_cmd = "%s -emit-llvm %s -o %s -c %s" % (CC, CFLAGS, ll_bc_file, c_src_file)
+            log.info("compilation command: %s", compile_cmd)
+            subprocess.check_call(compile_cmd, shell=True)
 
-        # call clang to generate LLVM bitcode file
-        CC = ctree.CONFIG.get(self.config_target, 'CC')
-        CFLAGS = ctree.CONFIG.get(self.config_target, 'CFLAGS')
-        compile_cmd = "%s -emit-llvm %s -o %s -c %s" % (CC, CFLAGS, ll_bc_file, c_src_file)
-        log.info("compilation command: %s", compile_cmd)
-        subprocess.check_call(compile_cmd, shell=True)
+        else:
+            log.info("LLVM file already generated")
 
         # load llvm bitcode
         import llvm.core
