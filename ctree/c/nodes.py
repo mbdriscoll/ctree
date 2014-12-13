@@ -9,12 +9,14 @@ import subprocess
 import logging
 
 log = logging.getLogger(__name__)
+logging.basicConfig()
 
 from ctypes import CFUNCTYPE
 from ctree.nodes import CtreeNode, File
 import ctree
 from ctree.util import singleton, highlight, truncate
 from ctree.types import get_ctype
+import hashlib
 
 
 class CNode(CtreeNode):
@@ -45,10 +47,29 @@ class CFile(CNode, File):
     def get_bc_filename(self):
         return "%s.bc" % self.name
 
+    def get_hash_filename(self):
+        return "%s.sha"
+
     def _compile(self, program_text, compilation_dir):
         c_src_file = os.path.join(compilation_dir, self.get_filename())
         ll_bc_file = os.path.join(compilation_dir, self.get_bc_filename())
-        if not os.path.exists(c_src_file):
+        hashfile = os.path.join(compilation_dir, self.get_hash_filename())
+        program_hash = hashlib.sha512(program_text).hexdigest()
+
+        c_src_exists = os.path.exists(c_src_file)
+        ll_bc_file_exists = os.path.exists(ll_bc_file)
+        h_file_exists = os.path.exists(hashfile)
+
+        if not h_file_exists:
+            log.info('creating empty hashfile')
+            with open(hashfile, 'w') as h_file:
+                h_file.write('')
+
+        with open(hashfile) as h_file:
+            old_hash = h_file.read().strip()
+
+        if not c_src_exists or old_hash != program_hash:
+            log.info('c_src does not exist. Creating C source file')
             # write program text to C file
             with open(c_src_file, 'w') as c_file:
                 c_file.write(program_text)
@@ -56,11 +77,13 @@ class CFile(CNode, File):
             # syntax-highlight and print C program
             highlighted = highlight(program_text, 'c')
             log.info("generated C program: (((\n%s\n)))", highlighted)
+            log.info('Creating hashfile')
+            with open(hashfile, 'w') as h_file:
+                h_file.write(program_hash)
 
-        else:
-            log.info("C program already generated")
 
-        if not os.path.exists(ll_bc_file):
+        if not ll_bc_file_exists or old_hash != program_hash:
+            log.info('Hash did not match. Regenerating bitcode file')
             log.info("file for generated LLVM: %s", ll_bc_file)
             # call clang to generate LLVM bitcode file
             CC = ctree.CONFIG.get(self.config_target, 'CC')

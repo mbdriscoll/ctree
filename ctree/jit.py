@@ -19,6 +19,8 @@ from ctree.util import highlight
 import llvm.core as ll
 
 import logging
+import inspect
+import hashlib
 
 log = logging.getLogger(__name__)
 
@@ -127,6 +129,16 @@ class LazySpecializedFunction(object):
         else:
             return hash(str(o))
 
+    def __hash__(self):
+        mro = type(self).mro()
+        result = hashlib.sha512('')
+        for klass in mro:
+            if issubclass(klass, LazySpecializedFunction):
+                result.update(inspect.getsource(klass))
+            else:
+                pass
+        return int(result.hexdigest(), 16)
+
 
     def config_to_dirname(self, program_config):
         """Returns the subdirectory name under .compiled/funcname"""
@@ -137,7 +149,6 @@ class LazySpecializedFunction(object):
         path = os.path.join(self.__class__.__name__, config_path)
         return path
 
-    #TODO: implement some kind of hashing for versioning
 
     def __call__(self, *args, **kwargs):
         """

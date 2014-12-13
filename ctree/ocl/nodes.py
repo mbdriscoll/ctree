@@ -47,5 +47,4 @@ class OclFile(OclNode, File):
         else:
             log.info("OpenCL file already generated")
         import llvm.core
-
         return llvm.core.Module.new("empty cl module")
