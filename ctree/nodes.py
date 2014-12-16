@@ -170,7 +170,7 @@ class File(CommonNode):
     @property
     def empty(self):
         if not self._empty:
-            self._empty = type(self)().codegen()
+            self._empty = type(self)(name=self.name, path=self.path).codegen()
         return self._empty
 
     def __init__(self, name="generated", body=None, path = None):
@@ -184,6 +184,25 @@ class File(CommonNode):
             self.path = os.path.abspath(os.path.join(ctree.CONFIG.get('jit','COMPILE_PATH'), path))
         if not os.path.exists(self.path):
             os.makedirs(self.path)
+
+    def get_hash_filename(self):
+        return os.path.join(self.path, "%s.%s.sha" % (self.name, self._ext))
+
+
+    @property
+    def program_hash(self):
+        if not os.path.exists(os.path.join(self.path, self.get_hash_filename())):
+            return False
+        if self._program_hash:
+            return self._program_hash
+        with open(os.path.join(self.path, self.get_hash_filename())) as h_file:
+            return h_file.read().strip()
+
+    @program_hash.setter
+    def program_hash(self, value):
+        self._program_hash = value
+        with open(os.path.join(self.path, self.get_hash_filename()), 'w') as h_file:
+            h_file.write(value)
 
     def codegen(self, *args):
         """Convert this substree into program text (a string)."""

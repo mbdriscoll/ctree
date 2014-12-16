@@ -47,24 +47,7 @@ class CFile(CNode, File):
     def get_bc_filename(self):
         return os.path.join(self.path, "%s.bc" % self.name)
 
-    def get_hash_filename(self):
-        return os.path.join(self.path, "%s.sha" % self.name)
 
-
-    @property
-    def program_hash(self):
-        if not os.path.exists(os.path.join(self.path, self.get_hash_filename())):
-            return False
-        if self._program_hash:
-            return self._program_hash
-        with open(os.path.join(self.path, self.get_hash_filename())) as h_file:
-            return h_file.read().strip()
-
-    @program_hash.setter
-    def program_hash(self, value):
-        self._program_hash = value
-        with open(os.path.join(self.path, self.get_hash_filename()), 'w') as h_file:
-            h_file.write(value)
 
     def _compile(self, program_text):
         c_src_file = os.path.join(self.path, self.get_filename())
