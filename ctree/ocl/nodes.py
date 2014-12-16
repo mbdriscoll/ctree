@@ -25,18 +25,18 @@ class OclFile(OclNode, File):
     """Represents a .cl file."""
     _ext = "cl"
 
-    def __init__(self, name="generated", body=None):
+    def __init__(self, name="generated", body=None, path = None):
         if not body:
             body = []
         #TODO: Inspect complains about 2 args to __init__
-        super(OclFile, self).__init__(name, body)
+        super(OclFile, self).__init__(name, body, path)
 
-    def _compile(self, program_text, compilation_dir):
+    def _compile(self, program_text):
         """
         write the ocl program to a text file and compile it
         """
         import os
-        cl_src_file = os.path.join(compilation_dir, self.get_filename())
+        cl_src_file = os.path.join(self.path, self.get_filename())
         if not os.path.exists(cl_src_file):
             log.info("file for generated OpenCL: %s" % cl_src_file)
             log.info("generated OpenCL code: (((\n%s\n)))" % program_text)

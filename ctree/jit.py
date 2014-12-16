@@ -30,33 +30,33 @@ class JitModule(object):
     Manages compilation of multiple ASTs.
     """
 
-    def __init__(self, compilation_dir = None):
+    def __init__(self):
         '''compilation_dir specifies the name of the subfolder under COMPILE_PATH'''
         # write files to $TEMPDIR/ctree/run-XXXX
-        compile_to = os.path.expanduser(ctree.CONFIG.get('jit','COMPILE_PATH'))
-
-        # makes sure that directories exists, otherwise creates
-        if not compile_to:
-            compile_to = os.path.join(tempfile.gettempdir(), "ctree")
-
-        if compilation_dir:
-            self.compilation_dir = os.path.join(compile_to, compilation_dir)
-        else:
-            self.compilation_dir = tempfile.mkdtemp(prefix="run-", dir=compile_to)
-        if not os.path.exists(self.compilation_dir):
-            os.makedirs(self.compilation_dir)
-
-        log.info('compiling to %s'%self.compilation_dir)
+        # compile_to = os.path.expanduser(ctree.CONFIG.get('jit','COMPILE_PATH'))
+        #
+        # # makes sure that directories exists, otherwise creates
+        # if not compile_to:
+        #     compile_to = os.path.join(tempfile.gettempdir(), "ctree")
+        #
+        # if compilation_dir:
+        #     self.compilation_dir = os.path.join(compile_to, compilation_dir)
+        # else:
+        #     self.compilation_dir = tempfile.mkdtemp(prefix="run-", dir=compile_to)
+        # if not os.path.exists(self.compilation_dir):
+        #     os.makedirs(self.compilation_dir)
+        #
+        # log.info('compiling to %s'%self.compilation_dir)
         self.ll_module = ll.Module.new('ctree')
         self.exec_engine = None
-        log.info("temporary compilation directory is: %s",
-                 self.compilation_dir)
+        # log.info("temporary compilation directory is: %s",
+        #          self.compilation_dir)
 
-    def __del__(self):
-        if not ctree.CONFIG.get("jit", "PRESERVE_SRC_DIR"):
-            log.info("removing temporary compilation directory %s.",
-                     self.compilation_dir)
-            shutil.rmtree(self.compilation_dir)
+    # def __del__(self):
+    #     if not ctree.CONFIG.get("jit", "PRESERVE_SRC_DIR"):
+    #         log.info("removing temporary compilation directory %s.",
+    #                  self.compilation_dir)
+    #         shutil.rmtree(self.compilation_dir)
 
     def _link_in(self, submodule):
         self.ll_module.link_in(submodule)
@@ -165,13 +165,12 @@ class LazySpecializedFunction(object):
         args_subconfig = self.args_to_subconfig(args)
         tuner_subconfig = next(self._tuner.configs)
         program_config = (args_subconfig, tuner_subconfig)
+        dir_name = self.config_to_dirname((args, tuner_subconfig))
 
         log.info("tuner subconfig: %s", tuner_subconfig)
         log.info("arguments subconfig: %s", args_subconfig)
 
-        # config_hash = hash((self._hash(args_subconfig),
-        #                     self._hash(tuner_subconfig)))
-        config_hash = self.config_to_dirname((args_subconfig, tuner_subconfig))
+        config_hash = dir_name
 
         if config_hash in self.concrete_functions:
             ctree.STATS.log("specialized function cache hit")
@@ -186,12 +185,9 @@ class LazySpecializedFunction(object):
             )
 
             try:
-                try:
-                    csf = self.finalize(*transform_result)
-                except TypeError:
-                    csf = self.finalize(transform_result, program_config)
+                csf = self.finalize(transform_result, program_config)
             except NotImplementedError:
-                log.warn("""Your lazy specailized function has not implemented
+                log.warn("""Your lazy specialized function has not implemented
                          finalize, assuming your output to transform is a
                          concrete specialized function.""")
                 csf = transform_result
@@ -220,7 +216,7 @@ class LazySpecializedFunction(object):
         """
         raise NotImplementedError()
 
-    def finalize(self, tree, program_config):
+    def finalize(self, transform_result, program_config):
         """
         This function will be passed the result of transform.  The specializer
         should return an ConcreteSpecializedFunction.

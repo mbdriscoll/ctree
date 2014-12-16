@@ -14,6 +14,7 @@ from ctree.codegen import CodeGenVisitor
 from ctree.dotgen import DotGenVisitor, DotGenLabeller
 from ctree.util import flatten
 import ctree
+import os
 
 
 class CtreeNode(ast.AST):
@@ -130,29 +131,26 @@ class Project(CommonNode):
         self.compilation_dir = compilation_dir
         self.indent = indent
 
-    def codegen(self, indent=0, compilation_dir = ''):
+    def codegen(self, indent=0):
         """
         Code generates each file in the project and links their
         bytecode together to get the master bytecode file.
         """
         from ctree.jit import JitModule
-        compile_to = ctree.CONFIG.get('jit','COMPILE_PATH')
-        if not os.path.exists(compile_to):
-            os.mkdir(compile_to)
 
-        self._module = JitModule(compilation_dir=compilation_dir)
+        self._module = JitModule()
 
         # now that we have a concrete compilation dir, resolve references to it
         from ctree.transformations import ResolveGeneratedPathRefs
-
-        resolver = ResolveGeneratedPathRefs(self._module.compilation_dir)
-        self.files = [resolver.visit(f) for f in self.files]
-        if resolver.count:
-            log.info("automatically resolved %d GeneratedPathRef node(s).", resolver.count)
+        #
+        # resolver = ResolveGeneratedPathRefs(self._module.compilation_dir)
+        # self.files = [resolver.visit(f) for f in self.files]
+        # if resolver.count:
+        #     log.info("automatically resolved %d GeneratedPathRef node(s).", resolver.count)
 
         # transform all files into llvm modules and link them into the master module
         for f in self.files:
-            submodule = f._compile(f.codegen(), self._module.compilation_dir)
+            submodule = f._compile(f.codegen())
             if submodule:
                 self._module._link_in(submodule)
         return self._module
@@ -161,17 +159,31 @@ class Project(CommonNode):
     def module(self):
         if self._module:
             return self._module
-        return self.codegen(indent=self.indent, compilation_dir=self.compilation_dir)
+        return self.codegen(indent=self.indent)
 
 
 class File(CommonNode):
     """Holds a list of statements."""
     _fields = ['body']
+    _empty = None
 
-    def __init__(self, name="generated", body=None):
+    @property
+    def empty(self):
+        if not self._empty:
+            self._empty = type(self)().codegen()
+        return self._empty
+
+    def __init__(self, name="generated", body=None, path = None):
         self.name = name
         self.body = body if body else []
         self.config_target = 'c'
+        path = path or ''
+        if os.path.isabs(path):
+            self.path = path
+        else:
+            self.path = os.path.abspath(os.path.join(ctree.CONFIG.get('jit','COMPILE_PATH'), path))
+        if not os.path.exists(self.path):
+            os.makedirs(self.path)
 
     def codegen(self, *args):
         """Convert this substree into program text (a string)."""
@@ -186,7 +198,7 @@ class File(CommonNode):
         return GeneratedPathRef(self)
 
     def get_filename(self):
-        return "%s.%s" % (self.name, self._ext)
+        return os.path.join(self.path, "%s.%s" % (self.name, self._ext))
 
 
 class GeneratedPathRef(CommonNode):

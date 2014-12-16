@@ -62,7 +62,8 @@ CONFIG.write(CONFIGFILE)
 CONFIG_TXT = CONFIGFILE.getvalue()
 LOG.info("using configuration:\n%s", highlight(CONFIG_TXT, language='ini'))
 CONFIGFILE.close()
-
+if CONFIG.has_option('log','level'):
+    logging.basicConfig(level=getattr(logging,CONFIG.get('log','level')))
 
 # ---------------------------------------------------------------------------
 # stats
