@@ -37,15 +37,12 @@ class CFile(CNode, File):
     _ext = "c"
 
     def __init__(self, name="generated", body=None, config_target='c', path = None):
-        if not body:
-            body = []
         CNode.__init__(self)
         File.__init__(self, name, body, path)
         self.config_target = config_target
-        self._program_hash = None
 
     def get_bc_filename(self):
-        return os.path.join(self.path, "%s.bc" % self.name)
+        return "%s.bc" % self.name
 
 
 

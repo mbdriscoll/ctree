@@ -21,8 +21,25 @@ import llvm.core as ll
 import logging
 import inspect
 import hashlib
+import json
+
+from ctree.c.nodes import CFile
+from ctree.ocl.nodes import OclFile
 
 log = logging.getLogger(__name__)
+
+
+def getFile(filepath):
+    """
+    Takes a filepath and returns a specialized File instance (i.e. OclFile, CFile, etc)
+    """
+    ext_map = {'.'+t._ext:t for t in (
+        CFile, OclFile
+    )}
+    path, filename = os.path.split(filepath)
+    name, ext = os.path.splitext(filename)
+    filetype = ext_map[ext]
+    return filetype(name=name, path=path)
 
 
 class JitModule(object):
@@ -109,6 +126,7 @@ class ConcreteSpecializedFunction(object):
         pass
 
 
+
 class LazySpecializedFunction(object):
     """
     A callable object that will produce executable
@@ -119,6 +137,23 @@ class LazySpecializedFunction(object):
         self.original_tree = py_ast
         self.concrete_functions = {}  # config -> callable map
         self._tuner = self.get_tuning_driver()
+
+    @property
+    def info_filename(self):
+        return 'info.json'
+
+    def get_info(self, path):
+        info_filepath = os.path.join(path, self.info_filename)
+        if not os.path.exists(info_filepath):
+            return {'hash':None, 'files':[]}
+        with open(info_filepath) as info_file:
+            return json.load(info_file)
+
+    def set_info(self, path, dictionary):
+        info_filepath = os.path.join(path, self.info_filename)
+        with open(info_filepath,'w') as info_file:
+            return json.dump(dictionary, info_file)
+
 
     @staticmethod
     def _hash(o):
@@ -146,7 +181,7 @@ class LazySpecializedFunction(object):
         forbidden_chars = r"""/\?%*:|"<>()' """
         replace_table = string.maketrans(forbidden_chars, '_'*len(forbidden_chars))
         config_path = re.sub("_+","_", str(program_config).translate(replace_table))
-        path = os.path.join(self.__class__.__name__, config_path)
+        path = os.path.join(ctree.CONFIG.get('jit','COMPILE_PATH'),self.__class__.__name__, config_path)
         return path
 
 
@@ -165,7 +200,10 @@ class LazySpecializedFunction(object):
         args_subconfig = self.args_to_subconfig(args)
         tuner_subconfig = next(self._tuner.configs)
         program_config = (args_subconfig, tuner_subconfig)
-        dir_name = self.config_to_dirname((args, tuner_subconfig))
+        dir_name = self.config_to_dirname(program_config)
+        if not os.path.exists(dir_name):
+            os.makedirs(dir_name)
+
 
         log.info("tuner subconfig: %s", tuner_subconfig)
         log.info("arguments subconfig: %s", args_subconfig)
@@ -178,11 +216,23 @@ class LazySpecializedFunction(object):
         else:
             ctree.STATS.log("specialized function cache miss")
             log.info("specialized function cache miss.")
+            info = self.get_info(dir_name)
+            if hash(self) != info['hash']:
+                #need to run transform
+                log.info('Hash miss. Running Transform')
+                transform_result = self.transform(
+                    copy.deepcopy(self.original_tree),
+                    program_config
+                )
+                for source_file in transform_result:
+                    source_file.path = dir_name
+                new_info = {'hash':hash(self), 'files':[os.path.join(f.path, f.get_filename()) for f in transform_result]}
+                self.set_info(dir_name, new_info)
 
-            transform_result = self.transform(
-                copy.deepcopy(self.original_tree),
-                program_config
-            )
+            else:
+                log.info('Hash hit. Skipping transform')
+                files = [getFile(path) for path in info['files']]
+                transform_result = files
 
             try:
                 csf = self.finalize(transform_result, program_config)

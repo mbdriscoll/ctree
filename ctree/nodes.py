@@ -167,26 +167,33 @@ class File(CommonNode):
     _fields = ['body']
     _empty = None
 
+
+    def __init__(self, name="generated", body=None, path = None):
+        self.name = name
+        self.body = body or []
+        self.config_target = 'c'
+        self.path = path or '.'
+        self._program_hash = None
+
     @property
     def empty(self):
         if not self._empty:
             self._empty = type(self)(name=self.name, path=self.path).codegen()
         return self._empty
 
-    def __init__(self, name="generated", body=None, path = None):
-        self.name = name
-        self.body = body if body else []
-        self.config_target = 'c'
-        path = path or ''
-        if os.path.isabs(path):
-            self.path = path
-        else:
-            self.path = os.path.abspath(os.path.join(ctree.CONFIG.get('jit','COMPILE_PATH'), path))
-        if not os.path.exists(self.path):
-            os.makedirs(self.path)
+
+    @property
+    def path(self):
+        return self._path
+
+    @path.setter
+    def path(self, value):
+        self._path = value
+        if not os.path.exists(self._path):
+            os.makedirs(self._path)
 
     def get_hash_filename(self):
-        return os.path.join(self.path, "%s.%s.sha" % (self.name, self._ext))
+        return "%s.%s.sha" % (self.name, self._ext)
 
 
     @property
@@ -217,7 +224,7 @@ class File(CommonNode):
         return GeneratedPathRef(self)
 
     def get_filename(self):
-        return os.path.join(self.path, "%s.%s" % (self.name, self._ext))
+        return "%s.%s" % (self.name, self._ext)
 
 
 class GeneratedPathRef(CommonNode):
