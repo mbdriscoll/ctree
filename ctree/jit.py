@@ -187,8 +187,10 @@ class LazySpecializedFunction(object):
 
     def __call__(self, *args, **kwargs):
         """
-        Determines the program_configuration to be run. If it has yet to be
-        built, build it. Then, execute it.
+            Determines the program_configuration to be run. If it has yet to be
+            built, build it. Then, execute it. If the selected program_configuration 
+            for this function has already been code generated for, this method draws
+            from the cache.
         """
         ctree.STATS.log("specialized function call")
         assert not kwargs, \
@@ -210,18 +212,19 @@ class LazySpecializedFunction(object):
 
         config_hash = dir_name
 
-        if config_hash in self.concrete_functions:
+        if config_hash in self.concrete_functions:              # checks to see if the necessary code is in the run-time cache
             ctree.STATS.log("specialized function cache hit")
             log.info("specialized function cache hit!")
         else:
             ctree.STATS.log("specialized function cache miss")
             log.info("specialized function cache miss.")
             info = self.get_info(dir_name)
-            if hash(self) != info['hash']:
-                #need to run transform
+            if hash(self) != info['hash']:                      # checks to see if the necessary code is in the persistent cache
+                
+                # need to run transform() for code generation
                 log.info('Hash miss. Running Transform')
                 transform_result = self.transform(
-                    copy.deepcopy(self.original_tree),
+                    copy.deepcopy(self.original_tree),      # TODO: is this deepcopy really necessary?
                     program_config
                 )
                 for source_file in transform_result:
@@ -229,7 +232,7 @@ class LazySpecializedFunction(object):
                 new_info = {'hash':hash(self), 'files':[os.path.join(f.path, f.get_filename()) for f in transform_result]}
                 self.set_info(dir_name, new_info)
 
-            else:
+            else:                                             
                 log.info('Hash hit. Skipping transform')
                 files = [getFile(path) for path in info['files']]
                 transform_result = files
@@ -240,7 +243,14 @@ class LazySpecializedFunction(object):
                 log.warn("""Your lazy specialized function has not implemented
                          finalize, assuming your output to transform is a
                          concrete specialized function.""")
-                csf = transform_result
+
+                if (transform_result.isinstance(ConcreteSpecializedFunction)):
+                    csf = transform_result                      # if finalize() isn't implemented, transform() must return a CSF
+                else:
+                    log.warn("""You have not implemented the finalize() method, and yout transform() 
+                                method does not return a ConcreteSpecializedFunction instance to compensate
+                                for this. Please have transform() return a ConcreteSpecializedFunction, or implemented
+                                finalize() (which should also return a Concrete SpecializedFunction) for your specializer.""")
 
             assert isinstance(csf, ConcreteSpecializedFunction), \
                 "Expected a ctree.jit.ConcreteSpecializedFunction, \
