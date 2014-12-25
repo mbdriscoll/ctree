@@ -93,8 +93,12 @@ class OpTranslator(LazySpecializedFunction):
 
         }
         """, {'n': Constant(len_A + 32 - (len_A % 32))})
+        cfile = CFile("generated", [control])
+        return kernel, cfile
 
-        proj = Project([kernel, CFile("generated", [control])])
+    def finalize(self, transform_result, program_config):
+        kernel, cfile = transform_result
+        proj = Project([kernel, cfile])
         fn = OpFunction()
 
         program = cl.clCreateProgramWithSource(fn.context, kernel.codegen()).build()

@@ -25,6 +25,7 @@ import json
 
 from ctree.c.nodes import CFile
 from ctree.ocl.nodes import OclFile
+from ctree.nodes import File
 
 log = logging.getLogger(__name__)
 
@@ -224,9 +225,12 @@ class LazySpecializedFunction(object):
                     copy.deepcopy(self.original_tree),
                     program_config
                 )
+                if not isinstance(transform_result, (tuple, list)):
+                    transform_result = (transform_result,)
                 for source_file in transform_result:
+                    assert isinstance(source_file, File), "Transform must return an iterable of Files"
                     source_file.path = dir_name
-                new_info = {'hash':hash(self), 'files':[os.path.join(f.path, f.get_filename()) for f in transform_result]}
+                new_info = {'hash': hash(self), 'files':[os.path.join(f.path, f.get_filename()) for f in transform_result]}
                 self.set_info(dir_name, new_info)
 
             else:
@@ -234,13 +238,7 @@ class LazySpecializedFunction(object):
                 files = [getFile(path) for path in info['files']]
                 transform_result = files
 
-            try:
-                csf = self.finalize(transform_result, program_config)
-            except NotImplementedError:
-                log.warn("""Your lazy specialized function has not implemented
-                         finalize, assuming your output to transform is a
-                         concrete specialized function.""")
-                csf = transform_result
+            csf = self.finalize(transform_result, program_config)
 
             assert isinstance(csf, ConcreteSpecializedFunction), \
                 "Expected a ctree.jit.ConcreteSpecializedFunction, \
@@ -271,7 +269,7 @@ class LazySpecializedFunction(object):
         This function will be passed the result of transform.  The specializer
         should return an ConcreteSpecializedFunction.
         """
-        raise NotImplementedError()
+        raise NotImplementedError("Finalize must be implemented")
 
     def get_tuning_driver(self):
         """
