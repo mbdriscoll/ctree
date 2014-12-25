@@ -224,7 +224,7 @@ class LazySpecializedFunction(object):
                 # need to run transform() for code generation
                 log.info('Hash miss. Running Transform')
                 transform_result = self.transform(
-                    copy.deepcopy(self.original_tree),      # TODO: is this deepcopy really necessary?
+                    copy.deepcopy(self.original_tree),          # TODO: is this deepcopy really necessary?
                     program_config
                 )
                 for source_file in transform_result:
@@ -237,20 +237,8 @@ class LazySpecializedFunction(object):
                 files = [getFile(path) for path in info['files']]
                 transform_result = files
 
-            try:
-                csf = self.finalize(transform_result, program_config)
-            except NotImplementedError:
-                log.warn("""Your lazy specialized function has not implemented
-                         finalize, assuming your output to transform is a
-                         concrete specialized function.""")
-
-                if (transform_result.isinstance(ConcreteSpecializedFunction)):
-                    csf = transform_result                      # if finalize() isn't implemented, transform() must return a CSF
-                else:
-                    log.warn("""You have not implemented the finalize() method, and yout transform() 
-                                method does not return a ConcreteSpecializedFunction instance to compensate
-                                for this. Please have transform() return a ConcreteSpecializedFunction, or implemented
-                                finalize() (which should also return a Concrete SpecializedFunction) for your specializer.""")
+            csf = self.finalize(transform_result, program_config) # if finalize isn't implemented by the specializer
+                                                                  # writer, this will throw and error
 
             assert isinstance(csf, ConcreteSpecializedFunction), \
                 "Expected a ctree.jit.ConcreteSpecializedFunction, \
