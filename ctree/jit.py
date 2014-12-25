@@ -241,12 +241,7 @@ class LazySpecializedFunction(object):
                 files = [getFile(path) for path in info['files']]
                 transform_result = files
 
-<<<<<<< HEAD
-            csf = self.finalize(transform_result, program_config)
-=======
-            csf = self.finalize(transform_result, program_config) # if finalize isn't implemented by the specializer
-                                                                  #  writer, this will throw and error
->>>>>>> a2d477b7af16cb56b06108b7d2075ef902c4c7c2
+        csf = self.finalize(transform_result, program_config)
 
             assert isinstance(csf, ConcreteSpecializedFunction), \
                 "Expected a ctree.jit.ConcreteSpecializedFunction, \
