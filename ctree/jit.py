@@ -238,7 +238,7 @@ class LazySpecializedFunction(object):
                 transform_result = files
 
             csf = self.finalize(transform_result, program_config) # if finalize isn't implemented by the specializer
-                                                                  # writer, this will throw and error
+                                                                  #  writer, this will throw and error
 
             assert isinstance(csf, ConcreteSpecializedFunction), \
                 "Expected a ctree.jit.ConcreteSpecializedFunction, \
