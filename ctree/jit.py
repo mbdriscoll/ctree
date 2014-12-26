@@ -217,6 +217,8 @@ class LazySpecializedFunction(object):
         if config_hash in self.concrete_functions:              # checks to see if the necessary code is in the run-time cache
             ctree.STATS.log("specialized function cache hit")
             log.info("specialized function cache hit!")
+            csf = self.concrete_functions[config_hash]
+
         else:
             ctree.STATS.log("specialized function cache miss")
             log.info("specialized function cache miss.")
@@ -242,10 +244,9 @@ class LazySpecializedFunction(object):
                 files = [getFile(path) for path in info['files']]
                 transform_result = files
 
-        csf = self.finalize(transform_result, program_config)
-        assert isinstance(csf, ConcreteSpecializedFunction), "Expected a ctree.jit.ConcreteSpecializedFunction, but got a %s." % type(csf)
-
-        self.concrete_functions[config_hash] = csf
+            csf = self.finalize(transform_result, program_config)
+            assert isinstance(csf, ConcreteSpecializedFunction), "Expected a ctree.jit.ConcreteSpecializedFunction, but got a %s." % type(csf)
+            self.concrete_functions[config_hash] = csf
         return csf(*args, **kwargs)
 
     def report(self, *args, **kwargs):

@@ -107,6 +107,9 @@ class OpTranslator(LazySpecializedFunction):
         entry_type = ct.CFUNCTYPE(None, cl.cl_command_queue, cl.cl_kernel, cl.cl_mem)
         return fn.finalize(apply_kernel_ptr, proj, "apply_all", entry_type)
 
+    def interpret(self, A):
+        return np.vectorize(self.apply)(A)
+
 
 class ArrayOp(object):
     """
@@ -122,14 +125,13 @@ class ArrayOp(object):
         """Apply the operator to the arguments via a generated function."""
         return self.translator(A)
 
-    def interpret(self, A):
-        return np.vectorize(self.apply)(A)
+
 
 
 # ---------------------------------------------------------------------------
 # user code
 
-class Doubler(ArrayOp):
+class Doubler(OpTranslator):
     """Double elements of the array."""
 
     @staticmethod
@@ -137,7 +139,7 @@ class Doubler(ArrayOp):
         return x * 2
 
 
-class Squarer(ArrayOp):
+class Squarer(OpTranslator):
     """Double elements of the array."""
 
     @staticmethod
