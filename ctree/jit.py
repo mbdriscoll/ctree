@@ -15,6 +15,7 @@ import ctree
 from ctree.nodes import Project
 from ctree.analyses import VerifyOnlyCtreeNodes
 from ctree.util import highlight
+from ctree.frontend import get_ast
 
 import llvm.core as ll
 
@@ -134,8 +135,8 @@ class LazySpecializedFunction(object):
     code just-in-time.
     """
 
-    def __init__(self, py_ast):
-        self.original_tree = py_ast
+    def __init__(self, py_ast = None):
+        self.original_tree = py_ast or get_ast(self.apply)
         self.concrete_functions = {}  # config -> callable map
         self._tuner = self.get_tuning_driver()
 
@@ -242,14 +243,10 @@ class LazySpecializedFunction(object):
                 transform_result = files
 
         csf = self.finalize(transform_result, program_config)
+        assert isinstance(csf, ConcreteSpecializedFunction), "Expected a ctree.jit.ConcreteSpecializedFunction, but got a %s." % type(csf)
 
-            assert isinstance(csf, ConcreteSpecializedFunction), \
-                "Expected a ctree.jit.ConcreteSpecializedFunction, \
-                 but got a %s." % type(csf)
-
-            self.concrete_functions[config_hash] = csf
-
-        return self.concrete_functions[config_hash](*args, **kwargs)
+        self.concrete_functions[config_hash] = csf
+        return csf(*args, **kwargs)
 
     def report(self, *args, **kwargs):
         """
