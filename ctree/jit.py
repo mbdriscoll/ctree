@@ -135,6 +135,9 @@ class LazySpecializedFunction(object):
     code just-in-time.
     """
 
+    class Proxied(object):
+        pass
+
     def __init__(self, py_ast = None):
         self.original_tree = py_ast or get_ast(self.apply)
         self.concrete_functions = {}  # config -> callable map
@@ -249,6 +252,23 @@ class LazySpecializedFunction(object):
             self.concrete_functions[config_hash] = csf
         return csf(*args, **kwargs)
 
+    @classmethod
+    def from_function(cls, func, classname = ''):
+        func_hash = int(hashlib.sha512(inspect.getsource(func)).hexdigest(), 16)
+        def transform(self, tree, program_config):
+            """
+                Calls transform after renaming the function name to 'apply' since specializers are written assuming "apply"
+            """
+            tree.body[0].name = 'apply'
+            return super(newClass, self).transform(tree, program_config)
+        newClass = type(classname or func.__name__, (cls, ), {'apply': staticmethod(func), '__hash__':
+                                                 lambda self: func_hash + hash(super(newClass, self)),
+                                                 'transform': transform
+                                                })
+
+        return newClass
+
+
     def report(self, *args, **kwargs):
         """
         Records the performance of the most recent configuration.
@@ -290,3 +310,7 @@ class LazySpecializedFunction(object):
                  "Consider overriding args_to_subconfig() in %s.",
                  type(self).__name__)
         return dict()
+
+    @staticmethod
+    def apply(*args):
+        raise NotImplementedError()

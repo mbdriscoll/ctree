@@ -103,9 +103,9 @@ class ArrayOp(object):
 class Doubler(ArrayOp):
     """Double elements of the array."""
 
+    @staticmethod
     def apply(n):
         return n * 2
-
 
 def py_doubler(A):
     A *= 2
