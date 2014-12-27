@@ -17,6 +17,8 @@ from ctree.analyses import VerifyOnlyCtreeNodes
 from ctree.util import highlight
 from ctree.frontend import get_ast
 
+import ast
+
 import llvm.core as ll
 
 import logging
@@ -24,9 +26,12 @@ import inspect
 import hashlib
 import json
 
-from ctree.c.nodes import CFile
+from ctree.c.nodes import CFile, FunctionDecl, FunctionCall
 from ctree.ocl.nodes import OclFile
 from ctree.nodes import File
+
+import itertools
+
 
 log = logging.getLogger(__name__)
 
@@ -254,12 +259,25 @@ class LazySpecializedFunction(object):
 
     @classmethod
     def from_function(cls, func, classname = ''):
+        print('asdfasfd')
+        class Replacer(ast.NodeTransformer):
+            def visit_FunctionDef(self, node):
+                if node.name == func.__name__:
+                    node.name = 'apply'
+                return node
+
+            def visit_Call(self, node):
+                if node.name == func.__name__:
+                    node.name = 'apply'
+                return node
+
         func_hash = int(hashlib.sha512(inspect.getsource(func)).hexdigest(), 16)
         def transform(self, tree, program_config):
             """
                 Calls transform after renaming the function name to 'apply' since specializers are written assuming "apply"
             """
-            tree.body[0].name = 'apply'
+            print('transform')
+            tree = Replacer().visit(tree)
             return super(newClass, self).transform(tree, program_config)
         newClass = type(classname or func.__name__, (cls, ), {'apply': staticmethod(func), '__hash__':
                                                  lambda self: func_hash + hash(super(newClass, self)),

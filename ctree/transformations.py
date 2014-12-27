@@ -9,7 +9,8 @@ from ctypes import c_long
 from ctree.nodes import Project, CtreeNode
 from ctree.c.nodes import Op, Constant, String, SymbolRef, BinaryOp, TernaryOp, Return
 from ctree.c.nodes import If, CFile, FunctionCall, FunctionDecl, For, Assign, AugAssign, ArrayRef
-from ctree.c.nodes import Lt, PostInc, AddAssign, SubAssign, MulAssign, DivAssign
+from ctree.c.nodes import Lt, PostInc, AddAssign, SubAssign, MulAssign, DivAssign, BitAndAssign, BitShRAssign, BitShLAssign
+from ctree.c.nodes import BitOrAssign, BitXorAssign, ModAssign
 from ctree.visitors import NodeTransformer
 from ctree.util import flatten
 
