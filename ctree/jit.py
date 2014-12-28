@@ -231,10 +231,12 @@ class LazySpecializedFunction(object):
             ctree.STATS.log("specialized function cache miss")
             log.info("specialized function cache miss.")
             info = self.get_info(dir_name)
+            print(info['hash'], hash(self))
             if hash(self) != info['hash']:                      # checks to see if the necessary code is in the persistent cache
                 
                 # need to run transform() for code generation
                 log.info('Hash miss. Running Transform')
+                ctree.STATS.log("Filesystem cache miss")
                 transform_result = self.transform(
                     copy.deepcopy(self.original_tree),          # TODO: is this deepcopy really necessary?
                     program_config
@@ -249,6 +251,7 @@ class LazySpecializedFunction(object):
 
             else:                                             
                 log.info('Hash hit. Skipping transform')
+                ctree.STATS.log('Filesystem cache hit')
                 files = [getFile(path) for path in info['files']]
                 transform_result = files
 
@@ -270,15 +273,20 @@ class LazySpecializedFunction(object):
                     node.name = 'apply'
                 return node
 
-        func_hash = int(hashlib.sha512(inspect.getsource(func)).hexdigest(), 16)
+
         def transform(self, tree, program_config):
             """
                 Calls transform after renaming the function name to 'apply' since specializers are written assuming "apply"
             """
             tree = Replacer().visit(tree)
             return super(newClass, self).transform(tree, program_config)
+
+        def __hash__(self):
+            func_hash = int(hashlib.sha512(inspect.getsource(func)).hexdigest(), 16)
+            old_hash = hash(cls())
+            return func_hash ^ old_hash
         newClass = type(classname or func.__name__, (cls, ), {'apply': staticmethod(func), '__hash__':
-                                                 lambda self: func_hash + hash(super(newClass, self)),
+                                                 __hash__,
                                                  'transform': transform
                                                 })
 
