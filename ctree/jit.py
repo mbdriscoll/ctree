@@ -30,6 +30,8 @@ from ctree.c.nodes import CFile, FunctionDecl, FunctionCall
 from ctree.ocl.nodes import OclFile
 from ctree.nodes import File
 
+from collections import namedtuple
+
 import itertools
 
 
@@ -140,8 +142,7 @@ class LazySpecializedFunction(object):
     code just-in-time.
     """
 
-    class Proxied(object):
-        pass
+    ProgramConfig = namedtuple('ProgramConfig',['args_subconfig', 'tuner_subconfig'])
 
     def __init__(self, py_ast = None):
         self.original_tree = py_ast or get_ast(self.apply)
@@ -211,7 +212,7 @@ class LazySpecializedFunction(object):
 
         args_subconfig = self.args_to_subconfig(args)
         tuner_subconfig = next(self._tuner.configs)
-        program_config = (args_subconfig, tuner_subconfig)
+        program_config = self.ProgramConfig(args_subconfig, tuner_subconfig)
         dir_name = self.config_to_dirname(program_config)
         if not os.path.exists(dir_name):
             os.makedirs(dir_name)

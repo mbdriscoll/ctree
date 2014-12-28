@@ -18,15 +18,20 @@ class TestTranslator(LazySpecializedFunction):
 
     def transform(self, tree, program_config):
         arg_types = program_config[0]['arg_typesig']
-        func_type = CFUNCTYPE(arg_types[0], *arg_types)
 
         tree.return_type = arg_types[0]()
         for param, ty in zip(tree.params, arg_types):
             param.type = ty()
+        return [CFile(tree.name, [tree])]
 
-        proj = Project([CFile("generated", [tree])])
+    def finalize(self, transform_result, program_config):
+        proj = Project(transform_result)
+        cfile = transform_result[0]
+        arg_types = program_config[0]['arg_typesig']
 
-        return BasicFunction(tree.name, proj, func_type)
+        func_type = CFUNCTYPE(arg_types[0], *arg_types)
+
+        return BasicFunction(cfile.name, proj, func_type)
 
 
 class BasicFunction(ConcreteSpecializedFunction):
@@ -54,6 +59,7 @@ class NoTransform(LazySpecializedFunction):
         return {'arg_typesig': tuple(type(get_ctype(arg)) for arg in args)}
 
 
+@unittest.skip('Removed Support for AST injection')
 class TestSpecializers(unittest.TestCase):
     def test_identity_int(self):
         c_identity = TestTranslator(identity_ast)
@@ -93,3 +99,6 @@ class TestSpecializers(unittest.TestCase):
         c_identity = NoTransform(identity_ast)
         with self.assertRaises(NotImplementedError):
             self.assertEqual(c_identity(1.2), identity(1.2))
+
+if __name__ == '__main__':
+    unittest.main()
