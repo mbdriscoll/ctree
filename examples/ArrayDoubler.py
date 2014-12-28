@@ -94,41 +94,21 @@ class ArrayFn(ConcreteSpecializedFunction):
     def __call__(self, A):
         return self._c_function(A)
 
-class ArrayOp(object):
-    """
-    A class for managing independent operation on elements
-    in numpy arrays.
-    """
-
-    def __init__(self):
-        """Instantiate translator."""
-        self.c_apply_all = OpTranslator(get_ast(self.apply))
-
-    def __call__(self, A):
-        """Apply the operator to the arguments via a generated function."""
-        return self.c_apply_all(A)
-
-
 # ---------------------------------------------------------------------------
 # User code
-
-# class Doubler(ArrayOp):
-#     """Double elements of the array."""
-#
-#     @staticmethod
-#     def apply(n):
-#         return n * 2
 
 def double(n):
     return n * 2
 
-Doubler = OpTranslator.from_function(double, "Doubler")
-
 def py_doubler(A):
     A *= 2
 
-
 def main():
+
+    # create a class called Doubler that has the function double(n) as an @staticmethod
+    Doubler = OpTranslator.from_function(double, "Doubler")
+    
+    # creating instance of c_doubler()
     c_doubler = Doubler()
 
     # doubling doubles
