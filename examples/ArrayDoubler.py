@@ -8,7 +8,9 @@ import logging
 
 import numpy as np
 
+import ctypes as ct
 from ctypes import *
+
 import ctree.np
 
 from ctree.frontend import get_ast
@@ -17,6 +19,7 @@ from ctree.transformations import *
 from ctree.jit import LazySpecializedFunction
 from ctree.jit import ConcreteSpecializedFunction
 from ctree.types import get_ctype
+# from ctypes import CFUNCTYPE
 
 # ---------------------------------------------------------------------------
 # Specializer code
@@ -68,11 +71,20 @@ class OpTranslator(LazySpecializedFunction):
         apply_one.return_type = inner_type
         apply_one.params[0].type = inner_type
 
-        entry_point_typesig = tree.find(FunctionDecl, name="apply_all").get_type()
-        print("FUNCTYPE", entry_point_typesig._restype_, entry_point_typesig._argtypes_)
+        c_doubler = CFile("generated", [tree])
+        return [c_doubler]
 
-        proj = Project([tree])
-        return ArrayFn().finalize("apply_all", proj, entry_point_typesig)
+    def finalize(self, transform_result, program_config):
+        
+        c_doubler = transform_result[0]
+        proj = Project([c_doubler])
+
+        arg_config, tuner_config = program_config
+        array_type = arg_config['ptr']
+        entry_type = ct.CFUNCTYPE(None, array_type)
+ 
+        concrete_Fn = ArrayFn()
+        return concrete_Fn.finalize("apply_all", proj, entry_type)
 
 class ArrayFn(ConcreteSpecializedFunction):
     def finalize(self, entry_point_name, project_node, entry_typesig):
