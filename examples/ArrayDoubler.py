@@ -100,8 +100,6 @@ class ArrayFn(ConcreteSpecializedFunction):
 def double(n):
     return n * 2
 
-# Using the 'from_function' quick-syntax
-
 def py_doubler(A):
     A *= 2
 
