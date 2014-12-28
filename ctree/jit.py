@@ -259,7 +259,6 @@ class LazySpecializedFunction(object):
 
     @classmethod
     def from_function(cls, func, classname = ''):
-        print('asdfasfd')
         class Replacer(ast.NodeTransformer):
             def visit_FunctionDef(self, node):
                 if node.name == func.__name__:
@@ -276,7 +275,6 @@ class LazySpecializedFunction(object):
             """
                 Calls transform after renaming the function name to 'apply' since specializers are written assuming "apply"
             """
-            print('transform')
             tree = Replacer().visit(tree)
             return super(newClass, self).transform(tree, program_config)
         newClass = type(classname or func.__name__, (cls, ), {'apply': staticmethod(func), '__hash__':

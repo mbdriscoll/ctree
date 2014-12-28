@@ -112,12 +112,17 @@ class ArrayOp(object):
 # ---------------------------------------------------------------------------
 # User code
 
-class Doubler(ArrayOp):
-    """Double elements of the array."""
+# class Doubler(ArrayOp):
+#     """Double elements of the array."""
+#
+#     @staticmethod
+#     def apply(n):
+#         return n * 2
 
-    @staticmethod
-    def apply(n):
-        return n * 2
+def double(n):
+    return n * 2
+
+Doubler = OpTranslator.from_function(double, "Doubler")
 
 def py_doubler(A):
     A *= 2
