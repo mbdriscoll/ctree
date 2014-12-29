@@ -36,6 +36,9 @@ class CCodeGen(CodeGenVisitor):
     # -------------------------------------------------------------------------
     # visitor methods
 
+    def visit_MultiNode(self, node):
+        return self._genblock(node.body, insert_curly_brackets=False, increase_indent=False)
+
     def visit_FunctionDecl(self, node):
         params = ", ".join(map(str, node.params))
         s = ""

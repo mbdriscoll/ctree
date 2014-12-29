@@ -267,11 +267,12 @@ class LazySpecializedFunction(object):
             def visit_FunctionDef(self, node):
                 if node.name == func.__name__:
                     node.name = 'apply'
+                node.body = [self.visit(item) for item in node.body]
                 return node
 
-            def visit_Call(self, node):
-                if node.name == func.__name__:
-                    node.name = 'apply'
+            def visit_Name(self, node):
+                if node.id == func.__name__:
+                    node.id = 'apply'
                 return node
 
 

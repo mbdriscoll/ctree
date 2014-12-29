@@ -7,7 +7,7 @@ import ast
 from ctypes import c_long
 
 from ctree.nodes import Project, CtreeNode
-from ctree.c.nodes import Op, Constant, String, SymbolRef, BinaryOp, TernaryOp, Return
+from ctree.c.nodes import Op, Constant, String, SymbolRef, BinaryOp, TernaryOp, Return, While, MultiNode
 from ctree.c.nodes import If, CFile, FunctionCall, FunctionDecl, For, Assign, AugAssign, ArrayRef
 from ctree.c.nodes import Lt, PostInc, AddAssign, SubAssign, MulAssign, DivAssign, BitAndAssign, BitShRAssign, BitShLAssign
 from ctree.c.nodes import BitOrAssign, BitXorAssign, ModAssign
@@ -190,12 +190,18 @@ class PyBasicConversions(NodeTransformer):
         return node
 
     def visit_Assign(self, node):
-        if len(node.targets) > 1:
-            # Raise exception?
-            return node
-        target = self.visit(node.targets[0])
-        value = self.visit(node.value)
-        return Assign(target, value)
+        if isinstance(node.targets[0], ast.Name): #single assign
+            target = self.visit(node.targets[0])
+            value = self.visit(node.value)
+            return Assign(target, value)
+        elif isinstance(node.targets[0], ast.Tuple) or isinstance(node.targets[0], ast.List):
+            body = []
+            for target, value in zip(node.targets[0].elts, node.value.elts):
+                body.append(
+                    Assign(self.visit(target), self.visit(value))
+                )
+            return MultiNode(body)
+        return node
 
     def visit_Subscript(self, node):
         if isinstance(node.slice,ast.Index):
@@ -204,6 +210,12 @@ class PyBasicConversions(NodeTransformer):
             return ArrayRef(value,index)
         else:
             return node
+
+    def visit_While(self,node):
+        cond = self.visit(node.test)
+        body = [self.visit(i) for i in node.body]
+        return While(cond, body)
+
 
 class ResolveGeneratedPathRefs(NodeTransformer):
     """

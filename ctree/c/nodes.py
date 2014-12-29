@@ -101,6 +101,18 @@ class CFile(CNode, File):
         return ll_module
 
 
+class MultiNode(CNode):
+    """
+        Some Python nodes need to be translated to a block of nodes but Visitors can't do that.
+    """
+
+    _fields = ['body']
+
+    def __init__(self, body = None):
+        self.body = body or []
+        CNode.__init__(self)
+
+
 class Statement(CNode):
     """Section B.2.3 6.6."""
     pass
