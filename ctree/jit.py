@@ -192,8 +192,8 @@ class LazySpecializedFunction(object):
         """Returns the subdirectory name under .compiled/funcname"""
         # fixes the directory names and squishes invalid chars
         forbidden_chars = r"""/\?%*:|"<>()' """
-        replace_table = string.maketrans(forbidden_chars, '_'*len(forbidden_chars))
-        config_path = re.sub("_+","_", str(program_config).translate(replace_table))
+        config_str = ''.join(i for i in str(program_config) if i not in forbidden_chars)
+        config_path = re.sub("_+","_", config_str)
         path = os.path.join(ctree.CONFIG.get('jit','COMPILE_PATH'),self.__class__.__name__, config_path)
         return path
 
