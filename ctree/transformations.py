@@ -108,10 +108,10 @@ class PyBasicConversions(NodeTransformer):
             # TODO allow any expressions castable to Long type
             target_type = c_long
             for el in (stop, start, step):
-                if isinstance(el, Literal) and not isinstance(el, SymbolRef):
+                if hasattr(el, 'get_type'):
                     t = el.get_type()
                     assert any(isinstance(t, klass) for klass in [
-                        c_byte, c_int, c_uint, c_long, c_ulong, c_short, c_ushort
+                        c_byte, c_int, c_long, c_short
                     ]), "Can only convert ranges with integer/long start/stop/step values"
                     target_type = t
 
