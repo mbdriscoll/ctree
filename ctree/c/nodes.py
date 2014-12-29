@@ -47,7 +47,7 @@ class CFile(CNode, File):
     def _compile(self, program_text):
         c_src_file = os.path.join(self.path, self.get_filename())
         ll_bc_file = os.path.join(self.path, self.get_bc_filename())
-        program_hash = hashlib.sha512(program_text.strip()).hexdigest()
+        program_hash = hashlib.sha512(program_text.strip().encode()).hexdigest()
         c_src_exists = os.path.exists(c_src_file)
         ll_bc_file_exists = os.path.exists(ll_bc_file)
         old_hash = self.program_hash

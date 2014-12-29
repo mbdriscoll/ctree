@@ -182,7 +182,7 @@ class LazySpecializedFunction(object):
         result = hashlib.sha512('')
         for klass in mro:
             if issubclass(klass, LazySpecializedFunction):
-                result.update(inspect.getsource(klass))
+                result.update(inspect.getsource(klass).encode())
             else:
                 pass
         return int(result.hexdigest(), 16)
@@ -288,7 +288,7 @@ class LazySpecializedFunction(object):
             return super(newClass, self).transform(tree, program_config)
 
         def __hash__(self):
-            func_hash = int(hashlib.sha512(inspect.getsource(func)).hexdigest(), 16)
+            func_hash = int(hashlib.sha512(inspect.getsource(func)).encode().hexdigest(), 16)
             old_hash = hash(cls())
             return func_hash ^ old_hash
         newClass = type(classname or func.__name__, (cls, ), {'apply': staticmethod(func), '__hash__':
