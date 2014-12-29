@@ -10,7 +10,7 @@ import numpy as np
 import ctypes as ct
 
 from ctree.transformations import *
-from ctree.frontend import get_ast
+from ctree.frontend import get_ast, dump
 from ctree.jit import LazySpecializedFunction
 from ctree.jit import ConcreteSpecializedFunction
 from ctree.types import get_ctype
@@ -33,8 +33,6 @@ class BasicFunction(ConcreteSpecializedFunction):
 
 
 class BasicTranslator(LazySpecializedFunction):
-    def __init__(self, func):
-        super(BasicTranslator, self).__init__(get_ast(func))
 
     def args_to_subconfig(self, args):
         return {'arg_type': type(get_ctype(args[0]))}
@@ -44,12 +42,12 @@ class BasicTranslator(LazySpecializedFunction):
 
         tree = PyBasicConversions().visit(tree)
 
-        fib_fn = tree.find(FunctionDecl, name="fib")
+        fib_fn = tree.find(FunctionDecl, name="apply")
         arg_type = program_config[0]['arg_type']
         fib_fn.return_type = arg_type()
         fib_fn.params[0].type = arg_type()
-
         c_translator = CFile("generated", [tree])
+
 
         return [c_translator]
 
@@ -71,14 +69,14 @@ class BasicTranslator(LazySpecializedFunction):
         # print ("ENTRY TYPE (through our analysis): ", entry_type)
         # print ("ENTRY TYPES ARE THE SAME: ", entry_type == fib_func.get_type())
 
-        return BasicFunction("fib", proj, entry_type)
+        return BasicFunction("apply", proj, entry_type)
 
 
 def main():
 
     # create a class called Doubler that has the function double(n) as an @staticmethod
     Translator = BasicTranslator.from_function(fib, "Translator")
-    c_fib = BasicTranslator(fib)
+    c_fib = Translator()
 
     assert fib(10) == c_fib(10)
     assert fib(11) == c_fib(11)

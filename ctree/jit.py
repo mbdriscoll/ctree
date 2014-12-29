@@ -26,7 +26,7 @@ import inspect
 import hashlib
 import json
 
-from ctree.c.nodes import CFile, FunctionDecl, FunctionCall
+from ctree.c.nodes import CFile, FunctionDecl, FunctionCall, MultiNode
 from ctree.ocl.nodes import OclFile
 from ctree.nodes import File
 
@@ -145,6 +145,8 @@ class LazySpecializedFunction(object):
     ProgramConfig = namedtuple('ProgramConfig',['args_subconfig', 'tuner_subconfig'])
 
     def __init__(self, py_ast = None):
+        if py_ast is not None:
+            raise TypeError('This functionality has been removed and the signature will be modified in future versions')
         self.original_tree = py_ast or get_ast(self.apply)
         self.concrete_functions = {}  # config -> callable map
         self._tuner = self.get_tuning_driver()
@@ -232,7 +234,6 @@ class LazySpecializedFunction(object):
             ctree.STATS.log("specialized function cache miss")
             log.info("specialized function cache miss.")
             info = self.get_info(dir_name)
-            print(info['hash'], hash(self))
             if hash(self) != info['hash']:                      # checks to see if the necessary code is in the persistent cache
                 
                 # need to run transform() for code generation
@@ -264,6 +265,9 @@ class LazySpecializedFunction(object):
     @classmethod
     def from_function(cls, func, classname = ''):
         class Replacer(ast.NodeTransformer):
+            def visit_Module(self, node):
+                return MultiNode(body = [self.visit(i) for i in node.body])
+
             def visit_FunctionDef(self, node):
                 if node.name == func.__name__:
                     node.name = 'apply'
