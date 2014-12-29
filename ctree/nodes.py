@@ -229,6 +229,7 @@ class File(CommonNode):
 
 class GeneratedPathRef(CommonNode):
     """Represents a path to a generated file."""
+    _force_parentheses = False
 
     def __init__(self, target_file=None):
         assert isinstance(target_file, File), \
@@ -243,7 +244,8 @@ class CommonCodeGen(CodeGenVisitor):
         return ";\n".join(map(str, node.body)) + ";\n"
 
     def visit_GeneratedPathRef(self, node):
-        raise Exception("Unresolved GeneratedPathRefs to file %s." % (node.target.get_filename()))
+        return '"%s"'% (os.path.join(node.target.path, node.target.get_filename()))
+        # raise Exception("Unresolved GeneratedPathRefs to file %s." % (node.target.get_filename()))
 
 
 class CommonDotGen(DotGenLabeller):

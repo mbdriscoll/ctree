@@ -8,8 +8,9 @@ from ctree.types import codegen_type
 from ctree.precedence import UnaryOp, BinaryOp, TernaryOp, Cast
 from ctree.precedence import get_precedence, is_left_associative
 
+from ctree.nodes import CommonCodeGen
 
-class CCodeGen(CodeGenVisitor):
+class CCodeGen(CommonCodeGen):
     """
     Manages generation of C code.
     """
@@ -143,3 +144,4 @@ class CCodeGen(CodeGenVisitor):
     def visit_ArrayDef(self, node):
         body = ", ".join(map(str, node.body))
         return "%s[%s] = { %s }" % (node.target, node.size, body)
+
