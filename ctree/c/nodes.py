@@ -388,6 +388,9 @@ class Break(Statement):
 class Continue(Statement):
     _requires_semicolon = lambda self : True
 
+class Pass(Statement):
+    _requires_semicolon = lambda self: False
+
 
 @singleton
 class Op:

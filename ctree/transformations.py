@@ -4,13 +4,15 @@ A set of basic transformers for python asts
 import os
 import ast
 
-from ctypes import c_long
+from ctypes import c_long, c_int, c_uint, c_byte, c_ulong, c_ushort, c_short
 
 from ctree.nodes import Project, CtreeNode
 from ctree.c.nodes import Op, Constant, String, SymbolRef, BinaryOp, TernaryOp, Return, While, MultiNode
-from ctree.c.nodes import If, CFile, FunctionCall, FunctionDecl, For, Assign, AugAssign, ArrayRef
+from ctree.c.nodes import If, CFile, FunctionCall, FunctionDecl, For, Assign, AugAssign, ArrayRef, Literal
 from ctree.c.nodes import Lt, PostInc, AddAssign, SubAssign, MulAssign, DivAssign, BitAndAssign, BitShRAssign, BitShLAssign
-from ctree.c.nodes import BitOrAssign, BitXorAssign, ModAssign, Break, Continue
+from ctree.c.nodes import BitOrAssign, BitXorAssign, ModAssign, Break, Continue, Pass
+
+
 from ctree.visitors import NodeTransformer
 from ctree.util import flatten
 
@@ -104,11 +106,19 @@ class PyBasicConversions(NodeTransformer):
                 raise Exception("Cannot convert a for...range with %d args." % nArgs)
 
             # TODO allow any expressions castable to Long type
-            assert isinstance(stop.get_type(), c_long), "Can only convert range's with stop values of Long type."
-            assert isinstance(start.get_type(), c_long), "Can only convert range's with start values of Long type."
-            assert isinstance(step.get_type(), c_long), "Can only convert range's with step values of Long type."
+            target_type = c_long
+            for el in (stop, start, step):
+                if isinstance(el, Literal) and not isinstance(el, SymbolRef):
+                    t = el.get_type()
+                    assert any(isinstance(t, klass) for klass in [
+                        c_byte, c_int, c_uint, c_long, c_ulong, c_short, c_ushort
+                    ]), "Can only convert ranges with integer/long start/stop/step values"
+                    target_type = t
 
-            target = SymbolRef(node.target.id, c_long())
+            # assert isinstance(stop.get_type(), c_long), "Can only convert range's with stop values of Long type."
+            # assert isinstance(start.get_type(), c_long), "Can only convert range's with start values of Long type."
+            # assert isinstance(step.get_type(), c_long), "Can only convert range's with step values of Long type."
+            target = SymbolRef(node.target.id, target_type)
             for_loop = For(
                 Assign(target, start),
                 Lt(target.copy(), stop),
@@ -221,6 +231,9 @@ class PyBasicConversions(NodeTransformer):
 
     def visit_Continue(self, node):
         return Continue()
+
+    def visit_Pass(self, node):
+        return Pass()
 
 
 class ResolveGeneratedPathRefs(NodeTransformer):

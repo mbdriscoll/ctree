@@ -247,6 +247,9 @@ class CommonCodeGen(CodeGenVisitor):
         return '"%s"'% (os.path.join(node.target.path, node.target.get_filename()))
         # raise Exception("Unresolved GeneratedPathRefs to file %s." % (node.target.get_filename()))
 
+    def visit_Pass(self, node):
+        return ""
+
 
 class CommonDotGen(DotGenLabeller):
     """Manages coversion of all common nodes to dot."""
