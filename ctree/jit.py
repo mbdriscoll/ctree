@@ -288,7 +288,7 @@ class LazySpecializedFunction(object):
             return super(newClass, self).transform(tree, program_config)
 
         def __hash__(self):
-            func_hash = int(hashlib.sha512(inspect.getsource(func)).encode().hexdigest(), 16)
+            func_hash = int(hashlib.sha512(inspect.getsource(func).encode()).hexdigest(), 16)
             old_hash = hash(cls())
             return func_hash ^ old_hash
         newClass = type(classname or func.__name__, (cls, ), {'apply': staticmethod(func), '__hash__':
