@@ -111,41 +111,19 @@ class OpTranslator(LazySpecializedFunction):
         return np.vectorize(self.apply)(A)
 
 
-class ArrayOp(object):
-    """
-    A class for managing independent operation on elements
-    in numpy arrays.
-    """
-
-    def __init__(self):
-        """Instantiate translator."""
-        self.translator = OpTranslator(get_ast(self.apply))
-
-    def __call__(self, A):
-        """Apply the operator to the arguments via a generated function."""
-        return self.translator(A)
-
-
-
-
 # ---------------------------------------------------------------------------
 # user code
 
-class Doubler(OpTranslator):
-    """Double elements of the array."""
 
-    @staticmethod
-    def apply(x):
-        return x * 2
+def double(x):
+    return x * 2
 
+Doubler = OpTranslator.from_function(double, 'Doubler')
 
-class Squarer(OpTranslator):
-    """Double elements of the array."""
+def square(x):
+    return x * x
 
-    @staticmethod
-    def apply(x):
-        return x * x
-
+Squarer = OpTranslator.from_function(square, 'Squarer')
 
 def main():
     data = np.arange(123, dtype=np.float32)

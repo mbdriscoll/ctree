@@ -72,7 +72,7 @@ import atexit
 import collections
 
 
-class Counter(object):
+class LogInfo(object):
     """Tracks events, reports counts upon garbage collections."""
 
     def __init__(self):
@@ -90,7 +90,7 @@ class Counter(object):
         LOG.info("execution statistics: (((\n%s)))", key_values_string)
 
 
-STATS = Counter()
+STATS = LogInfo()
 atexit.register(STATS.report)
 
 # Registries for type-based logic in extension packages.
