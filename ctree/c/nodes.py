@@ -382,6 +382,12 @@ class ArrayDef(Expression):
         self.body = body if body else []
         super(ArrayDef, self).__init__()
 
+class Break(Statement):
+    _requires_semicolon = lambda self : True
+
+class Continue(Statement):
+    _requires_semicolon = lambda self : True
+
 
 @singleton
 class Op:

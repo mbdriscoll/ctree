@@ -145,3 +145,9 @@ class CCodeGen(CommonCodeGen):
         body = ", ".join(map(str, node.body))
         return "%s[%s] = { %s }" % (node.target, node.size, body)
 
+    def visit_Break(self, node):
+        return 'break'
+
+    def visit_Continue(self, node):
+        return 'continue'
+

@@ -10,7 +10,7 @@ from ctree.nodes import Project, CtreeNode
 from ctree.c.nodes import Op, Constant, String, SymbolRef, BinaryOp, TernaryOp, Return, While, MultiNode
 from ctree.c.nodes import If, CFile, FunctionCall, FunctionDecl, For, Assign, AugAssign, ArrayRef
 from ctree.c.nodes import Lt, PostInc, AddAssign, SubAssign, MulAssign, DivAssign, BitAndAssign, BitShRAssign, BitShLAssign
-from ctree.c.nodes import BitOrAssign, BitXorAssign, ModAssign
+from ctree.c.nodes import BitOrAssign, BitXorAssign, ModAssign, Break, Continue
 from ctree.visitors import NodeTransformer
 from ctree.util import flatten
 
@@ -215,6 +215,12 @@ class PyBasicConversions(NodeTransformer):
         cond = self.visit(node.test)
         body = [self.visit(i) for i in node.body]
         return While(cond, body)
+
+    def visit_Break(self, node):
+        return Break()
+
+    def visit_Continue(self, node):
+        return Continue()
 
 
 class ResolveGeneratedPathRefs(NodeTransformer):
