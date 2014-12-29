@@ -48,7 +48,6 @@ class BasicTranslator(LazySpecializedFunction):
         fib_fn.params[0].type = arg_type()
         c_translator = CFile("generated", [tree])
 
-
         return [c_translator]
 
     def finalize(self, transform_result, program_config):
@@ -56,18 +55,9 @@ class BasicTranslator(LazySpecializedFunction):
         c_translator = transform_result[0]
         proj = Project([c_translator])
 
-        # print ("TRANS RESULT: ", transform_result)
-        # print ("C TRANS: ", c_translator)
-
         arg_config, tuner_config = program_config
         arg_type = arg_config['arg_type']
         entry_type = ct.CFUNCTYPE(arg_type, arg_type)
-
-        # these debug statements verify that the entry type of our function is correct
-        # fib_func = c_translator.find(FunctionDecl, name="fib")
-        # print ("ENTRY TYPE (as an attribute of the node) : ", fib_func.get_type())
-        # print ("ENTRY TYPE (through our analysis): ", entry_type)
-        # print ("ENTRY TYPES ARE THE SAME: ", entry_type == fib_func.get_type())
 
         return BasicFunction("apply", proj, entry_type)
 
