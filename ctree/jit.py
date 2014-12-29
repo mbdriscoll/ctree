@@ -179,7 +179,7 @@ class LazySpecializedFunction(object):
 
     def __hash__(self):
         mro = type(self).mro()
-        result = hashlib.sha512('')
+        result = hashlib.sha512(''.encode())
         for klass in mro:
             if issubclass(klass, LazySpecializedFunction):
                 result.update(inspect.getsource(klass).encode())
