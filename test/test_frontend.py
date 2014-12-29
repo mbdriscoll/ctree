@@ -1,8 +1,10 @@
 import ast
 import unittest
 
-from ctree.frontend import get_ast
+from ctree.frontend import *
 from fixtures.sample_asts import *
+
+from inspect import getsource
 
 
 class TestFrontend(unittest.TestCase):
@@ -14,3 +16,9 @@ class TestFrontend(unittest.TestCase):
 
     def test_fib(self):
         self.assertIsInstance(get_ast(fib), ast.AST)
+
+    def test_parse_print(self):
+        parseprint(getsource(fib))
+
+    def test_dump(self):
+        self.assertEqual(dump(fib_ast), 'FunctionDecl(params=[\n    SymbolRef(),\n  ], defn=[\n    If(cond=BinaryOp(left=SymbolRef(), right=Constant()), then=[\n        Return(value=SymbolRef()),\n      ], elze=[\n        Return(value=BinaryOp(left=FunctionCall(func=SymbolRef(), args=[\n            BinaryOp(left=SymbolRef(), right=Constant()),\n          ]), right=FunctionCall(func=SymbolRef(), args=[\n            BinaryOp(left=SymbolRef(), right=Constant()),\n          ]))),\n      ]),\n  ])')
