@@ -23,6 +23,7 @@ class CNode(CtreeNode):
 
     def codegen(self, indent=0):
         from ctree.c.codegen import CCodeGen
+        from ctree.transformations import DeclarationFiller
 
         return CCodeGen(indent).visit(self)
 
@@ -107,6 +108,7 @@ class MultiNode(CNode):
     """
 
     _fields = ['body']
+    _requires_semicolon = lambda self: False
 
     def __init__(self, body = None):
         self.body = body or []
@@ -145,6 +147,7 @@ class If(Statement):
 class While(Statement):
     """Cite me."""
     _fields = ['cond', 'body']
+    _requires_semicolon = lambda self: False
 
     def __init__(self, cond=None, body=None):
         self.cond = cond
@@ -193,6 +196,7 @@ class Literal(Expression):
 
 class Constant(Literal):
     """Section B.1.4 6.1.3."""
+    _fields = ['value']
 
     def __init__(self, value=None):
         self.value = value
@@ -225,6 +229,7 @@ class String(Literal):
 class SymbolRef(Literal):
     """Cite me."""
     _next_id = 0
+    _fields = ['name','type']
 
     def __init__(self, name=None, sym_type=None, _global=False,
                  _local=False, _const=False):
@@ -327,7 +332,7 @@ class UnaryOp(Expression):
 
 class BinaryOp(Expression):
     """Cite me."""
-    _fields = ['left', 'right']
+    _fields = ['left', 'op', 'right']
 
     def __init__(self, left=None, op=None, right=None):
         self.left = left

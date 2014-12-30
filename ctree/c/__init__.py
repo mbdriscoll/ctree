@@ -29,6 +29,7 @@ if sys.version_info >= (3, 0):
         ctypes.c_void_p: lambda t: "void*",
         ctypes.c_bool: lambda t: "bool",
         ctypes.c_ulong: lambda t: "size_t",
+        ctypes.c_wchar_p: lambda t: "char*",
         type(None): lambda n: "void",
 
         _ctypes.Array: lambda ct: "%s*" % codegen_type(ct._type_()),

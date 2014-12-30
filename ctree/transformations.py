@@ -4,7 +4,7 @@ A set of basic transformers for python asts
 import os
 import ast
 
-from ctypes import c_long, c_int, c_uint, c_byte, c_ulong, c_ushort, c_short
+from ctypes import c_long, c_int, c_uint, c_byte, c_ulong, c_ushort, c_short, c_wchar_p, c_char_p
 
 from ctree.nodes import Project, CtreeNode
 from ctree.c.nodes import Op, Constant, String, SymbolRef, BinaryOp, TernaryOp, Return, While, MultiNode
@@ -12,6 +12,7 @@ from ctree.c.nodes import If, CFile, FunctionCall, FunctionDecl, For, Assign, Au
 from ctree.c.nodes import Lt, PostInc, AddAssign, SubAssign, MulAssign, DivAssign, BitAndAssign, BitShRAssign, BitShLAssign
 from ctree.c.nodes import BitOrAssign, BitXorAssign, ModAssign, Break, Continue, Pass
 
+from ctree.c.nodes import Op
 
 from ctree.visitors import NodeTransformer
 from ctree.util import flatten
@@ -279,3 +280,66 @@ class Lifter(NodeTransformer):
                         new_includes.append(include)
             node.body = list(new_includes) + node.body
         return self.generic_visit(node)
+
+class DeclarationFiller(NodeTransformer):
+    def __init__(self):
+        self.__environments = [{}]
+
+    def __lookup(self, key):
+        """
+        :param key:
+        :return: Looks up the last value corresponding to key in self.__environments
+        """
+        value = sentinel = object()
+        for environment in self.__environments:
+            if key in environment:
+                value = environment[key]
+        if value is sentinel:
+            raise KeyError('Did not find {} in environments'.format(repr(key)))
+        return value
+
+    def __add_entry(self, key, value):
+        self.__environments[-1][key] = value
+
+    def __add_environment(self):
+        self.__environments.append({})
+
+    def __pop_environment(self):
+        return self.__environments.pop()
+
+    def visit_FunctionDecl(self, node):
+        #add current FunctionDecl's return type onto environments
+        self.__add_entry(node.name, node.return_type)
+        #new environment every time we enter a function
+        self.__add_environment()
+        for param in node.params:
+            #binding types of parameters
+            self.__add_entry(param.name, param.type)
+        node.defn = [self.visit(i) for i in node.defn]
+        self.__pop_environment()
+        return node
+
+    def visit_SymbolRef(self, node):
+        if node.type:
+            self.__add_entry(node.name, node.type)
+        return node
+
+    def visit_BinaryOp(self, node):
+        if isinstance(node.op, Op.Assign):
+            node.left = self.visit(node.left)
+            node.right = self.visit(node.right)
+            name = node.left
+            value = node.right
+            try:
+                self.__lookup(name.name)
+            except KeyError:
+                if isinstance(value, Constant):
+                    node.left.type = value.get_type()
+                if isinstance(value, String):
+                    node.left.type = c_char_p()
+                if isinstance(value, SymbolRef):
+                    node.left.type = self.__lookup(value.name)
+
+                self.__add_entry(node.left.name, node.left.type)
+        return node
+
