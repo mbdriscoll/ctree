@@ -116,9 +116,6 @@ class PyBasicConversions(NodeTransformer):
                     ]), "Can only convert ranges with integer/long start/stop/step values"
                     target_type = t
 
-            # assert isinstance(stop.get_type(), c_long), "Can only convert range's with stop values of Long type."
-            # assert isinstance(start.get_type(), c_long), "Can only convert range's with start values of Long type."
-            # assert isinstance(step.get_type(), c_long), "Can only convert range's with step values of Long type."
             target = SymbolRef(node.target.id, target_type)
             for_loop = For(
                 Assign(target, start),
