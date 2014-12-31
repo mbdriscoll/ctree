@@ -190,9 +190,21 @@ class PyBasicConversions(NodeTransformer):
         return node
 
     def visit_Assign(self, node):
+        print ('GOT TO VISIT ASSIGN')
+        print ('TARG', node.targets)
+
+
         if isinstance(node.targets[0], ast.Name): #single assign
             target = self.visit(node.targets[0])
             value = self.visit(node.value)
+
+            print ("VALUE", value)
+
+            if isinstance(value, FunctionDecl):
+                value.name = target
+                return value
+
+
             return Assign(target, value)
         elif isinstance(node.targets[0], ast.Tuple) or isinstance(node.targets[0], ast.List):
             body = []
@@ -215,6 +227,38 @@ class PyBasicConversions(NodeTransformer):
         cond = self.visit(node.test)
         body = [self.visit(i) for i in node.body]
         return While(cond, body)
+
+    def visit_Lambda(self, node):
+        print ("ENTERED visit_Lambda()")
+
+        if isinstance(node, ast.Lambda):
+            print ("NODE: ", node)
+            print ("NODE BODY: ", node.body)
+            print ("NODE ARGS: ", node.args)
+            # print ("NODE PARAMS: ", node.params)
+            # print ("NODE OP: ", node.op)
+            def_node = ast.FunctionDef(name = "default", args = node.args, body = node.body, decorator_list = None)
+            print ("DEF NODE:", def_node)
+            print ("DEF NODE NAME:", def_node.name)
+            print ("DEF NODE ARGS:", def_node.args)
+            print ("DEF NODE BODY:", def_node.body)
+
+            params = [self.visit(p) for p in def_node.args.args]
+            defn = [Return(self.visit(def_node.body))]
+
+            decl_node = FunctionDecl(None, def_node.name, params, defn)
+
+
+            # decl_node = self.visit_FunctionDef(def_node)
+            print "HAHHHHLLOOOO"
+            print ("DECL NODE:", decl_node)
+            print ("DECL NODE NAME:", decl_node.name)
+            Lifter().visit_FunctionDecl(decl_node)
+
+            return decl_node
+        else:
+            return node
+
 
 
 class ResolveGeneratedPathRefs(NodeTransformer):
