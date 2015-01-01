@@ -46,6 +46,7 @@ class OpTranslator(LazySpecializedFunction):
         array_type = arg_config['ptr']
         nItems = np.prod(array_type._shape_)
         inner_type = array_type._dtype_.type()
+        kernel_func_name = 'apply'
 
         tree = CFile("generated", [
             py_ast.body[0],
@@ -57,7 +58,7 @@ class OpTranslator(LazySpecializedFunction):
                                  PostInc(SymbolRef("i")),
                                  [
                                      Assign(ArrayRef(SymbolRef("A"), SymbolRef("i")),
-                                            FunctionCall(SymbolRef("apply"), [ArrayRef(SymbolRef("A"),
+                                            FunctionCall(SymbolRef(kernel_func_name), [ArrayRef(SymbolRef("A"),
                                                                                        SymbolRef("i"))])),
                                  ]),
                          ]
@@ -66,7 +67,8 @@ class OpTranslator(LazySpecializedFunction):
 
         tree = PyBasicConversions().visit(tree)
 
-        apply_one = tree.find(FunctionDecl, name="apply")
+        apply_one = PyBasicConversions().visit(tree.body[0])
+        apply_one.name = kernel_func_name
         apply_one.set_static().set_inline()
         apply_one.return_type = inner_type
         apply_one.params[0].type = inner_type
@@ -143,4 +145,10 @@ def main():
 
 
 if __name__ == '__main__':
+    # Testing conventional (non-lambda) kernel function implementation
     main()
+
+    # Testing lambda kernel function implementation
+    double = lambda x: x * 2
+    main()
+

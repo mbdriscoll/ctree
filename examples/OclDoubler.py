@@ -62,6 +62,7 @@ class OpTranslator(LazySpecializedFunction):
         inner_type = A._dtype_.type()
 
         apply_one = PyBasicConversions().visit(py_ast.body[0])
+        apply_one.name = 'apply'
         apply_one.return_type = inner_type
         apply_one.params[0].type = inner_type
 
@@ -71,7 +72,7 @@ class OpTranslator(LazySpecializedFunction):
                 Assign(SymbolRef("i", ct.c_int()), get_global_id(0)),
                 If(Lt(SymbolRef("i"), Constant(len_A)), [
                     Assign(ArrayRef(SymbolRef("A"), SymbolRef("i")),
-                           FunctionCall(SymbolRef("apply"),
+                           FunctionCall(SymbolRef(apply_one.name),
                                         [ArrayRef(SymbolRef("A"), SymbolRef("i"))])),
                 ], []),
             ]
@@ -118,14 +119,15 @@ class OpTranslator(LazySpecializedFunction):
 def double(x):
     return x * 2
 
-Doubler = OpTranslator.from_function(double, 'Doubler')
 
 def square(x):
     return x * x
 
-Squarer = OpTranslator.from_function(square, 'Squarer')
 
 def main():
+    Doubler = OpTranslator.from_function(double, 'Doubler')
+    Squarer = OpTranslator.from_function(square, 'Squarer')
+
     data = np.arange(123, dtype=np.float32)
 
     # squaring floats
@@ -143,4 +145,11 @@ def main():
     print("Doubler works.")
 
 if __name__ == '__main__':
+    # Testing conventional (non-lambda) kernel function implementation
     main()
+
+    # Testing lambda kernel function implementation
+    double = lambda x: x * 2
+    square = lambda x: x * x
+    main()
+
