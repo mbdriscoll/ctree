@@ -190,9 +190,16 @@ class PyBasicConversions(NodeTransformer):
         return node
 
     def visit_Assign(self, node):
+
         if isinstance(node.targets[0], ast.Name): #single assign
             target = self.visit(node.targets[0])
             value = self.visit(node.value)
+
+            if isinstance(value, FunctionDecl):
+                value.name = target
+                return value
+
+
             return Assign(target, value)
         elif isinstance(node.targets[0], ast.Tuple) or isinstance(node.targets[0], ast.List):
             body = []
@@ -215,6 +222,21 @@ class PyBasicConversions(NodeTransformer):
         cond = self.visit(node.test)
         body = [self.visit(i) for i in node.body]
         return While(cond, body)
+
+    def visit_Lambda(self, node):
+
+        if isinstance(node, ast.Lambda):
+            def_node = ast.FunctionDef(name = "default", args = node.args, body = node.body, decorator_list = None)
+
+            params = [self.visit(p) for p in def_node.args.args]
+            defn = [Return(self.visit(def_node.body))]
+            decl_node = FunctionDecl(None, def_node.name, params, defn)
+            Lifter().visit_FunctionDecl(decl_node)
+
+            return decl_node
+        else:
+            return node
+
 
 
 class ResolveGeneratedPathRefs(NodeTransformer):
