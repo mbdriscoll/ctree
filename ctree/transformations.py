@@ -9,7 +9,7 @@ from ctypes import c_long, c_int, c_uint, c_byte, c_ulong, c_ushort, c_short, c_
 from ctree.nodes import Project, CtreeNode
 from ctree.c.nodes import Op, Constant, String, SymbolRef, BinaryOp, TernaryOp, Return, While, MultiNode
 from ctree.c.nodes import If, CFile, FunctionCall, FunctionDecl, For, Assign, AugAssign, ArrayRef, Literal
-from ctree.c.nodes import Lt, PostInc, AddAssign, SubAssign, MulAssign, DivAssign, BitAndAssign, BitShRAssign, BitShLAssign
+from ctree.c.nodes import Lt, Gt, AddAssign, SubAssign, MulAssign, DivAssign, BitAndAssign, BitShRAssign, BitShLAssign
 from ctree.c.nodes import BitOrAssign, BitXorAssign, ModAssign, Break, Continue, Pass
 
 from ctree.c.nodes import Op
@@ -106,10 +106,21 @@ class PyBasicConversions(NodeTransformer):
             else:
                 raise Exception("Cannot convert a for...range with %d args." % nArgs)
 
+            print(start.value, stop.value, step.value)
+            if step.value == 0:
+                raise ValueError("range() step argument must not be zero")
+
+            #check no-op conditions.
+            if start.value == stop.value or \
+                    (start.value < stop.value and step.value < 0) or \
+                    (start.value > stop.value and step.value > 0):
+                return None
+
             # TODO allow any expressions castable to Long type
             target_type = c_long
             for el in (stop, start, step):
-                if hasattr(el, 'get_type'):
+                if hasattr(el, 'get_type'): #typed item to try and guess type off of. Imperfect right now.
+                    # TODO take the proper class instead of the last; if start, end are doubles, but step is long, target is double
                     t = el.get_type()
                     assert any(isinstance(t, klass) for klass in [
                         c_byte, c_int, c_long, c_short
@@ -117,9 +128,13 @@ class PyBasicConversions(NodeTransformer):
                     target_type = t
 
             target = SymbolRef(node.target.id, target_type)
+            if start.value < stop.value:
+                op = Lt
+            else:
+                op = Gt
             for_loop = For(
                 Assign(target, start),
-                Lt(target.copy(), stop),
+                op(target.copy(), stop),
                 AddAssign(target.copy(), step),
                 [self.visit(stmt) for stmt in node.body],
             )
