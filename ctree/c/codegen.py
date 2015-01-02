@@ -151,3 +151,6 @@ class CCodeGen(CommonCodeGen):
     def visit_Continue(self, node):
         return 'continue'
 
+    def visit_Array(self, node):
+        return "{%s}" % ', '.join([i.codegen() for i in node.body])
+

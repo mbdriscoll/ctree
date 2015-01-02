@@ -387,6 +387,18 @@ class ArrayDef(Expression):
         self.body = body if body else []
         super(ArrayDef, self).__init__()
 
+class Array(Expression):
+    _fields = ['type', 'size', 'body']
+
+    def __init__(self, type, size = None, body = None):
+        self.body = body or []
+        self.size = size or len(self.body)
+        self.type = type
+        super(Array, self).__init__()
+
+    def get_type(self):
+        return self.type
+
 class Break(Statement):
     _requires_semicolon = lambda self : True
 

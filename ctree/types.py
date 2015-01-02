@@ -3,6 +3,8 @@ from __future__ import absolute_import
 import types
 import sys
 
+import ctypes
+
 import logging
 
 from ctree import _TYPE_CODEGENERATORS as generators
@@ -97,3 +99,26 @@ def codegen_type(ctype):
         except KeyError:
             pass
     raise ValueError("No code generator defined for %s." % type(ctype))
+
+def get_common_ctype(ctypes_list):
+    """
+    :param ctypes_list: iterable of ctypes
+    :return: calculates the proper ctype for coercion of all types, as per
+
+        If either is      long          double the other is promoted to      long          double
+        If either is                    double the other is promoted to                    double
+        If either is                    float  the other is promoted to                    float
+        If either is long long unsigned int    the other is promoted to long long unsigned int
+        If either is long long          int    the other is promoted to long long          int
+        If either is long      unsigned int    the other is promoted to long      unsigned int
+        If either is long               int    the other is promoted to long               int
+        if either is           unsigned int    the other is promoted to           unsigned int
+        If either is                    int    the other is promoted to                    int
+        Both operands are promoted to int
+    """
+
+    #lowest ranking takes precedence
+    rankings = [ctypes.c_longdouble, ctypes.c_double, ctypes.c_float, ctypes.uint, ctypes.int, ctypes.c_byte,
+                ctypes.c_wchar, ctypes.c_char, ctypes.c_bool]
+
+    return min(ctypes_list, key=rankings.index)

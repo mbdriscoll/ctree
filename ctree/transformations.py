@@ -10,9 +10,11 @@ from ctree.nodes import Project, CtreeNode
 from ctree.c.nodes import Op, Constant, String, SymbolRef, BinaryOp, TernaryOp, Return, While, MultiNode
 from ctree.c.nodes import If, CFile, FunctionCall, FunctionDecl, For, Assign, AugAssign, ArrayRef, Literal
 from ctree.c.nodes import Lt, Gt, AddAssign, SubAssign, MulAssign, DivAssign, BitAndAssign, BitShRAssign, BitShLAssign
-from ctree.c.nodes import BitOrAssign, BitXorAssign, ModAssign, Break, Continue, Pass
+from ctree.c.nodes import BitOrAssign, BitXorAssign, ModAssign, Break, Continue, Pass, Array
 
 from ctree.c.nodes import Op
+
+from ctree.types import get_ctype
 
 from ctree.visitors import NodeTransformer
 from ctree.util import flatten
@@ -92,7 +94,7 @@ class PyBasicConversions(NodeTransformer):
         if isinstance(node, ast.For) and \
            isinstance(node.iter, ast.Call) and \
            isinstance(node.iter.func, ast.Name) and \
-           node.iter.func.id == 'range':
+           node.iter.func.id in ('range', 'xrange'):
             Range = node.iter
             nArgs = len(Range.args)
             if nArgs == 1:
@@ -111,10 +113,11 @@ class PyBasicConversions(NodeTransformer):
                 raise ValueError("range() step argument must not be zero")
 
             #check no-op conditions.
-            if start.value == stop.value or \
-                    (start.value < stop.value and step.value < 0) or \
-                    (start.value > stop.value and step.value > 0):
-                return None
+            if all(isinstance(item, Constant) for item in (start, stop, step)):
+                if start.value == stop.value or \
+                        (start.value < stop.value and step.value < 0) or \
+                        (start.value > stop.value and step.value > 0):
+                    return None
 
             # TODO allow any expressions castable to Long type
             target_type = c_long
@@ -345,7 +348,7 @@ class DeclarationFiller(NodeTransformer):
             try:
                 self.__lookup(name.name)
             except KeyError:
-                if isinstance(value, Constant):
+                if hasattr(value, 'get_type'):
                     node.left.type = value.get_type()
                 if isinstance(value, String):
                     node.left.type = c_char_p()
