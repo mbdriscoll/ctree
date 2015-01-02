@@ -16,6 +16,7 @@ from ctree.nodes import Project
 from ctree.analyses import VerifyOnlyCtreeNodes
 from ctree.util import highlight
 from ctree.frontend import get_ast
+from ctree.transformations import DeclarationFiller
 
 import ast
 
@@ -245,9 +246,11 @@ class LazySpecializedFunction(object):
                 )
                 if not isinstance(transform_result, (tuple, list)):
                     transform_result = (transform_result,)
+                transform_result = [DeclarationFiller().visit(source_file) for source_file in transform_result]
                 for source_file in transform_result:
                     assert isinstance(source_file, File), "Transform must return an iterable of Files"
                     source_file.path = dir_name
+
                 new_info = {'hash': hash(self), 'files':[os.path.join(f.path, f.get_filename()) for f in transform_result]}
                 self.set_info(dir_name, new_info)
 
