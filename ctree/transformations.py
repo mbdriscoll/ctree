@@ -4,7 +4,7 @@ A set of basic transformers for python asts
 import os
 import ast
 
-from ctypes import c_long, c_int, c_uint, c_byte, c_ulong, c_ushort, c_short, c_wchar_p, c_char_p
+from ctypes import c_long, c_int, c_uint, c_byte, c_ulong, c_ushort, c_short, c_wchar_p, c_char_p, c_float
 
 from ctree.nodes import Project, CtreeNode
 from ctree.c.nodes import Op, Constant, String, SymbolRef, BinaryOp, TernaryOp, Return, While, MultiNode
@@ -29,7 +29,6 @@ class PyCtxScrubber(NodeTransformer):
     def visit_Name(self, node):
         node.ctx = None
         return node
-
 
 class PyBasicConversions(NodeTransformer):
     """
@@ -222,9 +221,23 @@ class PyBasicConversions(NodeTransformer):
             return Assign(target, value)
         elif isinstance(node.targets[0], ast.Tuple) or isinstance(node.targets[0], ast.List):
             body = []
+            temp_var_map = {}
             for target, value in zip(node.targets[0].elts, node.value.elts):
+                # TODO: might need to do some DeclarationFiller thing here to get the types of the new ____temp_variables.
+
+                temp_target_id = "____temp__" + value.id
+                temp_target = ast.Name(id = temp_target_id, ctx = target.ctx)
+                temp_var_map[temp_target] = target
+
+                ref = self.visit(temp_target)
+                # ref.type = c_float()                # TODO: need to change this from c_float() to whatever the value's type is using DeclarationFiller.
+
                 body.append(
-                    Assign(self.visit(target), self.visit(value))
+                    Assign(ref, self.visit(value))
+                )
+            for temp_target, target in temp_var_map.iteritems():
+                body.append(
+                    Assign(self.visit(target), self.visit(temp_target))
                 )
             return MultiNode(body)
         return node
@@ -321,6 +334,7 @@ class DeclarationFiller(NodeTransformer):
 
     def __pop_environment(self):
         return self.__environments.pop()
+
 
     def visit_FunctionDecl(self, node):
         #add current FunctionDecl's return type onto environments
