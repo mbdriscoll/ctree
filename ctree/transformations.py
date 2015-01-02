@@ -130,10 +130,10 @@ class PyBasicConversions(NodeTransformer):
                     target_type = t
 
             target = SymbolRef(node.target.id, target_type)
-            if start.value < stop.value:
-                op = Lt
-            else:
-                op = Gt
+            op = Lt
+            if hasattr(start,'value') and hasattr(stop,'value'):
+                if start.value > stop.value:
+                    op = Gt
             for_loop = For(
                 Assign(target, start),
                 op(target.copy(), stop),
