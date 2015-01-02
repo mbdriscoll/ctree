@@ -61,7 +61,7 @@ class TestStripDocstrings(unittest.TestCase):
 class TestBasicConversions(unittest.TestCase):
     def _check(self, py_ast, expected_c_ast, names_dict ={}, constants_dict={}):
         actual_c_ast = PyBasicConversions(names_dict, constants_dict).visit(py_ast)
-        self.assertEqual(str(actual_c_ast).strip(), str(expected_c_ast).strip())
+        self.assertEqual(str(actual_c_ast).strip('\n;'), str(expected_c_ast).strip('\n;'))
 
     def test_num_float(self):
         py_ast = ast.Num(123.4)
