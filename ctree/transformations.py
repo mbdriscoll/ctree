@@ -107,12 +107,12 @@ class PyBasicConversions(NodeTransformer):
             else:
                 raise Exception("Cannot convert a for...range with %d args." % nArgs)
 
-            print(start.value, stop.value, step.value)
-            if step.value == 0:
-                raise ValueError("range() step argument must not be zero")
+
 
             #check no-op conditions.
             if all(isinstance(item, Constant) for item in (start, stop, step)):
+                if step.value == 0:
+                    raise ValueError("range() step argument must not be zero")
                 if start.value == stop.value or \
                         (start.value < stop.value and step.value < 0) or \
                         (start.value > stop.value and step.value > 0):
@@ -130,10 +130,10 @@ class PyBasicConversions(NodeTransformer):
                     target_type = t
 
             target = SymbolRef(node.target.id, target_type)
-            if start.value < stop.value:
-                op = Lt
-            else:
-                op = Gt
+            op = Lt
+            if hasattr(start,'value') and hasattr(stop,'value'):
+                if start.value > stop.value:
+                    op = Gt
             for_loop = For(
                 Assign(target, start),
                 op(target.copy(), stop),
