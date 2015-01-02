@@ -403,9 +403,9 @@ class DeclarationFiller(NodeTransformer):
             except KeyError:
                 if hasattr(value, 'get_type'):
                     node.left.type = value.get_type()
-                if isinstance(value, String):
+                elif isinstance(value, String):
                     node.left.type = c_char_p()
-                if isinstance(value, SymbolRef):
+                elif isinstance(value, SymbolRef):
                     node.left.type = self.__lookup(value.name)
 
                 self.__add_entry(node.left.name, node.left.type)
