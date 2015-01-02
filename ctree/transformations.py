@@ -242,6 +242,7 @@ class PyBasicConversions(NodeTransformer):
             #making temporary variables for results.
             new_target = target.copy()
             new_target.name = "____temp__" + new_target.name
+
             new_targets.append(new_target)
             body.append(Assign(new_target, target))
 
@@ -252,34 +253,6 @@ class PyBasicConversions(NodeTransformer):
             #now assigning the temp values to the original variables
             body.append(Assign(target, new_target.copy()))
         return MultiNode(body = body)
-
-
-        # if isinstance(node.targets[0], ast.Name): #single assign
-        #     target = self.visit(node.targets[0])
-        #     value = self.visit(node.value)
-        #     return Assign(target, value)
-        # elif isinstance(node.targets[0], ast.Tuple) or isinstance(node.targets[0], ast.List):
-        #     body = []
-        #     temp_var_map = {}
-        #     for target, value in zip(node.targets[0].elts, node.value.elts):
-        #         # TODO: might need to do some DeclarationFiller thing here to get the types of the new ____temp_variables.
-        #
-        #         temp_target_id = "____temp__" + value.id
-        #         temp_target = ast.Name(id = temp_target_id, ctx = target.ctx)
-        #         temp_var_map[temp_target] = target
-        #
-        #         ref = self.visit(temp_target)
-        #         # ref.type = c_float()# TODO: need to change this from c_float() to whatever the value's type is using DeclarationFiller.
-        #
-        #         body.append(
-        #             Assign(ref, self.visit(value))
-        #         )
-        #     for temp_target, target in temp_var_map.iteritems():
-        #         body.append(
-        #             Assign(self.visit(target), self.visit(temp_target))
-        #         )
-        #     return MultiNode(body)
-        # return node
 
     def visit_Subscript(self, node):
         if isinstance(node.slice,ast.Index):
@@ -387,7 +360,6 @@ class DeclarationFiller(NodeTransformer):
     def __pop_environment(self):
         return self.__environments.pop()
 
-
     def visit_FunctionDecl(self, node):
         #add current FunctionDecl's return type onto environments
         self.__add_entry(node.name, node.return_type)
@@ -413,17 +385,24 @@ class DeclarationFiller(NodeTransformer):
             node.right = self.visit(node.right)
             name = node.left
             value = node.right
-            if hasattr(node.left, 'type'):
+            if hasattr(name, 'type') and name.type != None:
                 return node
+
             try:
                 self.__lookup(name.name)
             except KeyError:
                 if hasattr(value, 'get_type'):
-                    node.left.type = value.get_type()
+
+                    val_type = value.get_type()
+                    if val_type is None:
+                        name.type = self.__lookup(value.left.name)
+                    else:
+                        name.type = val_type
+
                 elif isinstance(value, String):
-                    node.left.type = c_char_p()
+                    name.type = c_char_p()
                 elif isinstance(value, SymbolRef):
-                    node.left.type = self.__lookup(value.name)
+                    name.type = self.__lookup(value.name)
 
                 self.__add_entry(node.left.name, node.left.type)
         return node

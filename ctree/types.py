@@ -4,6 +4,7 @@ import types
 import sys
 
 import ctypes
+from ctypes import *
 
 import logging
 
@@ -79,6 +80,30 @@ def get_ctype(py_obj):
             pass
     raise ValueError("No type recognizer defined for %s." % type(py_obj))
 
+def get_c_type_from_numpy_dtype(dtype_specified):
+        """
+        Get the ctype corresponding to a given numpy.dtype
+        :param: dtype_specified - the numpy.dtype
+        :return: the ctype corresponding the the dtype_specified. None unable to match
+        """
+        typemap = {}
+        for t in (c_byte, c_short, c_int, c_long, c_longlong):
+            typemap["<i%s" % sizeof(t)] = t.__ctype_le__
+            typemap[">i%s" % sizeof(t)] = t.__ctype_be__
+        for t in (c_ubyte, c_ushort, c_uint, c_ulong, c_ulonglong):
+            typemap["<u%s" % sizeof(t)] = t.__ctype_le__
+            typemap[">u%s" % sizeof(t)] = t.__ctype_be__
+        for t in (c_float, c_double):
+            typemap["<f%s" % sizeof(t)] = t.__ctype_le__
+            typemap[">f%s" % sizeof(t)] = t.__ctype_be__
+        typemap["|b1"] = c_bool
+        typemap["|i1"] = c_byte
+        typemap["|u1"] = c_ubyte
+
+        if dtype_specified.descr[0][1] in typemap:
+            return typemap[dtype_specified.descr[0][1]]
+        else:
+            return None
 
 def codegen_type(ctype):
     """
