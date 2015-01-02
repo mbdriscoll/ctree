@@ -395,9 +395,13 @@ class DeclarationFiller(NodeTransformer):
     def visit_BinaryOp(self, node):
         if isinstance(node.op, Op.Assign):
             node.left = self.visit(node.left)
+            if isinstance(node.left, BinaryOp):
+                return node
             node.right = self.visit(node.right)
             name = node.left
             value = node.right
+            if hasattr(node.left, 'type'):
+                return node
             try:
                 self.__lookup(name.name)
             except KeyError:
