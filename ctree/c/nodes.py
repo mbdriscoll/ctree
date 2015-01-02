@@ -14,7 +14,7 @@ from ctypes import CFUNCTYPE
 from ctree.nodes import CtreeNode, File
 import ctree
 from ctree.util import singleton, highlight, truncate
-from ctree.types import get_ctype
+from ctree.types import get_ctype, get_common_ctype
 import hashlib
 
 
@@ -342,7 +342,19 @@ class BinaryOp(Expression):
 
     def get_type(self):
         # FIXME: integer promotions and stuff like that
-        return self.left.get_type()
+        if hasattr(self.left, 'get_type'):
+            left_type = self.left.get_type()
+        elif hasattr(self.left, 'type'):
+            left_type = self.left.type
+        else:
+            left_type = None
+        if hasattr(self.right, 'get_type'):
+            right_type = self.right.get_type()
+        elif hasattr(self.right, 'type'):
+            right_type = self.right.type
+        else:
+            right_type = None
+        return get_common_ctype([right_type, left_type])
 
 
 class AugAssign(Expression):
