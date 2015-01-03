@@ -395,22 +395,28 @@ class DeclarationFiller(NodeTransformer):
     def visit_FunctionDecl(self, node):
         #add current FunctionDecl's return type onto environments
         self.__add_entry(node.name, node.return_type)
+
         #new environment every time we enter a function
         self.__add_environment()
+
         for param in node.params:
             #binding types of parameters
             self.__add_entry(param.name, param.type)
+
         node.defn = [self.visit(i) for i in node.defn]
         self.__pop_environment()
         return node
 
     def visit_SymbolRef(self, node):
+
         if node.type:
             self.__add_entry(node.name, node.type)
         return node
 
     def visit_BinaryOp(self, node):
+
         if isinstance(node.op, Op.Assign):
+
             node.left = self.visit(node.left)
             if isinstance(node.left, BinaryOp):
                 return node
@@ -420,14 +426,25 @@ class DeclarationFiller(NodeTransformer):
             if hasattr(name, 'type') and name.type != None:
                 return node
 
-            try:
+            try:                                            # first, see if we already know the current variable's type.
                 self.__lookup(name.name)
-            except KeyError:
+            except KeyError:                                # if not, then we have to do some digging
                 if hasattr(value, 'get_type'):
+
+                    # val_type = value.get_type()
+                    # if val_type is None:
+                    #     if isinstance(value, BinaryOp):
+                    #         try:
+                    #             name.type = self.__lookup(value.left.name)
+                    #
+                    #     elif isinstance(value, Constant):
 
                     val_type = value.get_type()
                     if val_type is None and hasattr(value, 'left'):
-                        name.type = self.__lookup(value.left.name)
+                        if hasattr(value.left, "name"):
+                            name.type = self.__lookup(value.left.name)
+                        # elif hasattr(value.left, "name"):
+
                     else:
                         name.type = val_type
 
@@ -435,7 +452,11 @@ class DeclarationFiller(NodeTransformer):
                     name.type = c_char_p()
                 elif isinstance(value, SymbolRef):
                     name.type = self.__lookup(value.name)
+                elif isinstance(value, FunctionCall):
+                    name.type = self.__lookup(value.func.name)
 
                 self.__add_entry(node.left.name, node.left.type)
+        else:
+            pass
         return node
 
