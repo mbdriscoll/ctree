@@ -423,7 +423,9 @@ class DeclarationFiller(NodeTransformer):
             node.right = self.visit(node.right)
             name = node.left
             value = node.right
+
             if hasattr(name, 'type') and name.type != None:
+                self.__add_entry(name.name, name.type)
                 return node
 
             try:                                            # first, see if we already know the current variable's type.
