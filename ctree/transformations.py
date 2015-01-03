@@ -215,44 +215,76 @@ class PyBasicConversions(NodeTransformer):
         return node
 
     def visit_Assign(self, node):
-        target_value_list = []
-        #a = b -> targets = [ast.Name], value = ast.Name
-        #a = b = c... -> targets = [ast.Name, ast.Name....], value = ast.Name
-        if all(isinstance(i, ast.Name) for i in node.targets):
-            target_value_list.extend((target, node.value) for target in node.targets)
+        # target_value_list = []
+        # #a = b -> targets = [ast.Name], value = ast.Name
+        # #a = b = c... -> targets = [ast.Name, ast.Name....], value = ast.Name
+        # if all(isinstance(i, ast.Name) for i in node.targets):
+        #     target_value_list.extend((target, node.value) for target in node.targets)
+        #
+        # #a, b = c,d -> targets = [ast.Tuple], value = ast.Tuple
+        # elif isinstance(node.targets[0], (ast.List, ast.Tuple)):
+        #     target_value_list.extend((target, value) for target, value in zip(node.targets[0].elts, node.value.elts))
+        #
+        # else:
+        #     return node
+        #
+        # target_value_list = [(self.visit(target), self.visit(value)) for target, value in target_value_list]
+        #
+        # #making a multinode no matter what. It's cleaner than branching a lot
+        # body = []
+        # for target, value in target_value_list[:]:
+        #     if isinstance(value, Constant):
+        #         body.append(Assign(target, value))
+        #         target_value_list.remove((target,value))
+        #
+        # new_targets = []
+        # for target, value in target_value_list:
+        #     #making temporary variables for results.
+        #     new_target = target.copy()
+        #     new_target.name = "____temp__" + new_target.name
+        #
+        #     new_targets.append(new_target)
+        #     body.append(Assign(new_target, target))
+        #
+        # for new_target, (target, value) in zip(new_targets, target_value_list):
+        #     body.append(Assign(new_target.copy(), value))
+        #
+        # for new_target, (target, value) in zip(new_targets, target_value_list):
+        #     #now assigning the temp values to the original variables
+        #     body.append(Assign(target, new_target.copy()))
+        # return MultiNode(body = body)
 
-        #a, b = c,d -> targets = [ast.Tuple], value = ast.Tuple
-        elif isinstance(node.targets[0], (ast.List, ast.Tuple)):
-            target_value_list.extend((target, value) for target, value in zip(node.targets[0].elts, node.value.elts))
+        if isinstance(node.targets[0], ast.Name): #single assign
+            target = self.visit(node.targets[0])
+            value = self.visit(node.value)
 
-        else:
-            return node
+            if isinstance(value, FunctionDecl):
+                value.name = target
+                return value
+            
+            return Assign(target, value)
 
-        target_value_list = [(self.visit(target), self.visit(value)) for target, value in target_value_list]
+        elif isinstance(node.targets[0], ast.Tuple) or isinstance(node.targets[0], ast.List):
+            body = []
+            temp_var_map = {}
+            for target, value in zip(node.targets[0].elts, node.value.elts):
+                # TODO: might need to do some DeclarationFiller thing here to get the types of the new ____temp_variables.
 
-        #making a multinode no matter what. It's cleaner than branching a lot
-        body = []
-        for target, value in target_value_list[:]:
-            if isinstance(value, Constant):
-                body.append(Assign(target, value))
-                target_value_list.remove((target,value))
+                temp_target_id = "____temp__" + value.id
+                temp_target = ast.Name(id = temp_target_id, ctx = target.ctx)
+                temp_var_map[temp_target] = target
 
-        new_targets = []
-        for target, value in target_value_list:
-            #making temporary variables for results.
-            new_target = target.copy()
-            new_target.name = "____temp__" + new_target.name
+                ref = self.visit(temp_target)
 
-            new_targets.append(new_target)
-            body.append(Assign(new_target, target))
-
-        for new_target, (target, value) in zip(new_targets, target_value_list):
-            body.append(Assign(new_target.copy(), value))
-
-        for new_target, (target, value) in zip(new_targets, target_value_list):
-            #now assigning the temp values to the original variables
-            body.append(Assign(target, new_target.copy()))
-        return MultiNode(body = body)
+                body.append(
+                    Assign(ref, self.visit(value))
+                )
+            for temp_target, target in temp_var_map.iteritems():
+                body.append(
+                    Assign(self.visit(target), self.visit(temp_target))
+                )
+            return MultiNode(body)
+        return node
 
     def visit_Subscript(self, node):
         if isinstance(node.slice,ast.Index):
