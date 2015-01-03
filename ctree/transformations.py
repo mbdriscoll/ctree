@@ -433,20 +433,11 @@ class DeclarationFiller(NodeTransformer):
             except KeyError:                                # if not, then we have to do some digging
                 if hasattr(value, 'get_type'):
 
-                    # val_type = value.get_type()
-                    # if val_type is None:
-                    #     if isinstance(value, BinaryOp):
-                    #         try:
-                    #             name.type = self.__lookup(value.left.name)
-                    #
-                    #     elif isinstance(value, Constant):
-
                     val_type = value.get_type()
-                    if val_type is None and hasattr(value, 'left'):
-                        if hasattr(value.left, "name"):
-                            name.type = self.__lookup(value.left.name)
-                        # elif hasattr(value.left, "name"):
-
+                    if val_type is None and hasattr(value, 'left') and hasattr(value.left, "name"):
+                        name.type = self.__lookup(value.left.name)
+                    elif val_type is None and hasattr(value, 'right') and hasattr(value.right, "name"):
+                        name.type = self.__lookup(value.right.name)
                     else:
                         name.type = val_type
 
@@ -458,7 +449,5 @@ class DeclarationFiller(NodeTransformer):
                     name.type = self.__lookup(value.func.name)
 
                 self.__add_entry(node.left.name, node.left.type)
-        else:
-            pass
         return node
 
