@@ -434,12 +434,17 @@ class DeclarationFiller(NodeTransformer):
                 if hasattr(value, 'get_type'):
 
                     val_type = value.get_type()
-                    if val_type is None and hasattr(value, 'left') and hasattr(value.left, "name"):
-                        name.type = self.__lookup(value.left.name)
-                    elif val_type is None and hasattr(value, 'right') and hasattr(value.right, "name"):
-                        name.type = self.__lookup(value.right.name)
-                    else:
-                        name.type = val_type
+                    name.type = val_type
+
+                    if val_type is None:
+                        if hasattr(value, 'left') and hasattr(value.left, "name") and self.__lookup(value.left.name) is not None:
+                                name.type = self.__lookup(value.left.name)
+                        elif hasattr(value, 'left') and isinstance(value.left, FunctionCall) and self.__lookup(value.left.func.name) is not None:
+                                name.type = self.__lookup(value.left.func.name)
+                        elif hasattr(value, 'right') and hasattr(value.right, "name") and self.__lookup(value.right.name) is not None:
+                                name.type = self.__lookup(value.right.name)
+                        elif hasattr(value, 'right') and isinstance(value.right, FunctionCall) and self.__lookup(value.right.func.name) is not None:
+                                name.type = self.__lookup(value.right.func.name)
 
                 elif isinstance(value, String):
                     name.type = c_char_p()
