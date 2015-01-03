@@ -215,71 +215,76 @@ class PyBasicConversions(NodeTransformer):
         return node
 
     def visit_Assign(self, node):
-        target_value_list = []
-        #a = b -> targets = [ast.Name], value = ast.Name
-        #a = b = c... -> targets = [ast.Name, ast.Name....], value = ast.Name
-        if all(isinstance(i, ast.Name) for i in node.targets):
-            target_value_list.extend((target, node.value) for target in node.targets)
-
-        #a, b = c,d -> targets = [ast.Tuple], value = ast.Tuple
-        elif isinstance(node.targets[0], (ast.List, ast.Tuple)):
-            target_value_list.extend((target, value) for target, value in zip(node.targets[0].elts, node.value.elts))
-
-        else:
-            return node
-
-        target_value_list = [(self.visit(target), self.visit(value)) for target, value in target_value_list]
-
-        #making a multinode no matter what. It's cleaner than branching a lot
-        body = []
-        for target, value in target_value_list[:]:
-            if isinstance(value, Constant):
-                body.append(Assign(target, value))
-                target_value_list.remove((target,value))
-
-        new_targets = []
-        for target, value in target_value_list:
-            #making temporary variables for results.
-            new_target = target.copy()
-            new_target.name = "____temp__" + new_target.name
-            new_targets.append(new_target)
-            body.append(Assign(new_target, target))
-
-        for new_target, (target, value) in zip(new_targets, target_value_list):
-            body.append(Assign(new_target.copy(), value))
-
-        for new_target, (target, value) in zip(new_targets, target_value_list):
-            #now assigning the temp values to the original variables
-            body.append(Assign(target, new_target.copy()))
-        return MultiNode(body = body)
-
-
-        # if isinstance(node.targets[0], ast.Name): #single assign
-        #     target = self.visit(node.targets[0])
-        #     value = self.visit(node.value)
-        #     return Assign(target, value)
-        # elif isinstance(node.targets[0], ast.Tuple) or isinstance(node.targets[0], ast.List):
-        #     body = []
-        #     temp_var_map = {}
-        #     for target, value in zip(node.targets[0].elts, node.value.elts):
-        #         # TODO: might need to do some DeclarationFiller thing here to get the types of the new ____temp_variables.
+        # target_value_list = []
+        # #a = b -> targets = [ast.Name], value = ast.Name
+        # #a = b = c... -> targets = [ast.Name, ast.Name....], value = ast.Name
+        # if all(isinstance(i, ast.Name) for i in node.targets):
+        #     target_value_list.extend((target, node.value) for target in node.targets)
         #
-        #         temp_target_id = "____temp__" + value.id
-        #         temp_target = ast.Name(id = temp_target_id, ctx = target.ctx)
-        #         temp_var_map[temp_target] = target
+        # #a, b = c,d -> targets = [ast.Tuple], value = ast.Tuple
+        # elif isinstance(node.targets[0], (ast.List, ast.Tuple)):
+        #     target_value_list.extend((target, value) for target, value in zip(node.targets[0].elts, node.value.elts))
         #
-        #         ref = self.visit(temp_target)
-        #         # ref.type = c_float()# TODO: need to change this from c_float() to whatever the value's type is using DeclarationFiller.
+        # else:
+        #     return node
         #
-        #         body.append(
-        #             Assign(ref, self.visit(value))
-        #         )
-        #     for temp_target, target in temp_var_map.iteritems():
-        #         body.append(
-        #             Assign(self.visit(target), self.visit(temp_target))
-        #         )
-        #     return MultiNode(body)
-        # return node
+        # target_value_list = [(self.visit(target), self.visit(value)) for target, value in target_value_list]
+        #
+        # #making a multinode no matter what. It's cleaner than branching a lot
+        # body = []
+        # for target, value in target_value_list[:]:
+        #     if isinstance(value, Constant):
+        #         body.append(Assign(target, value))
+        #         target_value_list.remove((target,value))
+        #
+        # new_targets = []
+        # for target, value in target_value_list:
+        #     #making temporary variables for results.
+        #     new_target = target.copy()
+        #     new_target.name = "____temp__" + new_target.name
+        #
+        #     new_targets.append(new_target)
+        #     body.append(Assign(new_target, target))
+        #
+        # for new_target, (target, value) in zip(new_targets, target_value_list):
+        #     body.append(Assign(new_target.copy(), value))
+        #
+        # for new_target, (target, value) in zip(new_targets, target_value_list):
+        #     #now assigning the temp values to the original variables
+        #     body.append(Assign(target, new_target.copy()))
+        # return MultiNode(body = body)
+
+        if isinstance(node.targets[0], ast.Name): #single assign
+            target = self.visit(node.targets[0])
+            value = self.visit(node.value)
+
+            if isinstance(value, FunctionDecl):
+                value.name = target
+                return value
+
+            return Assign(target, value)
+
+        elif isinstance(node.targets[0], ast.Tuple) or isinstance(node.targets[0], ast.List):
+            body = []
+            temp_var_map = {}
+            for target, value in zip(node.targets[0].elts, node.value.elts):
+                # TODO: might need to do some DeclarationFiller thing here to get the types of the new ____temp_variables.
+
+                temp_target_id = "____temp__" + target.id
+                temp_target = ast.Name(id = temp_target_id, ctx = target.ctx)
+                temp_var_map[temp_target] = target
+
+                ref = self.visit(temp_target)
+
+                body.append(
+                    Assign(ref, self.visit(value))
+                )
+            for temp_target, target in temp_var_map.iteritems():
+                body.append(
+                    Assign(self.visit(target), self.visit(temp_target))
+                )
+            return MultiNode(body)
+        return node
 
     def visit_Subscript(self, node):
         if isinstance(node.slice,ast.Index):
@@ -387,43 +392,66 @@ class DeclarationFiller(NodeTransformer):
     def __pop_environment(self):
         return self.__environments.pop()
 
-
     def visit_FunctionDecl(self, node):
         #add current FunctionDecl's return type onto environments
         self.__add_entry(node.name, node.return_type)
+
         #new environment every time we enter a function
         self.__add_environment()
+
         for param in node.params:
             #binding types of parameters
             self.__add_entry(param.name, param.type)
+
         node.defn = [self.visit(i) for i in node.defn]
         self.__pop_environment()
         return node
 
     def visit_SymbolRef(self, node):
+
         if node.type:
             self.__add_entry(node.name, node.type)
         return node
 
     def visit_BinaryOp(self, node):
+
         if isinstance(node.op, Op.Assign):
+
             node.left = self.visit(node.left)
             if isinstance(node.left, BinaryOp):
                 return node
             node.right = self.visit(node.right)
             name = node.left
             value = node.right
-            if hasattr(node.left, 'type'):
+
+            if hasattr(name, 'type') and name.type != None:
+                self.__add_entry(name.name, name.type)
                 return node
-            try:
+
+            try:                                            # first, see if we already know the current variable's type.
                 self.__lookup(name.name)
-            except KeyError:
+            except KeyError:                                # if not, then we have to do some digging
                 if hasattr(value, 'get_type'):
-                    node.left.type = value.get_type()
+
+                    val_type = value.get_type()
+                    name.type = val_type
+
+                    if val_type is None:
+                        if hasattr(value, 'left') and hasattr(value.left, "name") and self.__lookup(value.left.name) is not None:
+                                name.type = self.__lookup(value.left.name)
+                        elif hasattr(value, 'left') and isinstance(value.left, FunctionCall) and self.__lookup(value.left.func.name) is not None:
+                                name.type = self.__lookup(value.left.func.name)
+                        elif hasattr(value, 'right') and hasattr(value.right, "name") and self.__lookup(value.right.name) is not None:
+                                name.type = self.__lookup(value.right.name)
+                        elif hasattr(value, 'right') and isinstance(value.right, FunctionCall) and self.__lookup(value.right.func.name) is not None:
+                                name.type = self.__lookup(value.right.func.name)
+
                 elif isinstance(value, String):
-                    node.left.type = c_char_p()
+                    name.type = c_char_p()
                 elif isinstance(value, SymbolRef):
-                    node.left.type = self.__lookup(value.name)
+                    name.type = self.__lookup(value.name)
+                elif isinstance(value, FunctionCall):
+                    name.type = self.__lookup(value.func.name)
 
                 self.__add_entry(node.left.name, node.left.type)
         return node
