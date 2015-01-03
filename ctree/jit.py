@@ -247,7 +247,7 @@ class LazySpecializedFunction(object):
                 if not isinstance(transform_result, (tuple, list)):
                     transform_result = (transform_result,)
                 transform_result = [DeclarationFiller().visit(source_file) for source_file in transform_result]
-                print ("TRANSFORMRESULT: ", str(transform_result[0]))
+                # print ("TRANSFORMRESULT: ", str(transform_result[0]))
                 for source_file in transform_result:
                     assert isinstance(source_file, File), "Transform must return an iterable of Files"
                     source_file.path = dir_name
