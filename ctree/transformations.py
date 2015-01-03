@@ -426,7 +426,7 @@ class DeclarationFiller(NodeTransformer):
                 if hasattr(value, 'get_type'):
 
                     val_type = value.get_type()
-                    if val_type is None:
+                    if val_type is None and hasattr(value, 'left'):
                         name.type = self.__lookup(value.left.name)
                     else:
                         name.type = val_type
