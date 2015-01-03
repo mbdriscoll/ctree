@@ -261,7 +261,7 @@ class PyBasicConversions(NodeTransformer):
             if isinstance(value, FunctionDecl):
                 value.name = target
                 return value
-            
+
             return Assign(target, value)
 
         elif isinstance(node.targets[0], ast.Tuple) or isinstance(node.targets[0], ast.List):
@@ -270,7 +270,7 @@ class PyBasicConversions(NodeTransformer):
             for target, value in zip(node.targets[0].elts, node.value.elts):
                 # TODO: might need to do some DeclarationFiller thing here to get the types of the new ____temp_variables.
 
-                temp_target_id = "____temp__" + value.id
+                temp_target_id = "____temp__" + target.id
                 temp_target = ast.Name(id = temp_target_id, ctx = target.ctx)
                 temp_var_map[temp_target] = target
 
