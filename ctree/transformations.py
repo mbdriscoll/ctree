@@ -231,60 +231,19 @@ class PyBasicConversions(NodeTransformer):
         target_value_list = [(self.visit(target), self.visit(value)) for target, value in target_value_list]
 
         #making a multinode no matter what. It's cleaner than branching a lot
-        body = []
+        operation_body = []
+        swap_body = []
         for target, value in target_value_list[:]:
-            if isinstance(value, Constant):
-                body.append(Assign(target, value))
+            if isinstance(value, (Constant, String)):
+                operation_body.append(Assign(target, value))
                 target_value_list.remove((target,value))
-
-        new_targets = []
-        for target, value in target_value_list:
-            #making temporary variables for results.
+                continue
             new_target = target.copy()
             new_target.name = "____temp__" + new_target.name
+            operation_body.append(Assign(new_target, value))
+            swap_body.append(Assign(target, new_target.copy()))
+        return MultiNode(body = operation_body + swap_body)
 
-            new_targets.append(new_target)
-            # body.append(Assign(new_target, target))
-
-        for new_target, (target, value) in zip(new_targets, target_value_list):
-            body.append(Assign(new_target.copy(), value))
-
-        for new_target, (target, value) in zip(new_targets, target_value_list):
-            #now assigning the temp values to the original variables
-            body.append(Assign(target, new_target.copy()))
-        return MultiNode(body = body)
-
-        # if isinstance(node.targets[0], ast.Name): #single assign
-        #     target = self.visit(node.targets[0])
-        #     value = self.visit(node.value)
-        #
-        #     if isinstance(value, FunctionDecl):
-        #         value.name = target
-        #         return value
-        #
-        #     return Assign(target, value)
-        #
-        # elif isinstance(node.targets[0], ast.Tuple) or isinstance(node.targets[0], ast.List):
-        #     body = []
-        #     temp_var_map = {}
-        #     for target, value in zip(node.targets[0].elts, node.value.elts):
-        #         # TODO: might need to do some DeclarationFiller thing here to get the types of the new ____temp_variables.
-        #
-        #         temp_target_id = "____temp__" + target.id
-        #         temp_target = ast.Name(id = temp_target_id, ctx = target.ctx)
-        #         temp_var_map[temp_target] = target
-        #
-        #         ref = self.visit(temp_target)
-        #
-        #         body.append(
-        #             Assign(ref, self.visit(value))
-        #         )
-        #     for temp_target, target in temp_var_map.iteritems():
-        #         body.append(
-        #             Assign(self.visit(target), self.visit(temp_target))
-        #         )
-        #     return MultiNode(body)
-        #return node
 
     def visit_Subscript(self, node):
         if isinstance(node.slice,ast.Index):
@@ -421,8 +380,9 @@ class DeclarationFiller(NodeTransformer):
         return node
 
     def visit_FunctionCall(self, node):
-        if self.__has_key(node.func.name):
-            node.type = self.__lookup(node.func.name)
+        if self.__has_key(node.func):
+            node.type = self.__lookup(node.func)
+        node.args = [self.visit(arg) for arg in node.args]
         return node
 
     def visit_BinaryOp(self, node):
@@ -433,7 +393,7 @@ class DeclarationFiller(NodeTransformer):
             node.right = self.visit(node.right)
             name = node.left
             value = node.right
-            if hasattr(node.left, 'type'):
+            if hasattr(name, 'type') and name.type is not None:
                 return node
             if not self.__has_key(name.name):
                 if name.name.startswith('____temp__'): #temporary variable
@@ -448,7 +408,7 @@ class DeclarationFiller(NodeTransformer):
                 elif isinstance(value, SymbolRef):
                     node.left.type = self.__lookup(value.name)
                 elif isinstance(value, FunctionCall):
-                    node.left.type = self.__lookup(value.name)
+                    node.left.type = self.__lookup(value.func)
 
                 self.__add_entry(node.left.name, node.left.type)
         return node
