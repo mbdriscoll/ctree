@@ -16,14 +16,26 @@ class TestAssigns(unittest.TestCase):
         self.assertEqual(str(node), "foo = bar")
 
 
-    def test_multiple_assign_simple1(self):
+    def test_multiple_assign_simple(self):
         node = ast.Assign([ast.Tuple(elts = (ast.Name(id = "x", ctx = None), ast.Name(id = "y", ctx = None)))], ast.Tuple(elts = (ast.Name(id = "x", ctx = None), ast.Name(id = "y", ctx = None))))
         transformed_node = PyBasicConversions().visit(node)
 
         self.assertEqual(str(transformed_node), "\n____temp__x = x;\n____temp__y = y;\ny = ____temp__y;\nx = ____temp__x;\n")
 
-    def test_multiple_assign_simple2(self):
+    def test_multiple_assign_constant(self):
+        node = ast.Assign([ast.Tuple(elts = (ast.Name(id = "x", ctx = None), ast.Name(id = "y", ctx = None)))], ast.Tuple(elts = (Constant(1), Constant(2))))
+        transformed_node = PyBasicConversions().visit(node)
+
+        self.assertEqual(str(transformed_node), "\n____temp__x = 1;\n____temp__y = 2;\nx = ____temp__x;\ny = ____temp__y;\n")
+
+    def test_multiple_assign_dependent(self):
         node = ast.Assign([ast.Tuple(elts = (ast.Name(id = "x", ctx = None), ast.Name(id = "y", ctx = None)))], ast.Tuple(elts = (ast.Name(id = "y", ctx = None), ast.Name(id = "x", ctx = None))))
         transformed_node = PyBasicConversions().visit(node)
 
-        self.assertEqual(str(transformed_node), "\n____temp__x = y;\n____temp__y = x;\nx = ____temp__x;\ny = ____temp__y;\n")
+        self.assertEqual(str(transformed_node), "\n____temp__x = x;\n____temp__y = y;\ny = ____temp__y;\nx = ____temp__x;\n")
+
+    def test_multiple_assign_dependent(self):
+        node = ast.Assign([ast.Tuple(elts = (ast.Name(id = "x", ctx = None), ast.Name(id = "y", ctx = None)))], ast.Tuple(elts = (FunctionCall(func = 'square', args = [Constant(5), Constant(5)]), FunctionCall(func = 'square', args = [Constant(5), Constant(5)]))))
+        transformed_node = PyBasicConversions().visit(node)
+
+        self.assertEqual(str(transformed_node), "\n____temp__x = square(5, 5);\n____temp__y = square(5, 5);\nx = ____temp__x;\ny = ____temp__y;\n")
