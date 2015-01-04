@@ -5,6 +5,8 @@ from ctree.transformations import PyBasicConversions, DeclarationFiller
 
 from ctree.c.nodes import *
 
+import sys
+
 
 class TestAssigns(unittest.TestCase):
 
@@ -38,7 +40,7 @@ class TestAssigns(unittest.TestCase):
         transformed_node = self.mini_transform(node)
         return DeclarationFiller().visit(transformed_node)
 
-
+    @unittest.skipIf(sys.version_info < (3,0))
     def test_one_arg_lambda(self):
         """
         This method tests the squaring lambda function, a one argument lambda function.
@@ -52,6 +54,7 @@ class TestAssigns(unittest.TestCase):
                                                 "    return x * x;\n}")
 
 
+    @unittest.skipIf(sys.version_info < (3,0))
     def test_two_arg_lambda(self):
         """
         This method tests the adding lambda function, a two argument lambda function.
