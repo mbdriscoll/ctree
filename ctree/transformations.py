@@ -216,12 +216,13 @@ class PyBasicConversions(NodeTransformer):
 
     def visit_Assign(self, node):
         target_value_list = []
-        #a = b -> targets = [ast.Name], value = ast.Name
-        #a = b = c... -> targets = [ast.Name, ast.Name....], value = ast.Name
+
+        # a = b -> targets = [ast.Name], value = ast.Name
+        # a = b = c... -> targets = [ast.Name, ast.Name....], value = ast.Name
         if all(isinstance(i, ast.Name) for i in node.targets):
             target_value_list.extend((target, node.value) for target in node.targets)
 
-        #a, b = c,d -> targets = [ast.Tuple], value = ast.Tuple
+        # a, b = c,d -> targets = [ast.Tuple], value = ast.Tuple
         elif isinstance(node.targets[0], (ast.List, ast.Tuple)):
             target_value_list.extend((target, value) for target, value in zip(node.targets[0].elts, node.value.elts))
 
@@ -230,7 +231,7 @@ class PyBasicConversions(NodeTransformer):
 
         target_value_list = [(self.visit(target), self.visit(value)) for target, value in target_value_list]
 
-        #making a multinode no matter what. It's cleaner than branching a lot
+        # making a multinode no matter what. It's cleaner than branching a lot
         operation_body = []
         swap_body = []
         for target, value in target_value_list[:]:
@@ -359,14 +360,14 @@ class DeclarationFiller(NodeTransformer):
         return self.__environments.pop()
 
     def visit_FunctionDecl(self, node):
-        #add current FunctionDecl's return type onto environments
+        # add current FunctionDecl's return type onto environments
         self.__add_entry(node.name, node.return_type)
 
-        #new environment every time we enter a function
+        # new environment every time we enter a function
         self.__add_environment()
 
         for param in node.params:
-            #binding types of parameters
+            # binding types of parameters
             self.__add_entry(param.name, param.type)
 
         node.defn = [self.visit(i) for i in node.defn]
@@ -396,7 +397,7 @@ class DeclarationFiller(NodeTransformer):
             if hasattr(name, 'type') and name.type is not None:
                 return node
             if not self.__has_key(name.name):
-                if name.name.startswith('____temp__'): #temporary variable
+                if name.name.startswith('____temp__'):                  # temporary variable types can be derived from the variables that they represent
                     stripped_name = name.name.lstrip('____temp__')
                     if self.__has_key(stripped_name):
                         node.left.type = self.__lookup(stripped_name)
