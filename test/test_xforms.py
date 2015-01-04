@@ -57,11 +57,11 @@ class TestStripDocstrings(unittest.TestCase):
         ]))
         self._check(tree)
 
-
 class TestBasicConversions(unittest.TestCase):
     def _check(self, py_ast, expected_c_ast, names_dict ={}, constants_dict={}):
         actual_c_ast = PyBasicConversions(names_dict, constants_dict).visit(py_ast)
         self.assertEqual(str(actual_c_ast).strip('\n;'), str(expected_c_ast).strip('\n;'))
+
 
     def test_num_float(self):
         py_ast = ast.Num(123.4)
@@ -84,9 +84,16 @@ class TestBasicConversions(unittest.TestCase):
         self._check(py_ast, c_ast)
 
     def test_binop(self):
-        py_ast = ast.BinOp(ast.Num(1), ast.Add(), ast.Num(2))
-        c_ast = Add(Constant(1), Constant(2))
-        self._check(py_ast, c_ast)
+        for py_op, c_op in (
+                (ast.Add, Add),
+                (ast.Sub, Sub),
+                (ast.BitXor, BitXor),
+                (ast.BitAnd, BitAnd),
+                (ast.BitOr, BitOr)
+        ):
+            py_ast = ast.BinOp(ast.Num(1), py_op(), ast.Num(2))
+            c_ast = c_op(Constant(1), Constant(2))
+            self._check(py_ast, c_ast)
 
     def test_return(self):
         py_ast = ast.Return()
