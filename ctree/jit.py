@@ -247,7 +247,6 @@ class LazySpecializedFunction(object):
                 if not isinstance(transform_result, (tuple, list)):
                     transform_result = (transform_result,)
                 transform_result = [DeclarationFiller().visit(source_file) for source_file in transform_result]
-                print ("TRANSFORMRESULT: ", str(transform_result[0]))
                 for source_file in transform_result:
                     assert isinstance(source_file, File), "Transform must return an iterable of Files"
                     source_file.path = dir_name
@@ -267,7 +266,7 @@ class LazySpecializedFunction(object):
         return csf(*args, **kwargs)
 
     @classmethod
-    def from_function(cls, func, classname = ''):
+    def from_function(cls, func, class_name = ''):
         class Replacer(ast.NodeTransformer):
             def visit_Module(self, node):
                 return MultiNode(body = [self.visit(i) for i in node.body])
@@ -295,7 +294,7 @@ class LazySpecializedFunction(object):
             func_hash = int(hashlib.sha512(inspect.getsource(func).encode()).hexdigest(), 16)
             old_hash = hash(cls())
             return func_hash ^ old_hash
-        newClass = type(classname or func.__name__, (cls, ), {'apply': staticmethod(func), '__hash__':
+        newClass = type(class_name or func.__name__, (cls, ), {'apply': staticmethod(func), '__hash__':
                                                  __hash__,
                                                  'transform': transform
                                                 })
