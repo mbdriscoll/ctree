@@ -16,7 +16,7 @@ class TestDotManager(unittest.TestCase):
     Difficult to test because of ipython and dot dependencies
     """
 
-    @unittest.skip
+    @unittest.skip("difficult to test because of ipython and dot dependencies")
     def test_c_identity(self):
         tree = get_ast(square_of)
         DotManager.run_dot(tree.to_dot())
