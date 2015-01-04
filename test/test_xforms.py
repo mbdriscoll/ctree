@@ -237,6 +237,25 @@ class TestBasicConversions(unittest.TestCase):
         c_ast = DivAssign(SymbolRef('i'), Constant(3))
         self._check(py_ast, c_ast)
 
+    def test_AugAssign(self):
+
+        for py_op, c_op in (
+                (
+                        (ast.Div, DivAssign),
+                        (ast.Add, AddAssign),
+                        (ast.Mult, MulAssign),
+                        (ast.BitOr, BitOrAssign),
+                        (ast.BitAnd, BitAndAssign),
+                        (ast.BitXor, BitXorAssign),
+                        (ast.LShift, BitShLAssign),
+                        (ast.RShift, BitShRAssign)
+                )
+        ):
+            py_ast = ast.AugAssign(ast.Name('i', ast.Load()),
+                                   py_op(), ast.Num(3))
+            c_ast = c_op(SymbolRef('i'), Constant(3))
+            self._check(py_ast, c_ast)
+
     def test_Assign(self):
         py_ast = ast.Assign([ast.Name('i', ast.Load())],
                             ast.Num(3))
