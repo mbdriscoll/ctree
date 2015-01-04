@@ -277,3 +277,24 @@ class TestBasicConversions(unittest.TestCase):
                                slice=ast.Index(value=ast.Num(n=1), ctx=ast.Load()))
         c_ast = ArrayRef(SymbolRef('i'),Constant(1))
         self._check(py_ast,c_ast)
+
+    def test_Range_ValueError(self):
+        py_ast = ast.For(target=ast.Name(id='i', ctx=ast.Store()), iter=ast.Call(func=ast.Name(id='range', ctx=ast.Load()), args=[
+            ast.Num(n=1),
+            ast.Num(n=0),
+            ast.Num(n=0),
+            ], keywords=[], starargs=None, kwargs=None), body=[
+            Pass(),
+            ], orelse=[])
+        with self.assertRaises(ValueError):
+            PyBasicConversions().visit(py_ast)
+
+    def test_Range_NoOp(self):
+        py_ast = ast.For(target=ast.Name(id='i', ctx=ast.Store()), iter=ast.Call(func=ast.Name(id='range', ctx=ast.Load()), args=[
+            ast.Num(n=1),
+            ast.Num(n=1),
+            ast.Num(n=3),
+            ], keywords=[], starargs=None, kwargs=None), body=[
+            Pass(),
+            ], orelse=[])
+        self.assertEqual(PyBasicConversions().visit(py_ast), None)

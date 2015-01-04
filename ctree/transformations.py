@@ -284,7 +284,7 @@ class PyBasicConversions(NodeTransformer):
         #             Assign(self.visit(target), self.visit(temp_target))
         #         )
         #     return MultiNode(body)
-        return node
+        #return node
 
     def visit_Subscript(self, node):
         if isinstance(node.slice,ast.Index):
@@ -418,6 +418,11 @@ class DeclarationFiller(NodeTransformer):
 
         if node.type:
             self.__add_entry(node.name, node.type)
+        return node
+
+    def visit_FunctionCall(self, node):
+        if self.__has_key(node.func.name):
+            node.type = self.__lookup(node.func.name)
         return node
 
     def visit_BinaryOp(self, node):
