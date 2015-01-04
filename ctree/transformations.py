@@ -241,7 +241,7 @@ class PyBasicConversions(NodeTransformer):
         for target, value in target_value_list:
             #making temporary variables for results.
             new_target = target.copy()
-            # new_target.name = "____temp__" + new_target.name
+            new_target.name = "____temp__" + new_target.name
 
             new_targets.append(new_target)
             # body.append(Assign(new_target, target))
