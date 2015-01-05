@@ -14,7 +14,7 @@ from ctypes import CFUNCTYPE
 from ctree.nodes import CtreeNode, File
 import ctree
 from ctree.util import singleton, highlight, truncate
-from ctree.types import get_ctype
+from ctree.types import get_ctype, get_common_ctype
 import hashlib
 
 
@@ -23,6 +23,7 @@ class CNode(CtreeNode):
 
     def codegen(self, indent=0):
         from ctree.c.codegen import CCodeGen
+        from ctree.transformations import DeclarationFiller
 
         return CCodeGen(indent).visit(self)
 
@@ -44,12 +45,10 @@ class CFile(CNode, File):
     def get_bc_filename(self):
         return "%s.bc" % self.name
 
-
-
     def _compile(self, program_text):
         c_src_file = os.path.join(self.path, self.get_filename())
         ll_bc_file = os.path.join(self.path, self.get_bc_filename())
-        program_hash = hashlib.sha512(program_text.strip()).hexdigest()
+        program_hash = hashlib.sha512(program_text.strip().encode()).hexdigest()
         c_src_exists = os.path.exists(c_src_file)
         ll_bc_file_exists = os.path.exists(ll_bc_file)
         old_hash = self.program_hash
@@ -103,6 +102,19 @@ class CFile(CNode, File):
         return ll_module
 
 
+class MultiNode(CNode):
+    """
+        Some Python nodes need to be translated to a block of nodes but Visitors can't do that.
+    """
+
+    _fields = ['body']
+    _requires_semicolon = lambda self: False
+
+    def __init__(self, body = None):
+        self.body = body or []
+        CNode.__init__(self)
+
+
 class Statement(CNode):
     """Section B.2.3 6.6."""
     pass
@@ -135,6 +147,7 @@ class If(Statement):
 class While(Statement):
     """Cite me."""
     _fields = ['cond', 'body']
+    _requires_semicolon = lambda self: False
 
     def __init__(self, cond=None, body=None):
         self.cond = cond
@@ -183,6 +196,7 @@ class Literal(Expression):
 
 class Constant(Literal):
     """Section B.1.4 6.1.3."""
+    _fields = ['value']
 
     def __init__(self, value=None):
         self.value = value
@@ -215,6 +229,7 @@ class String(Literal):
 class SymbolRef(Literal):
     """Cite me."""
     _next_id = 0
+    _fields = ['name','type']
 
     def __init__(self, name=None, sym_type=None, _global=False,
                  _local=False, _const=False):
@@ -317,7 +332,7 @@ class UnaryOp(Expression):
 
 class BinaryOp(Expression):
     """Cite me."""
-    _fields = ['left', 'right']
+    _fields = ['left', 'op', 'right']
 
     def __init__(self, left=None, op=None, right=None):
         self.left = left
@@ -327,7 +342,19 @@ class BinaryOp(Expression):
 
     def get_type(self):
         # FIXME: integer promotions and stuff like that
-        return self.left.get_type()
+        if hasattr(self.left, 'get_type'):
+            left_type = self.left.get_type()
+        elif hasattr(self.left, 'type'):
+            left_type = self.left.type
+        else:
+            left_type = None
+        if hasattr(self.right, 'get_type'):
+            right_type = self.right.get_type()
+        elif hasattr(self.right, 'type'):
+            right_type = self.right.type
+        else:
+            right_type = None
+        return get_common_ctype([right_type, left_type])
 
 
 class AugAssign(Expression):
@@ -371,6 +398,27 @@ class ArrayDef(Expression):
         self.size = size
         self.body = body if body else []
         super(ArrayDef, self).__init__()
+
+class Array(Expression):
+    _fields = ['type', 'size', 'body']
+
+    def __init__(self, type, size = None, body = None):
+        self.body = body or []
+        self.size = size or len(self.body)
+        self.type = type
+        super(Array, self).__init__()
+
+    def get_type(self):
+        return self.type
+
+class Break(Statement):
+    _requires_semicolon = lambda self : True
+
+class Continue(Statement):
+    _requires_semicolon = lambda self : True
+
+class Pass(Statement):
+    _requires_semicolon = lambda self: False
 
 
 @singleton

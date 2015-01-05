@@ -59,16 +59,19 @@ class OpTranslator(LazySpecializedFunction):
         ])
 
         tree = PyBasicConversions().visit(tree)
+        print(tree)
 
         apply_one = tree.find(FunctionDecl, name="apply")
         apply_one.set_static().set_inline()
         apply_one.return_type = inner_type
         apply_one.params[0].type = inner_type
+        return (tree,)
 
-        with open("graph.dot", 'w') as f:
-            f.write( tree.to_dot() )
-
+    def finalize(self, transform_result, program_config):
+        tree = transform_result[0]
         proj = Project([tree])
+        arg_config = program_config[0]
+        A = arg_config['ptr']
         entry_point_typesig = CFUNCTYPE(None, A)
 
         return BasicFunction("apply_all", proj, entry_point_typesig)
@@ -82,30 +85,13 @@ class BasicFunction(ConcreteSpecializedFunction):
         return self._c_function(*args, **kwargs)
 
 
-class ArrayOp(object):
-    """
-    A class for managing independent operation on elements
-    in numpy arrays.
-    """
-
-    def __init__(self):
-        """Instantiate translator."""
-        self.c_apply_all = OpTranslator(get_ast(self.apply))
-
-    def __call__(self, A):
-        """Apply the operator to the arguments via a generated function."""
-        return self.c_apply_all(A)
-
-
 # ---------------------------------------------------------------------------
 # User code
 
-class Doubler(ArrayOp):
-    """Double elements of the array."""
 
-    def apply(n):
-        return n * 2
-
+def double(n):
+    return n * 2
+Doubler = OpTranslator.from_function(double, 'Doubler')
 
 def py_doubler(A):
     A *= 2

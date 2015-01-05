@@ -15,6 +15,10 @@ import ctree
 from ctree.nodes import Project
 from ctree.analyses import VerifyOnlyCtreeNodes
 from ctree.util import highlight
+from ctree.frontend import get_ast
+from ctree.transformations import DeclarationFiller
+
+import ast
 
 import llvm.core as ll
 
@@ -23,8 +27,14 @@ import inspect
 import hashlib
 import json
 
-from ctree.c.nodes import CFile
+from ctree.c.nodes import CFile, FunctionDecl, FunctionCall, MultiNode
 from ctree.ocl.nodes import OclFile
+from ctree.nodes import File
+
+from collections import namedtuple
+
+import itertools
+
 
 log = logging.getLogger(__name__)
 
@@ -48,32 +58,8 @@ class JitModule(object):
     """
 
     def __init__(self):
-        '''compilation_dir specifies the name of the subfolder under COMPILE_PATH'''
-        # write files to $TEMPDIR/ctree/run-XXXX
-        # compile_to = os.path.expanduser(ctree.CONFIG.get('jit','COMPILE_PATH'))
-        #
-        # # makes sure that directories exists, otherwise creates
-        # if not compile_to:
-        #     compile_to = os.path.join(tempfile.gettempdir(), "ctree")
-        #
-        # if compilation_dir:
-        #     self.compilation_dir = os.path.join(compile_to, compilation_dir)
-        # else:
-        #     self.compilation_dir = tempfile.mkdtemp(prefix="run-", dir=compile_to)
-        # if not os.path.exists(self.compilation_dir):
-        #     os.makedirs(self.compilation_dir)
-        #
-        # log.info('compiling to %s'%self.compilation_dir)
         self.ll_module = ll.Module.new('ctree')
         self.exec_engine = None
-        # log.info("temporary compilation directory is: %s",
-        #          self.compilation_dir)
-
-    # def __del__(self):
-    #     if not ctree.CONFIG.get("jit", "PRESERVE_SRC_DIR"):
-    #         log.info("removing temporary compilation directory %s.",
-    #                  self.compilation_dir)
-    #         shutil.rmtree(self.compilation_dir)
 
     def _link_in(self, submodule):
         self.ll_module.link_in(submodule)
@@ -133,8 +119,12 @@ class LazySpecializedFunction(object):
     code just-in-time.
     """
 
-    def __init__(self, py_ast):
-        self.original_tree = py_ast
+    ProgramConfig = namedtuple('ProgramConfig',['args_subconfig', 'tuner_subconfig'])
+
+    def __init__(self, py_ast = None):
+        if py_ast is not None:
+            raise TypeError('This functionality has been removed and the signature will be modified in future versions')
+        self.original_tree = py_ast or get_ast(self.apply)
         self.concrete_functions = {}  # config -> callable map
         self._tuner = self.get_tuning_driver()
 
@@ -166,10 +156,10 @@ class LazySpecializedFunction(object):
 
     def __hash__(self):
         mro = type(self).mro()
-        result = hashlib.sha512('')
+        result = hashlib.sha512(''.encode())
         for klass in mro:
             if issubclass(klass, LazySpecializedFunction):
-                result.update(inspect.getsource(klass))
+                result.update(inspect.getsource(klass).encode())
             else:
                 pass
         return int(result.hexdigest(), 16)
@@ -179,16 +169,18 @@ class LazySpecializedFunction(object):
         """Returns the subdirectory name under .compiled/funcname"""
         # fixes the directory names and squishes invalid chars
         forbidden_chars = r"""/\?%*:|"<>()' """
-        replace_table = string.maketrans(forbidden_chars, '_'*len(forbidden_chars))
-        config_path = re.sub("_+","_", str(program_config).translate(replace_table))
+        config_str = ''.join(i for i in str(program_config) if i not in forbidden_chars)
+        config_path = re.sub("_+","_", config_str)
         path = os.path.join(ctree.CONFIG.get('jit','COMPILE_PATH'),self.__class__.__name__, config_path)
         return path
 
 
     def __call__(self, *args, **kwargs):
         """
-        Determines the program_configuration to be run. If it has yet to be
-        built, build it. Then, execute it.
+            Determines the program_configuration to be run. If it has yet to be
+            built, build it. Then, execute it. If the selected program_configuration 
+            for this function has already been code generated for, this method draws
+            from the cache.
         """
         ctree.STATS.log("specialized function call")
         assert not kwargs, \
@@ -199,7 +191,7 @@ class LazySpecializedFunction(object):
 
         args_subconfig = self.args_to_subconfig(args)
         tuner_subconfig = next(self._tuner.configs)
-        program_config = (args_subconfig, tuner_subconfig)
+        program_config = self.ProgramConfig(args_subconfig, tuner_subconfig)
         dir_name = self.config_to_dirname(program_config)
         if not os.path.exists(dir_name):
             os.makedirs(dir_name)
@@ -210,45 +202,83 @@ class LazySpecializedFunction(object):
 
         config_hash = dir_name
 
-        if config_hash in self.concrete_functions:
+        if config_hash in self.concrete_functions:              # checks to see if the necessary code is in the run-time cache
             ctree.STATS.log("specialized function cache hit")
             log.info("specialized function cache hit!")
+            csf = self.concrete_functions[config_hash]
+
         else:
             ctree.STATS.log("specialized function cache miss")
             log.info("specialized function cache miss.")
             info = self.get_info(dir_name)
-            if hash(self) != info['hash']:
-                #need to run transform
+            if hash(self) != info['hash']:                      # checks to see if the necessary code is in the persistent cache
+                
+                # need to run transform() for code generation
                 log.info('Hash miss. Running Transform')
+                ctree.STATS.log("Filesystem cache miss")
                 transform_result = self.transform(
-                    copy.deepcopy(self.original_tree),
+                    copy.deepcopy(self.original_tree),          # TODO: is this deepcopy really necessary?
                     program_config
                 )
+                if not isinstance(transform_result, (tuple, list)):
+                    transform_result = (transform_result,)
+                transform_result = [DeclarationFiller().visit(source_file)
+                                    if isinstance(source_file, CFile) else source_file
+                                    for source_file in transform_result]
                 for source_file in transform_result:
+                    assert isinstance(source_file, File), "Transform must return an iterable of Files"
                     source_file.path = dir_name
-                new_info = {'hash':hash(self), 'files':[os.path.join(f.path, f.get_filename()) for f in transform_result]}
+
+                new_info = {'hash': hash(self), 'files':[os.path.join(f.path, f.get_filename()) for f in transform_result]}
                 self.set_info(dir_name, new_info)
 
-            else:
+            else:                                             
                 log.info('Hash hit. Skipping transform')
+                ctree.STATS.log('Filesystem cache hit')
                 files = [getFile(path) for path in info['files']]
                 transform_result = files
 
-            try:
-                csf = self.finalize(transform_result, program_config)
-            except NotImplementedError:
-                log.warn("""Your lazy specialized function has not implemented
-                         finalize, assuming your output to transform is a
-                         concrete specialized function.""")
-                csf = transform_result
-
-            assert isinstance(csf, ConcreteSpecializedFunction), \
-                "Expected a ctree.jit.ConcreteSpecializedFunction, \
-                 but got a %s." % type(csf)
-
+            csf = self.finalize(transform_result, program_config)
+            assert isinstance(csf, ConcreteSpecializedFunction), "Expected a ctree.jit.ConcreteSpecializedFunction, but got a %s." % type(csf)
             self.concrete_functions[config_hash] = csf
+        return csf(*args, **kwargs)
 
-        return self.concrete_functions[config_hash](*args, **kwargs)
+    @classmethod
+    def from_function(cls, func, class_name = ''):
+        class Replacer(ast.NodeTransformer):
+            def visit_Module(self, node):
+                return MultiNode(body = [self.visit(i) for i in node.body])
+
+            def visit_FunctionDef(self, node):
+                if node.name == func.__name__:
+                    node.name = 'apply'
+                node.body = [self.visit(item) for item in node.body]
+                return node
+
+            def visit_Name(self, node):
+                if node.id == func.__name__:
+                    node.id = 'apply'
+                return node
+
+
+        def transform(self, tree, program_config):
+            """
+                Calls transform after renaming the function name to 'apply' since specializers are written assuming "apply"
+            """
+            tree = Replacer().visit(tree)
+            return super(newClass, self).transform(tree, program_config)
+
+        def __hash__(self):
+            func_hash = int(hashlib.sha512(inspect.getsource(func).encode()).hexdigest(), 16)
+            old_hash = hash(cls())
+            return func_hash ^ old_hash
+        newClass = type(class_name or func.__name__, (cls, ), {'apply': staticmethod(func), '__hash__':
+                                                 __hash__,
+                                                 'transform': transform
+                                                })
+
+        return newClass
+
 
     def report(self, *args, **kwargs):
         """
@@ -271,7 +301,7 @@ class LazySpecializedFunction(object):
         This function will be passed the result of transform.  The specializer
         should return an ConcreteSpecializedFunction.
         """
-        raise NotImplementedError()
+        raise NotImplementedError("Finalize must be implemented")
 
     def get_tuning_driver(self):
         """
@@ -291,3 +321,7 @@ class LazySpecializedFunction(object):
                  "Consider overriding args_to_subconfig() in %s.",
                  type(self).__name__)
         return dict()
+
+    @staticmethod
+    def apply(*args):
+        raise NotImplementedError()

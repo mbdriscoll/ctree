@@ -35,7 +35,7 @@ class OclFile(OclNode, File):
         write the ocl program to a text file and compile it
         """
         import os
-        new_hash = hashlib.sha512(program_text.strip()).hexdigest()
+        new_hash = hashlib.sha512(program_text.strip().encode()).hexdigest()
         recreate_source = program_text != self._empty and new_hash != self.program_hash
         self.program_hash = new_hash
         cl_src_file = os.path.join(self.path, self.get_filename())
