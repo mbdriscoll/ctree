@@ -6,6 +6,9 @@ import ast
 
 from ctypes import c_long, c_int, c_uint, c_byte, c_ulong, c_ushort, c_short, c_wchar_p, c_char_p, c_float
 
+from collections import deque
+import itertools
+
 from ctree.nodes import Project, CtreeNode
 from ctree.c.nodes import Op, Constant, String, SymbolRef, BinaryOp, TernaryOp, Return, While, MultiNode
 from ctree.c.nodes import If, CFile, FunctionCall, FunctionDecl, For, Assign, AugAssign, ArrayRef, Literal
@@ -218,17 +221,50 @@ class PyBasicConversions(NodeTransformer):
         target_value_list = []
         #a = b -> targets = [ast.Name], value = ast.Name
         #a = b = c... -> targets = [ast.Name, ast.Name....], value = ast.Name
-        if all(isinstance(i, ast.Name) for i in node.targets):
-            target_value_list.extend((target, node.value) for target in node.targets)
 
-        #a, b = c,d -> targets = [ast.Tuple], value = ast.Tuple
-        elif isinstance(node.targets[0], (ast.List, ast.Tuple)):
-            target_value_list.extend((target, value) for target, value in zip(node.targets[0].elts, node.value.elts))
+        def parse_pairs(node):
+            def targets_to_list(targets): #parses target into nested lists
+                res = []
+                for elt in targets:
+                    if not isinstance(elt, (ast.List, ast.Tuple)):
+                        res.append(elt)
+                    elif isinstance(elt, (ast.Tuple, ast.List)):
+                        res.append(targets_to_list(elt.elts))
+                return res
 
-        else:
-            return node
+            def value_to_list(value): #parses value into nested lists for multiple assign
+                res = []
+                if not isinstance(value, (ast.List, ast.Tuple)):
+                    return value
+                for elt in value.elts:
+                    if not isinstance(value, (ast.List, ast.Tuple)):
+                        res.append(elt)
+                    else:
+                        res.append(value_to_list(elt))
+                return res
 
-        target_value_list = [(self.visit(target), self.visit(value)) for target, value in target_value_list]
+            def pair_lists(targets, values):
+                res = []
+                queue = deque((target, values) for target in targets)
+                sentinel = object()
+                while queue:
+                    target, value = queue.popleft()
+                    if isinstance(target, list):
+                        #target hasn't been completely unrolled yet
+                        for sub_target, sub_value in itertools.izip_longest(target, value, fillvalue=sentinel):
+                            if sub_target is sentinel or sub_value is sentinel:
+                                raise ValueError('Incorrect number of values to unpack')
+                            queue.append((sub_target, sub_value))
+                    else:
+                        res.append((target, value))
+                return res
+
+            targets = targets_to_list(node.targets)
+            values = value_to_list(node.value)
+            return pair_lists(targets, values)
+
+
+        target_value_list = [(self.visit(target), self.visit(value)) for target, value in parse_pairs(node)]
 
         #making a multinode no matter what. It's cleaner than branching a lot
         operation_body = []
