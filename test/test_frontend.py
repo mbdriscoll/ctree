@@ -1,10 +1,8 @@
-import ast
 import unittest
+from inspect import getsource
 
 from ctree.frontend import *
 from fixtures.sample_asts import *
-
-from inspect import getsource
 
 
 class TestFrontend(unittest.TestCase):

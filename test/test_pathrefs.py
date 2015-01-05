@@ -1,6 +1,6 @@
 import unittest
-
 from ctypes import c_char_p
+
 from ctree.nodes import *
 from ctree.c.nodes import *
 

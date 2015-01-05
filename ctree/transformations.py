@@ -1,25 +1,21 @@
 """
 A set of basic transformers for python asts
 """
-import os, sys
+import os
+import sys
 import ast
-
-from ctypes import c_long, c_int, c_uint, c_byte, c_ulong, c_ushort, c_short, c_wchar_p, c_char_p, c_float
-
+from ctypes import c_long, c_int, c_byte, c_short, c_char_p
 from collections import deque
 
-from ctree.nodes import Project, CtreeNode
-from ctree.c.nodes import Op, Constant, String, SymbolRef, BinaryOp, TernaryOp, Return, While, MultiNode
-from ctree.c.nodes import If, CFile, FunctionCall, FunctionDecl, For, Assign, AugAssign, ArrayRef, Literal
+from ctree.nodes import Project
+from ctree.c.nodes import Constant, String, SymbolRef, BinaryOp, TernaryOp, Return, While, MultiNode
+from ctree.c.nodes import If, CFile, FunctionCall, FunctionDecl, For, Assign, ArrayRef
 from ctree.c.nodes import Lt, Gt, AddAssign, SubAssign, MulAssign, DivAssign, BitAndAssign, BitShRAssign, BitShLAssign
-from ctree.c.nodes import BitOrAssign, BitXorAssign, ModAssign, Break, Continue, Pass, Array
-
+from ctree.c.nodes import BitOrAssign, BitXorAssign, ModAssign, Break, Continue, Pass
 from ctree.c.nodes import Op
-
-from ctree.types import get_ctype
-
 from ctree.visitors import NodeTransformer
-from ctree.util import flatten
+
+
 
 
 #conditional imports

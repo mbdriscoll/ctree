@@ -1,19 +1,12 @@
-import ctypes
 import _ctypes
+
+import numpy as np
 
 from ctree.types import (
     get_ctype,
-    codegen_type,
 )
-
 from util import CtreeTest
-
-import ctree
-import ctree.c
-import ctree.np
 from ctree.c.nodes import SymbolRef
-
-import numpy as np
 
 class TestTypeRecognizer(CtreeTest):
     def test_int_array(self):

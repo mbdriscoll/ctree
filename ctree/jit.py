@@ -4,12 +4,18 @@ Just-in-time compilation support.
 
 import abc
 import copy
-import shutil
-import tempfile
 import os
-import hashlib
-import string
+import shutil
 import re
+import atexit
+import ast
+import logging
+import inspect
+import hashlib
+import json
+from collections import namedtuple
+
+import llvm.core as ll
 
 import ctree
 from ctree.nodes import Project
@@ -17,23 +23,9 @@ from ctree.analyses import VerifyOnlyCtreeNodes
 from ctree.util import highlight
 from ctree.frontend import get_ast
 from ctree.transformations import DeclarationFiller
-
-import ast
-
-import llvm.core as ll
-
-import logging
-import inspect
-import hashlib
-import json
-
-from ctree.c.nodes import CFile, FunctionDecl, FunctionCall, MultiNode
+from ctree.c.nodes import CFile, MultiNode
 from ctree.ocl.nodes import OclFile
 from ctree.nodes import File
-
-from collections import namedtuple
-
-import itertools
 
 
 log = logging.getLogger(__name__)
@@ -231,6 +223,10 @@ class LazySpecializedFunction(object):
 
                 new_info = {'hash': hash(self), 'files':[os.path.join(f.path, f.get_filename()) for f in transform_result]}
                 self.set_info(dir_name, new_info)
+                if ctree.CONFIG.get('jit','PRESERVE_SRC_DIR') == 'False':
+                    atexit.register(
+                        shutil.rmtree, dir_name
+                    )
 
             else:                                             
                 log.info('Hash hit. Skipping transform')
