@@ -58,32 +58,8 @@ class JitModule(object):
     """
 
     def __init__(self):
-        '''compilation_dir specifies the name of the subfolder under COMPILE_PATH'''
-        # write files to $TEMPDIR/ctree/run-XXXX
-        # compile_to = os.path.expanduser(ctree.CONFIG.get('jit','COMPILE_PATH'))
-        #
-        # # makes sure that directories exists, otherwise creates
-        # if not compile_to:
-        #     compile_to = os.path.join(tempfile.gettempdir(), "ctree")
-        #
-        # if compilation_dir:
-        #     self.compilation_dir = os.path.join(compile_to, compilation_dir)
-        # else:
-        #     self.compilation_dir = tempfile.mkdtemp(prefix="run-", dir=compile_to)
-        # if not os.path.exists(self.compilation_dir):
-        #     os.makedirs(self.compilation_dir)
-        #
-        # log.info('compiling to %s'%self.compilation_dir)
         self.ll_module = ll.Module.new('ctree')
         self.exec_engine = None
-        # log.info("temporary compilation directory is: %s",
-        #          self.compilation_dir)
-
-    # def __del__(self):
-    #     if not ctree.CONFIG.get("jit", "PRESERVE_SRC_DIR"):
-    #         log.info("removing temporary compilation directory %s.",
-    #                  self.compilation_dir)
-    #         shutil.rmtree(self.compilation_dir)
 
     def _link_in(self, submodule):
         self.ll_module.link_in(submodule)

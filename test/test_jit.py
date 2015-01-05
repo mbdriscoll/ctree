@@ -56,3 +56,6 @@ class TestJit(unittest.TestCase):
         c_l2norm_fn = mod.get_callable(entry.name, entry.get_type())
         self.assertEqual(l2norm(np.ones(12, dtype=np.float64)),
                          c_l2norm_fn(np.ones(12, dtype=np.float64), 12))
+
+    def test_getFile(self):
+        getFile(os.path.join(CONFIG.get('jit','COMPILE_PATH'),'test_l2norm.c'))

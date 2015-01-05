@@ -1,13 +1,12 @@
 """
 A set of basic transformers for python asts
 """
-import os
+import os, sys
 import ast
 
 from ctypes import c_long, c_int, c_uint, c_byte, c_ulong, c_ushort, c_short, c_wchar_p, c_char_p, c_float
 
 from collections import deque
-import itertools
 
 from ctree.nodes import Project, CtreeNode
 from ctree.c.nodes import Op, Constant, String, SymbolRef, BinaryOp, TernaryOp, Return, While, MultiNode
@@ -22,6 +21,13 @@ from ctree.types import get_ctype
 from ctree.visitors import NodeTransformer
 from ctree.util import flatten
 
+
+#conditional imports
+
+if sys.version_info < (3,0):
+    from itertools import izip_longest
+else:
+    from itertools import zip_longest as izip_longest
 
 class PyCtxScrubber(NodeTransformer):
     """
@@ -248,7 +254,7 @@ class PyBasicConversions(NodeTransformer):
                     target, value = queue.popleft()
                     if isinstance(target, list):
                         #target hasn't been completely unrolled yet
-                        for sub_target, sub_value in itertools.izip_longest(target, value, fillvalue=sentinel):
+                        for sub_target, sub_value in izip_longest(target, value, fillvalue=sentinel):
                             if sub_target is sentinel or sub_value is sentinel:
                                 raise ValueError('Incorrect number of values to unpack')
                             queue.append((sub_target, sub_value))
