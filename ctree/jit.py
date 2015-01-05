@@ -225,7 +225,7 @@ class LazySpecializedFunction(object):
                 self.set_info(dir_name, new_info)
                 if ctree.CONFIG.get('jit','PRESERVE_SRC_DIR') == 'False':
                     atexit.register(
-                        shutil.rmtree, dir_name
+                        shutil.rmtree, dir_name, ignore_errors=True
                     )
 
             else:                                             
