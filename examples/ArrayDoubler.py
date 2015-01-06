@@ -2,23 +2,16 @@
 Parses the python AST below, transforms it to C, JITs it, and runs it.
 """
 
-import logging
-
 #logging.basicConfig(level=10)
+
+import ctypes as ct
 
 import numpy as np
 
-import ctypes as ct
-from ctypes import *
-
-import ctree.np
-
-from ctree.frontend import get_ast
 from ctree.c.nodes import *
 from ctree.transformations import *
 from ctree.jit import LazySpecializedFunction
 from ctree.jit import ConcreteSpecializedFunction
-from ctree.types import get_ctype
 # from ctypes import CFUNCTYPE
 
 # ---------------------------------------------------------------------------

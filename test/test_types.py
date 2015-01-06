@@ -1,15 +1,7 @@
-import types
 import ctypes
 
-from ctree.types import (
-    get_ctype,
-    codegen_type,
-)
-
+from ctree.types import get_ctype
 from util import CtreeTest
-
-import ctree
-import ctree.c
 from ctree.c.nodes import SymbolRef, FunctionDecl
 
 class TestTypeRecognizer(CtreeTest):

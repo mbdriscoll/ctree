@@ -1,7 +1,10 @@
 __author__ = 'nzhang-dev'
 
-from ctree.frontend import *; from ctree.c.nodes import MultiNode; from ctree.transformations import PyBasicConversions, DeclarationFiller
 import unittest
+
+from ctree.frontend import *;
+from ctree.transformations import PyBasicConversions, DeclarationFiller
+
 
 def fib(n):
     a, b = 0, 1

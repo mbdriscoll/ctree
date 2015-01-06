@@ -4,8 +4,8 @@ from textwrap import dedent
 
 from ctree.templates.nodes import StringTemplate, FileTemplate
 from ctree.c.nodes import Constant, While
-
 import fixtures
+
 
 class TestStringTemplates(unittest.TestCase):
     def _check(self, tree, expected):
