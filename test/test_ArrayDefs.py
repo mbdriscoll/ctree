@@ -1,6 +1,7 @@
+import ctypes as ct
+
 from util import CtreeTest
 from ctree.c.nodes import SymbolRef, Constant, Add, Mul, ArrayDef, Sub
-import ctypes as ct
 
 
 class TestArrayDefs(CtreeTest):

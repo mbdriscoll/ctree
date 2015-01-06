@@ -1,14 +1,8 @@
 import unittest
 
 from ctree.nodes import *
-from ctree.c.nodes import *
-
-from ctree.types import get_ctype
-from ctypes import *
-
 from ctree.jit import LazySpecializedFunction
 from ctree.jit import ConcreteSpecializedFunction
-
 from fixtures.sample_asts import *
 
 

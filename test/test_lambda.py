@@ -1,11 +1,10 @@
 import unittest
 import ctypes as ct
 import ast
-from ctree.transformations import PyBasicConversions, DeclarationFiller
-
-from ctree.c.nodes import *
-
 import sys
+
+from ctree.transformations import PyBasicConversions, DeclarationFiller
+from ctree.c.nodes import *
 
 
 class TestAssigns(unittest.TestCase):

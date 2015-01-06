@@ -1,7 +1,5 @@
 import unittest
 
-import os
-import shutil
 from itertools import islice
 
 # class TestNullTuningDriver(unittest.TestCase):

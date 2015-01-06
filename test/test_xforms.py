@@ -1,8 +1,4 @@
-import ast
-import sys
 import unittest
-
-from ctypes import c_long
 
 from fixtures.sample_asts import *
 from ctree.transformations import *

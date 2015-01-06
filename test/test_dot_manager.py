@@ -3,9 +3,7 @@ __author__ = 'Chick Markley'
 import unittest
 
 from ctree.visual.dot_manager import DotManager
-import ctree.visual.dot_manager
 from ctree.frontend import get_ast
-from fixtures.sample_asts import *
 
 
 def square_of(n):

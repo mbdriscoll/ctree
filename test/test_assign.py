@@ -1,9 +1,7 @@
 import unittest
-import ctypes as ct
 import ast
-from ctree.transformations import PyBasicConversions, DeclarationFiller
 
-
+from ctree.transformations import PyBasicConversions
 from ctree.c.nodes import *
 
 

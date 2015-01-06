@@ -3,9 +3,11 @@ A collection of pre-built ASTs for use in testing.
 """
 
 from ctypes import *
+
 from ctree.c.nodes import *
 from ctree.cpp.nodes import *
 import ctree.np
+
 ctree.np  # Make PEP8 Happy
 
 
