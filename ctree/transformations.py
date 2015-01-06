@@ -16,7 +16,7 @@ from ctree.c.nodes import BitOrAssign, BitXorAssign, ModAssign, Break, Continue,
 
 from ctree.c.nodes import Op
 
-from ctree.types import get_ctype
+from ctree.types import get_ctype, get_common_ctype
 
 from ctree.visitors import NodeTransformer
 from ctree.util import flatten
@@ -128,7 +128,7 @@ class PyBasicConversions(NodeTransformer):
                     return None
 
             # TODO allow any expressions castable to Long type
-            target_type = c_long
+            target_types = [c_long]
             for el in (stop, start, step):
                 if hasattr(el, 'get_type'): #typed item to try and guess type off of. Imperfect right now.
                     # TODO take the proper class instead of the last; if start, end are doubles, but step is long, target is double
@@ -136,7 +136,8 @@ class PyBasicConversions(NodeTransformer):
                     assert any(isinstance(t, klass) for klass in [
                         c_byte, c_int, c_long, c_short
                     ]), "Can only convert ranges with integer/long start/stop/step values"
-                    target_type = t
+                    target_types.append(type(t))
+            target_type = get_common_ctype(target_types)()
 
             target = SymbolRef(node.target.id, target_type)
             op = Lt

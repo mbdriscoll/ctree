@@ -145,7 +145,12 @@ def get_common_ctype(ctypes_list):
     #lowest ranking takes precedence
     rankings = [ctypes.c_longdouble, ctypes.c_double, ctypes.c_float, ctypes.c_uint, ctypes.c_int, ctypes.c_byte,
                 ctypes.c_wchar, ctypes.c_char, ctypes.c_bool, None]
-    try:
-        return min(ctypes_list, key=rankings.index)
-    except ValueError:
-        return ctypes_list[0]
+    filtered = []
+    for c_type in ctypes_list:
+        if c_type not in rankings:
+            return c_type
+        filtered.append(c_type)
+    if filtered:
+        return min(filtered, key=rankings.index)
+    else:
+        return ctypes.c_void_p
