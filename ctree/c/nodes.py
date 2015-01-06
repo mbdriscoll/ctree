@@ -399,7 +399,7 @@ class ArrayDef(Expression):
         self.body = body if body else []
         super(ArrayDef, self).__init__()
 
-class Array(Expression):
+class Array(Literal):
     _fields = ['type', 'size', 'body']
 
     def __init__(self, type, size = None, body = None):

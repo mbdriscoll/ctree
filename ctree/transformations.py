@@ -4,14 +4,15 @@ A set of basic transformers for python asts
 import os
 import sys
 import ast
-from ctypes import c_long, c_int, c_byte, c_short, c_char_p
+from ctypes import c_long, c_int, c_byte, c_short, c_char_p, c_void_p
+import ctypes
 from collections import deque
 
 from ctree.nodes import Project
 from ctree.c.nodes import Constant, String, SymbolRef, BinaryOp, TernaryOp, Return, While, MultiNode
 from ctree.c.nodes import If, CFile, FunctionCall, FunctionDecl, For, Assign, ArrayRef
 from ctree.c.nodes import Lt, Gt, AddAssign, SubAssign, MulAssign, DivAssign, BitAndAssign, BitShRAssign, BitShLAssign
-from ctree.c.nodes import BitOrAssign, BitXorAssign, ModAssign, Break, Continue, Pass
+from ctree.c.nodes import BitOrAssign, BitXorAssign, ModAssign, Break, Continue, Pass, Array, Literal
 from ctree.c.nodes import Op
 from ctree.visitors import NodeTransformer
 
@@ -25,6 +26,13 @@ if sys.version_info < (3,0):
     from itertools import izip_longest
 else:
     from itertools import zip_longest as izip_longest
+
+def get_type(node):
+    if hasattr(node, 'get_type'):
+        return type(node.get_type())
+    elif hasattr(node, 'type'):
+        return type(node.type)
+    return c_void_p
 
 class PyCtxScrubber(NodeTransformer):
     """
@@ -242,7 +250,7 @@ class PyBasicConversions(NodeTransformer):
                         res.append(elt)
                     else:
                         res.append(value_to_list(elt))
-                return res
+                return ast.List(elts=res)
 
             def pair_lists(targets, values):
                 res = []
@@ -252,7 +260,7 @@ class PyBasicConversions(NodeTransformer):
                     target, value = queue.popleft()
                     if isinstance(target, list):
                         #target hasn't been completely unrolled yet
-                        for sub_target, sub_value in izip_longest(target, value, fillvalue=sentinel):
+                        for sub_target, sub_value in izip_longest(target, value.elts, fillvalue=sentinel):
                             if sub_target is sentinel or sub_value is sentinel:
                                 raise ValueError('Incorrect number of values to unpack')
                             queue.append((sub_target, sub_value))
@@ -270,16 +278,15 @@ class PyBasicConversions(NodeTransformer):
         # making a multinode no matter what. It's cleaner than branching a lot
         operation_body = []
         swap_body = []
-        for target, value in target_value_list[:]:
-            if isinstance(value, (Constant, String)):
+        for target, value in target_value_list:
+            if isinstance(value, Literal) and not isinstance(value, SymbolRef):
                 operation_body.append(Assign(target, value))
-                target_value_list.remove((target,value))
                 continue
             new_target = target.copy()
             new_target.name = "____temp__" + new_target.name
             operation_body.append(Assign(new_target, value))
             swap_body.append(Assign(target, new_target.copy()))
-        return MultiNode(body = operation_body + swap_body)
+        return MultiNode(body=operation_body + swap_body)
 
 
     def visit_Subscript(self, node):
@@ -317,6 +324,12 @@ class PyBasicConversions(NodeTransformer):
 
     def visit_Pass(self, node):
         return Pass()
+
+    def visit_List(self, node):
+        elts = [self.visit(elt) for elt in node.elts]
+        types = [get_type(elt) for elt in elts]
+        array_type = get_common_ctype(types)
+        return Array(type=ctypes.POINTER(array_type)(), body=elts)
 
 class ResolveGeneratedPathRefs(NodeTransformer):
     """

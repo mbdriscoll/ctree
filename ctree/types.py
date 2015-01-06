@@ -117,7 +117,7 @@ def codegen_type(ctype):
     bases = [type(ctype)]
     while bases:
         base = bases.pop()
-        bases += base.__bases__
+        bases.extend(base.__bases__)
         try:
             val = generators[base](ctype)
             return val
@@ -144,7 +144,7 @@ def get_common_ctype(ctypes_list):
 
     #lowest ranking takes precedence
     rankings = [ctypes.c_longdouble, ctypes.c_double, ctypes.c_float, ctypes.c_uint, ctypes.c_int, ctypes.c_byte,
-                ctypes.c_wchar, ctypes.c_char, ctypes.c_bool, None]
+                ctypes.c_wchar, ctypes.c_char, ctypes.c_bool, ctypes.c_void_p]
     filtered = []
     for c_type in ctypes_list:
         if c_type not in rankings:
