@@ -113,12 +113,45 @@ class LazySpecializedFunction(object):
 
     ProgramConfig = namedtuple('ProgramConfig',['args_subconfig', 'tuner_subconfig'])
 
-    def __init__(self, py_ast = None):
-        if py_ast is not None:
-            raise TypeError('This functionality has been removed and the signature will be modified in future versions')
+    class NameExtractor(ast.NodeVisitor):
+        """
+        Extracts the first functiondef name found
+        """
+        def visit_FunctionDef(self, node):
+            return node.name
+
+        def generic_visit(self, node):
+            for field, value in ast.iter_fields(node):
+                if isinstance(value, list):
+                    for item in value:
+                        if isinstance(item, ast.AST):
+                            res = self.visit(item)
+                            if res:
+                                return res
+                elif isinstance(value, ast.AST):
+                    res = self.visit(value)
+                    if res:
+                        return res
+
+    def __init__(self, py_ast=None, sub_dir=''):
+        if py_ast is not None and self.apply is not LazySpecializedFunction.apply:
+            raise TypeError('Cannot define apply and pass py_ast')
         self.original_tree = py_ast or get_ast(self.apply)
         self.concrete_functions = {}  # config -> callable map
         self._tuner = self.get_tuning_driver()
+        print(sub_dir)
+        self.sub_dir = sub_dir or self.NameExtractor().visit(self.original_tree)
+
+    @property
+    def original_tree(self):
+        return copy.deepcopy(self._original_tree)
+
+    @original_tree.setter
+    def original_tree(self, value):
+        if not hasattr(self, '_original_tree'):
+            self._original_tree = value
+        elif ast.dump(self.__original_tree, True, True) != ast.dump(value, True, True):
+            raise AttributeError('Cannot redefine the ast')
 
     @property
     def info_filename(self):
@@ -127,7 +160,7 @@ class LazySpecializedFunction(object):
     def get_info(self, path):
         info_filepath = os.path.join(path, self.info_filename)
         if not os.path.exists(info_filepath):
-            return {'hash':None, 'files':[]}
+            return {'hash': None, 'files':[]}
         with open(info_filepath) as info_file:
             return json.load(info_file)
 
@@ -151,9 +184,14 @@ class LazySpecializedFunction(object):
         result = hashlib.sha512(''.encode())
         for klass in mro:
             if issubclass(klass, LazySpecializedFunction):
-                result.update(inspect.getsource(klass).encode())
+                try:
+                    result.update(inspect.getsource(klass).encode())
+                except IOError:
+                    pass
             else:
                 pass
+        tree_str = ast.dump(self.original_tree, annotate_fields=True, include_attributes=True)
+        result.update(tree_str.encode())
         return int(result.hexdigest(), 16)
 
 
@@ -161,9 +199,14 @@ class LazySpecializedFunction(object):
         """Returns the subdirectory name under .compiled/funcname"""
         # fixes the directory names and squishes invalid chars
         forbidden_chars = r"""/\?%*:|"<>()' """
-        config_str = ''.join(i for i in str(program_config) if i not in forbidden_chars)
+        regex_filter = re.compile('['+forbidden_chars+']')
+        args_subconfig_str, tuner_config_str = str(program_config.args_subconfig), str(program_config.tuner_subconfig)
+        args_subconfig_str = re.sub(regex_filter, '', args_subconfig_str)
+        tuner_config_str = re.sub(regex_filter, '', tuner_config_str)
+        config_str = os.path.join(args_subconfig_str, tuner_config_str)
         config_path = re.sub("_+","_", config_str)
-        path = os.path.join(ctree.CONFIG.get('jit','COMPILE_PATH'),self.__class__.__name__, config_path)
+        sub_dir = re.sub(regex_filter, '', self.sub_dir or hex(hash(self))[2:])
+        path = os.path.join(ctree.CONFIG.get('jit','COMPILE_PATH'),self.__class__.__name__, sub_dir, config_path)
         return path
 
 
@@ -240,7 +283,7 @@ class LazySpecializedFunction(object):
         return csf(*args, **kwargs)
 
     @classmethod
-    def from_function(cls, func, class_name = ''):
+    def from_function(cls, func, folder_name = ''):
         class Replacer(ast.NodeTransformer):
             def visit_Module(self, node):
                 return MultiNode(body = [self.visit(i) for i in node.body])
@@ -256,24 +299,9 @@ class LazySpecializedFunction(object):
                     node.id = 'apply'
                 return node
 
+        func_ast = Replacer().visit(get_ast(func))
+        return cls(py_ast=func_ast, sub_dir=folder_name or func.__name__)
 
-        def transform(self, tree, program_config):
-            """
-                Calls transform after renaming the function name to 'apply' since specializers are written assuming "apply"
-            """
-            tree = Replacer().visit(tree)
-            return super(newClass, self).transform(tree, program_config)
-
-        def __hash__(self):
-            func_hash = int(hashlib.sha512(inspect.getsource(func).encode()).hexdigest(), 16)
-            old_hash = hash(cls())
-            return func_hash ^ old_hash
-        newClass = type(class_name or func.__name__, (cls, ), {'apply': staticmethod(func), '__hash__':
-                                                 __hash__,
-                                                 'transform': transform
-                                                })
-
-        return newClass
 
 
     def report(self, *args, **kwargs):

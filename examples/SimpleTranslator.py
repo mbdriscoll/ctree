@@ -65,8 +65,7 @@ class BasicTranslator(LazySpecializedFunction):
 def main():
 
     # create a class called Doubler that has the function double(n) as an @staticmethod
-    Translator = BasicTranslator.from_function(fib, "Translator")
-    c_fib = Translator()
+    c_fib = BasicTranslator.from_function(fib, "Translator")
 
     assert fib(10) == c_fib(10)
     assert fib(11) == c_fib(11)
