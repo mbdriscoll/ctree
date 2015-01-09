@@ -384,6 +384,8 @@ class DeclarationFiller(NodeTransformer):
         :param key:
         :return: Looks up the last value corresponding to key in self.__environments
         """
+        if isinstance(key, SymbolRef):
+            key = key.name
         value = sentinel = object()
         for environment in self.__environments:
             if key in environment:
@@ -400,6 +402,8 @@ class DeclarationFiller(NodeTransformer):
             return False
 
     def __add_entry(self, key, value):
+        if isinstance(key, SymbolRef):
+            key = key.name
         self.__environments[-1][key] = value
 
     def __add_environment(self):
