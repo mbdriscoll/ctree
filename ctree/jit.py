@@ -229,7 +229,6 @@ class LazySpecializedFunction(object):
         if not os.path.exists(dir_name):
             os.makedirs(dir_name)
 
-
         log.info("tuner subconfig: %s", tuner_subconfig)
         log.info("arguments subconfig: %s", args_subconfig)
 
