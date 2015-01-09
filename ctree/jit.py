@@ -21,7 +21,7 @@ import ctree
 from ctree.nodes import Project
 from ctree.analyses import VerifyOnlyCtreeNodes
 from ctree.util import highlight
-from ctree.frontend import get_ast
+from ctree.frontend import get_ast, dump
 from ctree.transformations import DeclarationFiller
 from ctree.c.nodes import CFile, MultiNode
 from ctree.ocl.nodes import OclFile
@@ -139,7 +139,6 @@ class LazySpecializedFunction(object):
         self.original_tree = py_ast or get_ast(self.apply)
         self.concrete_functions = {}  # config -> callable map
         self._tuner = self.get_tuning_driver()
-        print(sub_dir)
         self.sub_dir = sub_dir or self.NameExtractor().visit(self.original_tree)
 
     @property
@@ -198,16 +197,15 @@ class LazySpecializedFunction(object):
     def config_to_dirname(self, program_config):
         """Returns the subdirectory name under .compiled/funcname"""
         # fixes the directory names and squishes invalid chars
-        forbidden_chars = r"""/\?%*:|"<>()' """
+        forbidden_chars = r"""/\?%*:|"<>()'{} """
         regex_filter = re.compile('['+forbidden_chars+']')
         args_subconfig_str, tuner_config_str = str(program_config.args_subconfig), str(program_config.tuner_subconfig)
-        args_subconfig_str = re.sub(regex_filter, '', args_subconfig_str)
-        tuner_config_str = re.sub(regex_filter, '', tuner_config_str)
+        args_subconfig_str = re.sub(regex_filter, '-', args_subconfig_str) or 'None'
+        tuner_config_str = re.sub(regex_filter, '-', tuner_config_str) or 'None'
         config_str = os.path.join(args_subconfig_str, tuner_config_str)
-        config_path = re.sub("_+","_", config_str)
         sub_dir = re.sub(regex_filter, '', self.sub_dir or hex(hash(self))[2:])
-        path = os.path.join(ctree.CONFIG.get('jit','COMPILE_PATH'),self.__class__.__name__, sub_dir, config_path)
-        return path
+        path = os.path.join(ctree.CONFIG.get('jit','COMPILE_PATH'),self.__class__.__name__, sub_dir, config_str)
+        return re.sub('-+', '-', re.sub('_+','_', path))
 
 
     def __call__(self, *args, **kwargs):

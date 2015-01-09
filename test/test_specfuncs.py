@@ -3,6 +3,7 @@ import unittest
 from ctree.nodes import *
 from ctree.jit import LazySpecializedFunction
 from ctree.jit import ConcreteSpecializedFunction
+from ctree.frontend import dump
 from fixtures.sample_asts import *
 
 
@@ -24,7 +25,6 @@ class TestTranslator(LazySpecializedFunction):
         arg_types = program_config[0]['arg_typesig']
 
         func_type = CFUNCTYPE(arg_types[0], *arg_types)
-
         return BasicFunction(cfile.name, proj, func_type)
 
 
@@ -43,9 +43,12 @@ class BadArgs(LazySpecializedFunction):
 
 class DefaultArgs(LazySpecializedFunction):
     def transform(self, tree, program_config):
-        proj = Project([CFile("generated", [tree])])
-        ctype = tree.get_type().as_ctype()
-        return BasicFunction(tree.name, proj, ctype)
+        return CFile("generated", [tree])
+
+    def finalize(self, transform_result, program_config):
+        proj = Project(transform_result)
+        ctype = self.original_tree.get_type().as_ctype()
+        return BasicFunction(self.original_tree.name, proj, ctype)
 
 
 class NoTransform(LazySpecializedFunction):
@@ -53,7 +56,7 @@ class NoTransform(LazySpecializedFunction):
         return {'arg_typesig': tuple(type(get_ctype(arg)) for arg in args)}
 
 
-@unittest.skip('Removed Support for AST injection')
+#@unittest.skip('Removed Support for AST injection')
 class TestSpecializers(unittest.TestCase):
     def test_identity_int(self):
         c_identity = TestTranslator(identity_ast)
@@ -61,11 +64,6 @@ class TestSpecializers(unittest.TestCase):
 
     def test_identity_float(self):
         c_identity = TestTranslator(identity_ast)
-        self.assertEqual(c_identity(1.2), identity(1.2))
-
-    def test_identity_intfloat(self):
-        c_identity = TestTranslator(identity_ast)
-        self.assertEqual(c_identity(1), identity(1))
         self.assertEqual(c_identity(1.2), identity(1.2))
 
     def test_fib_int(self):
