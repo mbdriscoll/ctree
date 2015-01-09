@@ -254,7 +254,6 @@ class LazySpecializedFunction(object):
                 )
                 if not isinstance(transform_result, (tuple, list)):
                     transform_result = (transform_result,)
-                transform_result = [copy.deepcopy(f) for f in transform_result]
                 transform_result = [DeclarationFiller().visit(source_file)
                                     if isinstance(source_file, CFile) else source_file
                                     for source_file in transform_result]
