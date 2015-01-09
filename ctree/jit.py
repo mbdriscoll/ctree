@@ -41,7 +41,7 @@ def getFile(filepath):
     path, filename = os.path.split(filepath)
     name, ext = os.path.splitext(filename)
     filetype = ext_map[ext]
-    return filetype(name=name, path=path)
+    return filetype(name=name.encode(), path=path.encode())
 
 
 class JitModule(object):
@@ -169,14 +169,14 @@ class LazySpecializedFunction(object):
             return json.dump(dictionary, info_file)
 
 
-    @staticmethod
-    def _hash(o):
-        if isinstance(o, dict):
-            return hash(frozenset(
-                LazySpecializedFunction._hash(item) for item in o.items()
-            ))
-        else:
-            return hash(str(o))
+    # @staticmethod
+    # def _hash(o):
+    #     if isinstance(o, dict):
+    #         return hash(frozenset(
+    #             LazySpecializedFunction._hash(item) for item in o.items()
+    #         ))
+    #     else:
+    #         return hash(str(o))
 
     def __hash__(self):
         mro = type(self).mro()
@@ -185,7 +185,7 @@ class LazySpecializedFunction(object):
             if issubclass(klass, LazySpecializedFunction):
                 try:
                     result.update(inspect.getsource(klass).encode())
-                except IOError:
+                except IOError:  # means source can't be found. Well, can't do anything about that I don't think
                     pass
             else:
                 pass
@@ -200,12 +200,12 @@ class LazySpecializedFunction(object):
         forbidden_chars = r"""/\?%*:|"<>()'{} """
         regex_filter = re.compile('['+forbidden_chars+']')
         args_subconfig_str, tuner_config_str = str(program_config.args_subconfig), str(program_config.tuner_subconfig)
-        args_subconfig_str = re.sub(regex_filter, '-', args_subconfig_str) or 'None'
-        tuner_config_str = re.sub(regex_filter, '-', tuner_config_str) or 'None'
+        args_subconfig_str = re.sub(regex_filter, '_', args_subconfig_str) or 'None'
+        tuner_config_str = re.sub(regex_filter, '_', tuner_config_str) or 'None'
         config_str = os.path.join(args_subconfig_str, tuner_config_str)
         sub_dir = re.sub(regex_filter, '', self.sub_dir or hex(hash(self))[2:])
         path = os.path.join(ctree.CONFIG.get('jit','COMPILE_PATH'),self.__class__.__name__, sub_dir, config_str)
-        return re.sub('-+', '-', re.sub('_+','_', path))
+        return re.sub('_+','_', path)
 
 
     def __call__(self, *args, **kwargs):
@@ -250,11 +250,12 @@ class LazySpecializedFunction(object):
                 log.info('Hash miss. Running Transform')
                 ctree.STATS.log("Filesystem cache miss")
                 transform_result = self.transform(
-                    copy.deepcopy(self.original_tree),          # TODO: is this deepcopy really necessary?
+                    self.original_tree,
                     program_config
                 )
                 if not isinstance(transform_result, (tuple, list)):
                     transform_result = (transform_result,)
+                transform_result = [copy.deepcopy(f) for f in transform_result]
                 transform_result = [DeclarationFiller().visit(source_file)
                                     if isinstance(source_file, CFile) else source_file
                                     for source_file in transform_result]
@@ -269,7 +270,7 @@ class LazySpecializedFunction(object):
                         shutil.rmtree, dir_name, ignore_errors=True
                     )
 
-            else:                                             
+            else:
                 log.info('Hash hit. Skipping transform')
                 ctree.STATS.log('Filesystem cache hit')
                 files = [getFile(path) for path in info['files']]
@@ -281,10 +282,10 @@ class LazySpecializedFunction(object):
         return csf(*args, **kwargs)
 
     @classmethod
-    def from_function(cls, func, folder_name = ''):
+    def from_function(cls, func, folder_name=''):
         class Replacer(ast.NodeTransformer):
             def visit_Module(self, node):
-                return MultiNode(body = [self.visit(i) for i in node.body])
+                return MultiNode(body=[self.visit(i) for i in node.body])
 
             def visit_FunctionDef(self, node):
                 if node.name == func.__name__:
