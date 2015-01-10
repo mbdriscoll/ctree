@@ -198,6 +198,7 @@ class LazySpecializedFunction(object):
         """Returns the subdirectory name under .compiled/funcname"""
         # fixes the directory names and squishes invalid chars
         forbidden_chars = r"""/\?%*:|"<>()'{} """
+
         regex_filter = re.compile('['+forbidden_chars+']')
         args_subconfig_str, tuner_config_str = str(program_config.args_subconfig), str(program_config.tuner_subconfig)
         args_subconfig_str = re.sub(regex_filter, '_', args_subconfig_str) or 'None'

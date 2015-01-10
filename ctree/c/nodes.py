@@ -79,7 +79,7 @@ class CFile(CNode, File):
             log.info('Regenerating LLVM Bitcode.')
             CC = ctree.CONFIG.get(self.config_target, 'CC')
             CFLAGS = ctree.CONFIG.get(self.config_target, 'CFLAGS')
-            compile_cmd = "%s -emit-llvm %s -o %s -c %s" % (CC, CFLAGS, ll_bc_file, c_src_file)
+            compile_cmd = "%s -emit-llvm %s -o '%s' -c '%s'" % (CC, CFLAGS, ll_bc_file, c_src_file)
             log.info("compilation command: %s", compile_cmd)
             subprocess.check_call(compile_cmd, shell=True)
             log.info("file for generated LLVM: %s", ll_bc_file)
