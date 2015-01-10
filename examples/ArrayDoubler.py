@@ -2,23 +2,16 @@
 Parses the python AST below, transforms it to C, JITs it, and runs it.
 """
 
-import logging
-
 #logging.basicConfig(level=10)
+
+import ctypes as ct
 
 import numpy as np
 
-import ctypes as ct
-from ctypes import *
-
-import ctree.np
-
-from ctree.frontend import get_ast
 from ctree.c.nodes import *
 from ctree.transformations import *
 from ctree.jit import LazySpecializedFunction
 from ctree.jit import ConcreteSpecializedFunction
-from ctree.types import get_ctype
 # from ctypes import CFUNCTYPE
 
 # ---------------------------------------------------------------------------
@@ -46,6 +39,7 @@ class OpTranslator(LazySpecializedFunction):
         array_type = arg_config['ptr']
         nItems = np.prod(array_type._shape_)
         inner_type = array_type._dtype_.type()
+        kernel_func_name = 'apply'
 
         tree = CFile("generated", [
             py_ast.body[0],
@@ -57,7 +51,7 @@ class OpTranslator(LazySpecializedFunction):
                                  PostInc(SymbolRef("i")),
                                  [
                                      Assign(ArrayRef(SymbolRef("A"), SymbolRef("i")),
-                                            FunctionCall(SymbolRef("apply"), [ArrayRef(SymbolRef("A"),
+                                            FunctionCall(SymbolRef(kernel_func_name), [ArrayRef(SymbolRef("A"),
                                                                                        SymbolRef("i"))])),
                                  ]),
                          ]
@@ -66,7 +60,8 @@ class OpTranslator(LazySpecializedFunction):
 
         tree = PyBasicConversions().visit(tree)
 
-        apply_one = tree.find(FunctionDecl, name="apply")
+        apply_one = PyBasicConversions().visit(tree.body[0])
+        apply_one.name = kernel_func_name
         apply_one.set_static().set_inline()
         apply_one.return_type = inner_type
         apply_one.params[0].type = inner_type
@@ -106,10 +101,8 @@ def py_doubler(A):
 def main():
 
     # create a class called Doubler that has the function double(n) as an @staticmethod
-    Doubler = OpTranslator.from_function(double, "Doubler")
-    
-    # creating instance of c_doubler()
-    c_doubler = Doubler()
+    c_doubler= OpTranslator.from_function(double, "Doubler")
+
 
     # doubling doubles
     actual_d = np.ones(12, dtype=np.float64)
@@ -143,4 +136,10 @@ def main():
 
 
 if __name__ == '__main__':
+    # Testing conventional (non-lambda) kernel function implementation
     main()
+
+    # Testing lambda kernel function implementation
+    double = lambda x: x * 2
+    main()
+

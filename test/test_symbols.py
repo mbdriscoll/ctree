@@ -1,7 +1,7 @@
 import unittest
+import ctypes as ct
 
 from ctree.c.nodes import *
-import ctypes as ct
 
 
 class TestSymbols(unittest.TestCase):

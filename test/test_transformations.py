@@ -1,9 +1,11 @@
 __author__ = 'nzhang-dev'
 
+import ast
+
 from ctree.transformations import DeclarationFiller, PyBasicConversions
 from ctree.frontend import *
-import ast
 from ctree.c.nodes import MultiNode
+
 
 code = [
     "a = 1",

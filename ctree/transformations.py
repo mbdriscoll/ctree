@@ -2,23 +2,37 @@
 A set of basic transformers for python asts
 """
 import os
+import sys
 import ast
+from ctypes import c_long, c_int, c_byte, c_short, c_char_p, c_void_p
+import ctypes
+from collections import deque
 
-from ctypes import c_long, c_int, c_uint, c_byte, c_ulong, c_ushort, c_short, c_wchar_p, c_char_p, c_float
-
-from ctree.nodes import Project, CtreeNode
-from ctree.c.nodes import Op, Constant, String, SymbolRef, BinaryOp, TernaryOp, Return, While, MultiNode
-from ctree.c.nodes import If, CFile, FunctionCall, FunctionDecl, For, Assign, AugAssign, ArrayRef, Literal
+from ctree.nodes import Project
+from ctree.c.nodes import Constant, String, SymbolRef, BinaryOp, TernaryOp, Return, While, MultiNode
+from ctree.c.nodes import If, CFile, FunctionCall, FunctionDecl, For, Assign, ArrayRef
 from ctree.c.nodes import Lt, Gt, AddAssign, SubAssign, MulAssign, DivAssign, BitAndAssign, BitShRAssign, BitShLAssign
-from ctree.c.nodes import BitOrAssign, BitXorAssign, ModAssign, Break, Continue, Pass, Array
-
+from ctree.c.nodes import BitOrAssign, BitXorAssign, ModAssign, Break, Continue, Pass, Array, Literal
 from ctree.c.nodes import Op
-
-from ctree.types import get_ctype
-
 from ctree.visitors import NodeTransformer
-from ctree.util import flatten
 
+from ctree.types import get_ctype, get_common_ctype
+
+
+
+#conditional imports
+
+if sys.version_info < (3,0):
+    from itertools import izip_longest
+else:
+    from itertools import zip_longest as izip_longest
+
+def get_type(node):
+    if hasattr(node, 'get_type'):
+        return type(node.get_type())
+    elif hasattr(node, 'type'):
+        return type(node.type)
+    return c_void_p
 
 class PyCtxScrubber(NodeTransformer):
     """
@@ -119,7 +133,7 @@ class PyBasicConversions(NodeTransformer):
                     return None
 
             # TODO allow any expressions castable to Long type
-            target_type = c_long
+            target_types = [c_long]
             for el in (stop, start, step):
                 if hasattr(el, 'get_type'): #typed item to try and guess type off of. Imperfect right now.
                     # TODO take the proper class instead of the last; if start, end are doubles, but step is long, target is double
@@ -127,7 +141,8 @@ class PyBasicConversions(NodeTransformer):
                     assert any(isinstance(t, klass) for klass in [
                         c_byte, c_int, c_long, c_short
                     ]), "Can only convert ranges with integer/long start/stop/step values"
-                    target_type = t
+                    target_types.append(type(t))
+            target_type = get_common_ctype(target_types)()
 
             target = SymbolRef(node.target.id, target_type)
             op = Lt
@@ -215,71 +230,64 @@ class PyBasicConversions(NodeTransformer):
         return node
 
     def visit_Assign(self, node):
-        target_value_list = []
-        #a = b -> targets = [ast.Name], value = ast.Name
-        #a = b = c... -> targets = [ast.Name, ast.Name....], value = ast.Name
-        if all(isinstance(i, ast.Name) for i in node.targets):
-            target_value_list.extend((target, node.value) for target in node.targets)
 
-        #a, b = c,d -> targets = [ast.Tuple], value = ast.Tuple
-        elif isinstance(node.targets[0], (ast.List, ast.Tuple)):
-            target_value_list.extend((target, value) for target, value in zip(node.targets[0].elts, node.value.elts))
+        def parse_pairs(node):
+            def targets_to_list(targets): #parses target into nested lists
+                res = []
+                for elt in targets:
+                    if not isinstance(elt, (ast.List, ast.Tuple)):
+                        res.append(elt)
+                    elif isinstance(elt, (ast.Tuple, ast.List)):
+                        res.append(targets_to_list(elt.elts))
+                return res
 
-        else:
-            return node
+            def value_to_list(value): #parses value into nested lists for multiple assign
+                res = []
+                if not isinstance(value, (ast.List, ast.Tuple)):
+                    return value
+                for elt in value.elts:
+                    if not isinstance(value, (ast.List, ast.Tuple)):
+                        res.append(elt)
+                    else:
+                        res.append(value_to_list(elt))
+                return ast.List(elts=res)
 
-        target_value_list = [(self.visit(target), self.visit(value)) for target, value in target_value_list]
+            def pair_lists(targets, values):
+                res = []
+                queue = deque((target, values) for target in targets)
+                sentinel = object()
+                while queue:
+                    target, value = queue.popleft()
+                    if isinstance(target, list):
+                        #target hasn't been completely unrolled yet
+                        for sub_target, sub_value in izip_longest(target, value.elts, fillvalue=sentinel):
+                            if sub_target is sentinel or sub_value is sentinel:
+                                raise ValueError('Incorrect number of values to unpack')
+                            queue.append((sub_target, sub_value))
+                    else:
+                        res.append((target, value))
+                return res
 
-        #making a multinode no matter what. It's cleaner than branching a lot
-        body = []
-        for target, value in target_value_list[:]:
-            if isinstance(value, Constant):
-                body.append(Assign(target, value))
-                target_value_list.remove((target,value))
+            targets = targets_to_list(node.targets)
+            values = value_to_list(node.value)
+            return pair_lists(targets, values)
 
-        new_targets = []
+
+        target_value_list = [(self.visit(target), self.visit(value)) for target, value in parse_pairs(node)]
+
+        # making a multinode no matter what. It's cleaner than branching a lot
+        operation_body = []
+        swap_body = []
         for target, value in target_value_list:
-            #making temporary variables for results.
+            if isinstance(value, Literal) and not isinstance(value, SymbolRef):
+                operation_body.append(Assign(target, value))
+                continue
             new_target = target.copy()
             new_target.name = "____temp__" + new_target.name
-            new_targets.append(new_target)
-            body.append(Assign(new_target, target))
+            operation_body.append(Assign(new_target, value))
+            swap_body.append(Assign(target, new_target.copy()))
+        return MultiNode(body=operation_body + swap_body)
 
-        for new_target, (target, value) in zip(new_targets, target_value_list):
-            body.append(Assign(new_target.copy(), value))
-
-        for new_target, (target, value) in zip(new_targets, target_value_list):
-            #now assigning the temp values to the original variables
-            body.append(Assign(target, new_target.copy()))
-        return MultiNode(body = body)
-
-
-        # if isinstance(node.targets[0], ast.Name): #single assign
-        #     target = self.visit(node.targets[0])
-        #     value = self.visit(node.value)
-        #     return Assign(target, value)
-        # elif isinstance(node.targets[0], ast.Tuple) or isinstance(node.targets[0], ast.List):
-        #     body = []
-        #     temp_var_map = {}
-        #     for target, value in zip(node.targets[0].elts, node.value.elts):
-        #         # TODO: might need to do some DeclarationFiller thing here to get the types of the new ____temp_variables.
-        #
-        #         temp_target_id = "____temp__" + value.id
-        #         temp_target = ast.Name(id = temp_target_id, ctx = target.ctx)
-        #         temp_var_map[temp_target] = target
-        #
-        #         ref = self.visit(temp_target)
-        #         # ref.type = c_float()# TODO: need to change this from c_float() to whatever the value's type is using DeclarationFiller.
-        #
-        #         body.append(
-        #             Assign(ref, self.visit(value))
-        #         )
-        #     for temp_target, target in temp_var_map.iteritems():
-        #         body.append(
-        #             Assign(self.visit(target), self.visit(temp_target))
-        #         )
-        #     return MultiNode(body)
-        # return node
 
     def visit_Subscript(self, node):
         if isinstance(node.slice,ast.Index):
@@ -294,6 +302,20 @@ class PyBasicConversions(NodeTransformer):
         body = [self.visit(i) for i in node.body]
         return While(cond, body)
 
+    def visit_Lambda(self, node):
+
+        if isinstance(node, ast.Lambda):
+            def_node = ast.FunctionDef(name = "default", args = node.args, body = node.body, decorator_list = None)
+
+            params = [self.visit(p) for p in def_node.args.args]
+            defn = [Return(self.visit(def_node.body))]
+            decl_node = FunctionDecl(None, def_node.name, params, defn)
+            Lifter().visit_FunctionDecl(decl_node)
+
+            return decl_node
+        else:
+            return node
+
     def visit_Break(self, node):
         return Break()
 
@@ -303,6 +325,11 @@ class PyBasicConversions(NodeTransformer):
     def visit_Pass(self, node):
         return Pass()
 
+    def visit_List(self, node):
+        elts = [self.visit(elt) for elt in node.elts]
+        types = [get_type(elt) for elt in elts]
+        array_type = get_common_ctype(types)
+        return Array(type=ctypes.POINTER(array_type)(), body=elts)
 
 class ResolveGeneratedPathRefs(NodeTransformer):
     """
@@ -357,6 +384,8 @@ class DeclarationFiller(NodeTransformer):
         :param key:
         :return: Looks up the last value corresponding to key in self.__environments
         """
+        if isinstance(key, SymbolRef):
+            key = key.name
         value = sentinel = object()
         for environment in self.__environments:
             if key in environment:
@@ -365,7 +394,16 @@ class DeclarationFiller(NodeTransformer):
             raise KeyError('Did not find {} in environments'.format(repr(key)))
         return value
 
+    def __has_key(self, key):
+        try:
+            self.__lookup(key)
+            return True
+        except KeyError:
+            return False
+
     def __add_entry(self, key, value):
+        if isinstance(key, SymbolRef):
+            key = key.name
         self.__environments[-1][key] = value
 
     def __add_environment(self):
@@ -374,22 +412,31 @@ class DeclarationFiller(NodeTransformer):
     def __pop_environment(self):
         return self.__environments.pop()
 
-
     def visit_FunctionDecl(self, node):
-        #add current FunctionDecl's return type onto environments
+        # add current FunctionDecl's return type onto environments
         self.__add_entry(node.name, node.return_type)
-        #new environment every time we enter a function
+
+        # new environment every time we enter a function
         self.__add_environment()
+
         for param in node.params:
-            #binding types of parameters
+            # binding types of parameters
             self.__add_entry(param.name, param.type)
+
         node.defn = [self.visit(i) for i in node.defn]
         self.__pop_environment()
         return node
 
     def visit_SymbolRef(self, node):
+
         if node.type:
             self.__add_entry(node.name, node.type)
+        return node
+
+    def visit_FunctionCall(self, node):
+        if self.__has_key(node.func):
+            node.type = self.__lookup(node.func)
+        node.args = [self.visit(arg) for arg in node.args]
         return node
 
     def visit_BinaryOp(self, node):
@@ -400,17 +447,22 @@ class DeclarationFiller(NodeTransformer):
             node.right = self.visit(node.right)
             name = node.left
             value = node.right
-            if hasattr(node.left, 'type'):
+            if hasattr(name, 'type') and name.type is not None:
                 return node
-            try:
-                self.__lookup(name.name)
-            except KeyError:
-                if hasattr(value, 'get_type'):
+            if not self.__has_key(name.name):
+                if name.name.startswith('____temp__'):                  # temporary variable types can be derived from the variables that they represent
+                    stripped_name = name.name.lstrip('____temp__')
+                    if self.__has_key(stripped_name):
+                        node.left.type = self.__lookup(stripped_name)
+
+                elif hasattr(value, 'get_type'):
                     node.left.type = value.get_type()
                 elif isinstance(value, String):
                     node.left.type = c_char_p()
                 elif isinstance(value, SymbolRef):
                     node.left.type = self.__lookup(value.name)
+                elif isinstance(value, FunctionCall):
+                    node.left.type = self.__lookup(value.func)
 
                 self.__add_entry(node.left.name, node.left.type)
         return node

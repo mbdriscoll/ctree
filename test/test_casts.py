@@ -1,6 +1,6 @@
-from util import CtreeTest
-
 from ctypes import *
+
+from util import CtreeTest
 from ctree.c.nodes import *
 
 

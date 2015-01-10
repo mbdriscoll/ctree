@@ -1,6 +1,5 @@
 import unittest
 
-
 class TestImport(unittest.TestCase):
     def test_import_base(self):
         import ctree

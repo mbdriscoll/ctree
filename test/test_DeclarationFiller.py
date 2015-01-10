@@ -1,15 +1,16 @@
 __author__ = 'nzhang-dev'
 
-from ctree.frontend import *; from ctree.c.nodes import MultiNode; from ctree.transformations import PyBasicConversions, DeclarationFiller
 import unittest
 
+from ctree.frontend import *;
+from ctree.transformations import PyBasicConversions, DeclarationFiller
+
+
 def fib(n):
-    a, b, c = 1, 1, 0
+    a, b = 0, 1
     k = "hello"
     while n > 0:
-        c = a + b
-        b = c
-        a = b
+        a, b = b, a + b
         n -= 1
     return a
 

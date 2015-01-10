@@ -3,6 +3,35 @@ import unittest
 from ctree.jit import *
 from ctree import CONFIG
 from fixtures.sample_asts import *
+import ctypes
+from ctree.transformations import PyBasicConversions
+
+class TestTranslator(LazySpecializedFunction):
+    def args_to_subconfig(self, args):
+        return {'arg_typesig': tuple(type(get_ctype(a)) for a in args)}
+
+    def transform(self, tree, program_config):
+        arg_types = program_config[0]['arg_typesig']
+        tree = PyBasicConversions().visit(tree.body[0])
+        tree.return_type = arg_types[0]()
+        for param, ty in zip(tree.params, arg_types):
+            param.type = ty()
+        return [CFile(tree.name, [tree])]
+
+    def finalize(self, transform_result, program_config):
+        proj = Project(transform_result)
+        cfile = transform_result[0]
+        arg_types = program_config[0]['arg_typesig']
+
+        func_type = ctypes.CFUNCTYPE(arg_types[0], *arg_types)
+        return BasicFunction(cfile.name, proj, func_type)
+
+class BasicFunction(ConcreteSpecializedFunction):
+    def __init__(self, entry, tree, typesig):
+        self._c_function = self._compile(entry, tree, typesig)
+
+    def __call__(self, *args, **kwargs):
+        return self._c_function(*args, **kwargs)
 
 
 class TestJit(unittest.TestCase):
@@ -56,3 +85,22 @@ class TestJit(unittest.TestCase):
         c_l2norm_fn = mod.get_callable(entry.name, entry.get_type())
         self.assertEqual(l2norm(np.ones(12, dtype=np.float64)),
                          c_l2norm_fn(np.ones(12, dtype=np.float64), 12))
+
+    def test_getFile(self):
+        getFile(os.path.join(CONFIG.get('jit','COMPILE_PATH'),'test_l2norm.c'))
+
+class TestAuxiliary(unittest.TestCase):
+    def test_NameExtractor(self):
+        def f(x):
+            return x + 3
+
+        py_ast = get_ast(f)
+        result = LazySpecializedFunction.NameExtractor().visit(py_ast)
+        self.assertEqual(result, 'f')
+
+    def test_from_function(self):
+        def f(x):
+            return x + 3
+
+        c_f = TestTranslator.from_function(f, 'test_from_function')
+        self.assertEqual(c_f(3), 6)

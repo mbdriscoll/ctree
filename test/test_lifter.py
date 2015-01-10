@@ -1,9 +1,7 @@
-import ast
 from copy import deepcopy
 
 from util import CtreeTest
 from fixtures.sample_asts import *
-
 from ctree.transformations import Lifter
 
 class TestLifter(CtreeTest):

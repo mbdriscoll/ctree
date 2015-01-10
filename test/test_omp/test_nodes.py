@@ -1,12 +1,9 @@
-import unittest
 from textwrap import dedent
-
 from ctypes import c_int
 
 from ctree.omp.nodes import *
 from ctree.omp.macros import *
 from ctree.c.nodes import *
-
 from util import CtreeTest
 
 class TestOmpCodegen(CtreeTest):

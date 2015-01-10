@@ -4,6 +4,7 @@ import textwrap
 
 from ctree.util import highlight
 
+
 class PreventImport(object):
     """
     Context manager that overrides the builtin __import__ method.

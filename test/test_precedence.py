@@ -1,8 +1,8 @@
 import unittest
+import ctypes as ct
 
 from ctree.c.nodes import *
 from ctree.precedence import *
-import ctypes as ct
 
 
 class TestPrecedence(unittest.TestCase):
