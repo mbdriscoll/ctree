@@ -134,9 +134,10 @@ class LazySpecializedFunction(object):
                         return res
 
     def __init__(self, py_ast=None, sub_dir=''):
+        print(self.apply is LazySpecializedFunction.apply)
         if py_ast is not None and self.apply is not LazySpecializedFunction.apply:
             raise TypeError('Cannot define apply and pass py_ast')
-        self.original_tree = py_ast or get_ast(self.apply)
+        self.original_tree = py_ast or (get_ast(self.apply) if self.apply is not LazySpecializedFunction.apply else None)
         self.concrete_functions = {}  # config -> callable map
         self._tuner = self.get_tuning_driver()
         self.sub_dir = sub_dir or self.NameExtractor().visit(self.original_tree)
@@ -189,8 +190,9 @@ class LazySpecializedFunction(object):
                     pass
             else:
                 pass
-        tree_str = ast.dump(self.original_tree, annotate_fields=True, include_attributes=True)
-        result.update(tree_str.encode())
+        if self.original_tree is not None:
+            tree_str = ast.dump(self.original_tree, annotate_fields=True, include_attributes=True)
+            result.update(tree_str.encode())
         return int(result.hexdigest(), 16)
 
 
@@ -244,7 +246,7 @@ class LazySpecializedFunction(object):
             ctree.STATS.log("specialized function cache miss")
             log.info("specialized function cache miss.")
             info = self.get_info(dir_name)
-            if hash(self) != info['hash']:                      # checks to see if the necessary code is in the persistent cache
+            if hash(self) != info['hash'] and self.original_tree is not None:                      # checks to see if the necessary code is in the persistent cache
                 
                 # need to run transform() for code generation
                 log.info('Hash miss. Running Transform')
