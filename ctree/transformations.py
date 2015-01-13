@@ -449,7 +449,7 @@ class DeclarationFiller(NodeTransformer):
             value = node.right
             if hasattr(name, 'type') and name.type is not None:
                 return node
-            if not self.__has_key(name.name):
+            if hasattr(name, 'name') and not self.__has_key(name.name):
                 if name.name.startswith('____temp__'):                  # temporary variable types can be derived from the variables that they represent
                     stripped_name = name.name.lstrip('____temp__')
                     if self.__has_key(stripped_name):
