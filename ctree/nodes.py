@@ -62,7 +62,7 @@ class CtreeNode(ast.AST):
         """
 
         def pred(node):
-            if type(node) == node_class:
+            if isinstance(node, node_class):
                 for attr, value in kwargs.items():
                     try:
                         if getattr(node, attr) != value:

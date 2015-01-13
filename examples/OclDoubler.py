@@ -125,22 +125,20 @@ def square(x):
 
 
 def main():
-    Doubler = OpTranslator.from_function(double, 'Doubler')
-    Squarer = OpTranslator.from_function(square, 'Squarer')
+    doubler = OpTranslator.from_function(double, 'Doubler')
+    squarer = OpTranslator.from_function(square, 'Squarer')
 
     data = np.arange(123, dtype=np.float32)
 
     # squaring floats
-    squarer = Squarer()
     actual   = squarer(data)
-    expected = squarer.interpret(data)
+    expected = np.vectorize(square)(data)
     np.testing.assert_array_equal(actual, expected)
     print("Squarer works.")
 
     # doubling floats
-    doubler = Doubler()
     actual = doubler(data)
-    expected = doubler.interpret(data)
+    expected = np.vectorize(double)(data)
     np.testing.assert_array_equal(actual, expected)
     print("Doubler works.")
 

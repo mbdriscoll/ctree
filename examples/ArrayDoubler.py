@@ -101,10 +101,8 @@ def py_doubler(A):
 def main():
 
     # create a class called Doubler that has the function double(n) as an @staticmethod
-    Doubler = OpTranslator.from_function(double, "Doubler")
-    
-    # creating instance of c_doubler()
-    c_doubler = Doubler()
+    c_doubler= OpTranslator.from_function(double, "Doubler")
+
 
     # doubling doubles
     actual_d = np.ones(12, dtype=np.float64)

@@ -91,14 +91,13 @@ class BasicFunction(ConcreteSpecializedFunction):
 
 def double(n):
     return n * 2
-Doubler = OpTranslator.from_function(double, 'Doubler')
 
 def py_doubler(A):
     A *= 2
 
 
 def main():
-    c_doubler = Doubler()
+    c_doubler = OpTranslator.from_function(double)
 
     # doubling doubles
     actual_d = np.ones(12, dtype=np.float64)

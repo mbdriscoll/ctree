@@ -1,3 +1,6 @@
+cache:
+  - apt
+  - pip
 language: python
 python:
   - '2.7'
