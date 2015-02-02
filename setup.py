@@ -73,9 +73,8 @@ setup(
 
     install_requires=[
         'numpy',
-        'mako',
         'pyserial',
-        # 'readline',
+        'pycl'
     ],
 
     data_files=data_file_list,
