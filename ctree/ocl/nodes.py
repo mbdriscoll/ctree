@@ -45,6 +45,8 @@ class OclFile(OclNode, File):
         with open(cl_src_file, 'w') as cl_file:
             cl_file.write(program_text)
 
-        import llvm.core
+        # import llvm.core
+        import llvmlite.ir as ll
+        import llvmlite.binding as llvm
 
-        return llvm.core.Module.new("empty cl module")
+        return None

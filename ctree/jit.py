@@ -12,7 +12,10 @@ from ctree.nodes import Project
 from ctree.analyses import VerifyOnlyCtreeNodes
 from ctree.util import highlight
 
-import llvm.core as ll
+# import llvm.core as ll
+import llvmlite.binding as llvm
+llvm.initialize()
+llvm.initialize_native_target()
 
 import logging
 
@@ -33,7 +36,7 @@ class JitModule(object):
             os.mkdir(ctree_dir)
 
         self.compilation_dir = tempfile.mkdtemp(prefix="run-", dir=ctree_dir)
-        self.ll_module = ll.Module.new('ctree')
+        self.ll_module = None
         self.exec_engine = None
         log.info("temporary compilation directory is: %s",
                  self.compilation_dir)
@@ -45,7 +48,10 @@ class JitModule(object):
             shutil.rmtree(self.compilation_dir)
 
     def _link_in(self, submodule):
-        self.ll_module.link_in(submodule)
+        if self.ll_module is not None:
+            self.ll_module.link_in(submodule)
+        else:
+            self.ll_module = submodule
 
     def get_callable(self, entry_point_name, entry_point_typesig):
         """
@@ -53,15 +59,13 @@ class JitModule(object):
         """
 
         # get llvm represetation of function
-        ll_function = self.ll_module.get_function_named(entry_point_name)
+        ll_function = self.ll_module.get_function(entry_point_name)
 
         # run jit compiler
-        from llvm.ee import EngineBuilder
+        # from llvm.ee import EngineBuilder
+        self.exec_engine = llvm.create_jit_compiler(self.ll_module)
 
-        self.exec_engine = \
-            EngineBuilder.new(self.ll_module).mcjit(True).opt(3).create()
-
-        c_func_ptr = self.exec_engine.get_pointer_to_function(ll_function)
+        c_func_ptr = self.exec_engine.get_pointer_to_global(ll_function)
 
         # cast c_func_ptr to python callable using ctypes
         return entry_point_typesig(c_func_ptr)
