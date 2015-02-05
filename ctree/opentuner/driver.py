@@ -45,6 +45,7 @@ class OpenTunerDriver(TuningDriver):
             if self.curr_desired_result is None:
                 break
             yield self.curr_desired_result.configuration.data
+            print("Best configuration", self.manager.get_best_configuration())
 
         log.info("exhausted stream of configurations.")
         best_config = self.manager.get_best_configuration()
@@ -56,6 +57,7 @@ class OpenTunerDriver(TuningDriver):
     def report(self, **kwargs):
         """Report the performance of the most recent configuration."""
         if not self._converged:
+            print("Tuning run result:", self.curr_desired_result.configuration.data, kwargs)
             self.manager.report_result(self.curr_desired_result, Result(**kwargs))
             # result = Result(**kwargs)
             # self._results.put_nowait(result)
