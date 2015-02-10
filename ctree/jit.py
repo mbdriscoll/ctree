@@ -229,58 +229,83 @@ class LazySpecializedFunction(object):
         tuner_subconfig = next(self._tuner.configs)
         program_config = self.ProgramConfig(args_subconfig, tuner_subconfig)
         dir_name = self.config_to_dirname(program_config)
-        if not os.path.exists(dir_name):
-            os.makedirs(dir_name)
+
+        if ctree.CONFIG.get('jit','CACHE_ON') == 'True':
+            if not os.path.exists(dir_name):
+                os.makedirs(dir_name)
 
         log.info("tuner subconfig: %s", tuner_subconfig)
         log.info("arguments subconfig: %s", args_subconfig)
 
         config_hash = dir_name
 
-        if config_hash in self.concrete_functions:              # checks to see if the necessary code is in the run-time cache
-            ctree.STATS.log("specialized function cache hit")
-            log.info("specialized function cache hit!")
-            csf = self.concrete_functions[config_hash]
-
-        else:
-            ctree.STATS.log("specialized function cache miss")
-            log.info("specialized function cache miss.")
-            info = self.get_info(dir_name)
-            if hash(self) != info['hash'] and self.original_tree is not None:                      # checks to see if the necessary code is in the persistent cache
-                
-                # need to run transform() for code generation
-                log.info('Hash miss. Running Transform')
-                ctree.STATS.log("Filesystem cache miss")
-                transform_result = self.transform(
-                    self.original_tree,
-                    program_config
-                )
-                if not isinstance(transform_result, (tuple, list)):
-                    transform_result = (transform_result,)
-                transform_result = [DeclarationFiller().visit(source_file)
-                                    if isinstance(source_file, CFile) else source_file
-                                    for source_file in transform_result]
-                for source_file in transform_result:
-                    assert isinstance(source_file, File), "Transform must return an iterable of Files"
-                    source_file.path = dir_name
-
-                new_info = {'hash': hash(self), 'files':[os.path.join(f.path, f.get_filename()) for f in transform_result]}
-                self.set_info(dir_name, new_info)
-                if ctree.CONFIG.get('jit','PRESERVE_SRC_DIR') == 'False':
-                    atexit.register(
-                        shutil.rmtree, dir_name, ignore_errors=True
-                    )
+        if ctree.CONFIG.get('jit','CACHE_ON') == 'True':
+            ctree.STATS.log("recognized that caching is enabled")
+            log.info("recognized that caching is enabled")
+            if config_hash in self.concrete_functions:              # checks to see if the necessary code is in the run-time cache
+                ctree.STATS.log("specialized function cache hit")
+                log.info("specialized function cache hit!")
+                csf = self.concrete_functions[config_hash]
 
             else:
-                log.info('Hash hit. Skipping transform')
-                ctree.STATS.log('Filesystem cache hit')
-                files = [getFile(path) for path in info['files']]
-                transform_result = files
+                ctree.STATS.log("specialized function cache miss")
+                log.info("specialized function cache miss.")
+                info = self.get_info(dir_name)
 
+                if hash(self) != info['hash'] and self.original_tree is not None:                      # checks to see if the necessary code is in the persistent cache
+                    # need to run transform() for code generation
+                    log.info('Hash miss. Running Transform')
+                    ctree.STATS.log("Filesystem cache miss")
+                    transform_result = self.run_transform(program_config)
+
+                    # Saving files to cache directory
+                    for source_file in transform_result:
+                        assert isinstance(source_file, File), "Transform must return an iterable of Files"
+                        source_file.path = dir_name
+
+                    new_info = {'hash': hash(self), 'files':[os.path.join(f.path, f.get_filename()) for f in transform_result]}
+                    self.set_info(dir_name, new_info)
+                    if ctree.CONFIG.get('jit','PRESERVE_SRC_DIR') == 'False':
+                        atexit.register(
+                            shutil.rmtree, dir_name, ignore_errors=True
+                        )
+
+                else:
+                    log.info('Hash hit. Skipping transform')
+                    ctree.STATS.log('Filesystem cache hit')
+                    files = [getFile(path) for path in info['files']]
+                    transform_result = files
+
+                csf = self.finalize(transform_result, program_config)
+                assert isinstance(csf, ConcreteSpecializedFunction), "Expected a ctree.jit.ConcreteSpecializedFunction, but got a %s." % type(csf)
+                self.concrete_functions[config_hash] = csf
+        else:
+
+            ctree.STATS.log("recognized that caching is disabled")
+            log.info("recognized that caching is disabled")
+
+            transform_result = self.run_transform(program_config)
             csf = self.finalize(transform_result, program_config)
             assert isinstance(csf, ConcreteSpecializedFunction), "Expected a ctree.jit.ConcreteSpecializedFunction, but got a %s." % type(csf)
             self.concrete_functions[config_hash] = csf
+
         return csf(*args, **kwargs)
+
+
+    def run_transform(self, program_config):
+        transform_result = self.transform(
+            self.original_tree,
+            program_config
+        )
+        if not isinstance(transform_result, (tuple, list)):
+            transform_result = (transform_result,)
+
+        transform_result = [DeclarationFiller().visit(source_file)
+                            if isinstance(source_file, CFile) else source_file
+                            for source_file in transform_result]
+        return transform_result
+
+
 
     @classmethod
     def from_function(cls, func, folder_name=''):
