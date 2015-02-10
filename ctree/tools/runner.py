@@ -48,12 +48,12 @@ def main(*args):
         meter = WattsUpReader(port_name=port)
         meter.interactive_mode()
 
-    elif args.enable_caching:
+    elif args.enable_cache:
         ctree.CONFIG.set("jit", "CACHE_ON", value="True")
         write_success = write_to_config()
         if write_success: print("[SUCCESS] ctree caching enabled.")
 
-    elif args.disable_caching:
+    elif args.disable_cache:
         ctree.CONFIG.set("jit", "CACHE_ON", value="False")
         write_success = write_to_config()
         clear_cache()
