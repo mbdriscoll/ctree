@@ -28,8 +28,8 @@ def main(*args):
     )
     parser.add_argument('-p', '--port', help="/dev name to use for wattsup meter port")
     parser.add_argument('-v', '--verbose', help='show more debug than you like', action="store_true")
-    parser.add_argument('-dc', '--disable_caching', help='disable and delete the persistent cache', action="store_true")
-    parser.add_argument('-ec', '--enable_caching', help='enable the persistent cache', action="store_true")
+    parser.add_argument('-dc', '--disable_cache', help='disable and delete the persistent cache', action="store_true")
+    parser.add_argument('-ec', '--enable_cache', help='enable the persistent cache', action="store_true")
     parser.add_argument('-cc', '--clear_cache', help='clear the persistent cache', action="store_true")
     args = parser.parse_args(args)
 
