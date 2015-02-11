@@ -46,6 +46,7 @@ class CFile(CNode, File):
         return "%s.bc" % self.name
 
     def _compile(self, program_text):
+        print(repr(self.path), repr(self.get_filename()))
         c_src_file = os.path.join(self.path, self.get_filename())
         ll_bc_file = os.path.join(self.path, self.get_bc_filename())
         program_hash = hashlib.sha512(program_text.strip().encode()).hexdigest()
