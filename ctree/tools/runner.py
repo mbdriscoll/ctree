@@ -7,6 +7,10 @@ import sys
 import argparse
 import ctree
 
+import collections
+import shutil
+import os
+
 from ctree.tools.generators import builder as Builder
 from subprocess import call as shell
 
@@ -60,7 +64,17 @@ def main(*args):
         if write_success: print("[SUCCESS] ctree caching disabled.")
 
     elif args.clear_cache:
-        clear_cache()
+        cache_name = ctree.CONFIG.get('jit','COMPILE_PATH')
+        wipe_queue = collections.deque([os.path.abspath(p) for p in os.listdir(os.getcwd())])
+        while wipe_queue:
+            directory = wipe_queue.popleft()
+            if not os.path.isdir(directory):
+                continue
+            if os.path.split(directory)[-1] == cache_name:
+                shutil.rmtree(directory)
+            else:
+                for sub_item in os.listdir(directory):
+                    wipe_queue.append(os.path.join(directory, sub_item))
 
     else:
         parser.print_usage()
@@ -81,15 +95,6 @@ def write_to_config():
     else:
         print("[FAILURE] No config file detected. Please create a '.ctree.cfg' file in your project directory.")
         return False
-
-
-def clear_cache():
-    '''
-    This method handles clearing the closest cache to the current project.
-    '''
-    path = ctree.CONFIG.get("jit", "COMPILE_PATH")
-    shell(["rm", "-rf", path])
-    print("[SUCCESS] ctree cache deleted from path: " + path)
 
 if __name__ == '__main__':
     main(sys.argv[1:])
