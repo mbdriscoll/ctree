@@ -6,6 +6,7 @@ The ctree package
 from __future__ import print_function
 
 
+
 # ---------------------------------------------------------------------------
 # explicit version check
 
@@ -65,6 +66,7 @@ CONFIGFILE.close()
 if CONFIG.has_option('log','level'):
     logging.basicConfig(level=getattr(logging,CONFIG.get('log','level')))
 
+
 # ---------------------------------------------------------------------------
 # stats
 
@@ -92,6 +94,27 @@ class LogInfo(object):
 
 STATS = LogInfo()
 atexit.register(STATS.report)
+
+#----------------------------------------------------------------------------
+#Temporary directory stuff
+import tempfile
+import shutil
+
+if CONFIG.getboolean('jit', 'CACHE'):
+    STATS.log("recognized that caching is enabled")
+else:
+    STATS.log("recognized that caching is disabled")
+
+if not CONFIG.getboolean('jit', 'CACHE'):
+    compile_path_old = CONFIG.get('jit', 'COMPILE_PATH')
+    temporary_path = tempfile.mkdtemp()
+    CONFIG.set('jit', 'COMPILE_PATH', temporary_path)
+
+    def reset():
+        CONFIG.set('jit', 'COMPILE_PATH', compile_path_old)
+        shutil.rmtree(temporary_path)
+
+    atexit.register(reset)
 
 # Registries for type-based logic in extension packages.
 _TYPE_CODEGENERATORS = {}

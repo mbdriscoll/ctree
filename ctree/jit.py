@@ -14,6 +14,7 @@ import inspect
 import hashlib
 import json
 from collections import namedtuple
+import tempfile
 
 import llvm.core as ll
 
@@ -112,6 +113,7 @@ class LazySpecializedFunction(object):
     """
 
     ProgramConfig = namedtuple('ProgramConfig',['args_subconfig', 'tuner_subconfig'])
+    _directory_fields = ['__class__.__name__', 'backend_name']
 
     class NameExtractor(ast.NodeVisitor):
         """
@@ -133,14 +135,16 @@ class LazySpecializedFunction(object):
                     if res:
                         return res
 
-    def __init__(self, py_ast=None, sub_dir=''):
-        print(self.apply is LazySpecializedFunction.apply)
+    def __init__(self, py_ast=None, sub_dir=None, backend_name="default"):
         if py_ast is not None and self.apply is not LazySpecializedFunction.apply:
             raise TypeError('Cannot define apply and pass py_ast')
         self.original_tree = py_ast or (get_ast(self.apply) if self.apply is not LazySpecializedFunction.apply else None)
         self.concrete_functions = {}  # config -> callable map
         self._tuner = self.get_tuning_driver()
-        self.sub_dir = sub_dir or self.NameExtractor().visit(self.original_tree)
+        self.sub_dir = sub_dir or self.NameExtractor().visit(self.original_tree) or hex(hash(self))[2:]
+        self.backend_name = backend_name
+
+
 
     @property
     def original_tree(self):
@@ -199,15 +203,28 @@ class LazySpecializedFunction(object):
     def config_to_dirname(self, program_config):
         """Returns the subdirectory name under .compiled/funcname"""
         # fixes the directory names and squishes invalid chars
-        forbidden_chars = r"""/\?%*:|"<>()'{} """
+        regex_filter = re.compile(r"""[/\?%*:|"<>()'{} ]""")
 
-        regex_filter = re.compile('['+forbidden_chars+']')
-        args_subconfig_str, tuner_config_str = str(program_config.args_subconfig), str(program_config.tuner_subconfig)
-        args_subconfig_str = re.sub(regex_filter, '_', args_subconfig_str) or 'None'
-        tuner_config_str = re.sub(regex_filter, '_', tuner_config_str) or 'None'
-        config_str = os.path.join(args_subconfig_str, tuner_config_str)
-        sub_dir = re.sub(regex_filter, '', self.sub_dir or hex(hash(self))[2:])
-        path = os.path.join(ctree.CONFIG.get('jit','COMPILE_PATH'),self.__class__.__name__, sub_dir, config_str)
+        def deep_getattr(obj, s):
+            parts = s.split('.')
+            for part in parts:
+                obj = getattr(obj, part)
+            return obj
+
+        path_parts = [
+            self.sub_dir,
+            str(program_config.args_subconfig),
+            str(program_config.tuner_subconfig)
+            ]
+
+        for attrib in self._directory_fields:
+            path_parts.append(str(deep_getattr(self, attrib)))
+        filtered_parts = [str(re.sub(regex_filter, '_', part)) for part in path_parts]
+        compile_path = str(ctree.CONFIG.get('jit', 'COMPILE_PATH'))
+
+        path = os.path.join(compile_path, *filtered_parts)
+
+
         return re.sub('_+','_', path)
 
 
@@ -230,61 +247,44 @@ class LazySpecializedFunction(object):
         program_config = self.ProgramConfig(args_subconfig, tuner_subconfig)
         dir_name = self.config_to_dirname(program_config)
 
-        if ctree.CONFIG.get('jit','CACHE_ON') == 'True':
-            if not os.path.exists(dir_name):
-                os.makedirs(dir_name)
+        if not os.path.exists(dir_name):
+            os.makedirs(dir_name)
 
         log.info("tuner subconfig: %s", tuner_subconfig)
         log.info("arguments subconfig: %s", args_subconfig)
 
         config_hash = dir_name
 
-        if ctree.CONFIG.get('jit','CACHE_ON') == 'True':
-            ctree.STATS.log("recognized that caching is enabled")
-            log.info("recognized that caching is enabled")
-            if config_hash in self.concrete_functions:              # checks to see if the necessary code is in the run-time cache
-                ctree.STATS.log("specialized function cache hit")
-                log.info("specialized function cache hit!")
-                csf = self.concrete_functions[config_hash]
+        if ctree.CONFIG.getboolean('jit', 'CACHE') and config_hash in self.concrete_functions:              # checks to see if the necessary code is in the run-time cache
+            ctree.STATS.log("specialized function cache hit")
+            log.info("specialized function cache hit!")
+            csf = self.concrete_functions[config_hash]
+
+        else:
+            ctree.STATS.log("specialized function cache miss")
+            log.info("specialized function cache miss.")
+            info = self.get_info(dir_name)
+
+            if hash(self) != info['hash'] and self.original_tree is not None:                      # checks to see if the necessary code is in the persistent cache
+                # need to run transform() for code generation
+                log.info('Hash miss. Running Transform')
+                ctree.STATS.log("Filesystem cache miss")
+                transform_result = self.run_transform(program_config)
+
+                # Saving files to cache directory
+                for source_file in transform_result:
+                    assert isinstance(source_file, File), "Transform must return an iterable of Files"
+                    source_file.path = dir_name
+
+                new_info = {'hash': hash(self), 'files':[os.path.join(f.path, f.get_filename()) for f in transform_result]}
+                self.set_info(dir_name, new_info)
 
             else:
-                ctree.STATS.log("specialized function cache miss")
-                log.info("specialized function cache miss.")
-                info = self.get_info(dir_name)
+                log.info('Hash hit. Skipping transform')
+                ctree.STATS.log('Filesystem cache hit')
+                files = [getFile(path) for path in info['files']]
+                transform_result = files
 
-                if hash(self) != info['hash'] and self.original_tree is not None:                      # checks to see if the necessary code is in the persistent cache
-                    # need to run transform() for code generation
-                    log.info('Hash miss. Running Transform')
-                    ctree.STATS.log("Filesystem cache miss")
-                    transform_result = self.run_transform(program_config)
-
-                    # Saving files to cache directory
-                    for source_file in transform_result:
-                        assert isinstance(source_file, File), "Transform must return an iterable of Files"
-                        source_file.path = dir_name
-
-                    new_info = {'hash': hash(self), 'files':[os.path.join(f.path, f.get_filename()) for f in transform_result]}
-                    self.set_info(dir_name, new_info)
-                    if ctree.CONFIG.get('jit','PRESERVE_SRC_DIR') == 'False':
-                        atexit.register(
-                            shutil.rmtree, dir_name, ignore_errors=True
-                        )
-
-                else:
-                    log.info('Hash hit. Skipping transform')
-                    ctree.STATS.log('Filesystem cache hit')
-                    files = [getFile(path) for path in info['files']]
-                    transform_result = files
-
-                csf = self.finalize(transform_result, program_config)
-                assert isinstance(csf, ConcreteSpecializedFunction), "Expected a ctree.jit.ConcreteSpecializedFunction, but got a %s." % type(csf)
-                self.concrete_functions[config_hash] = csf
-        else:
-
-            ctree.STATS.log("recognized that caching is disabled")
-            log.info("recognized that caching is disabled")
-
-            transform_result = self.run_transform(program_config)
             csf = self.finalize(transform_result, program_config)
             assert isinstance(csf, ConcreteSpecializedFunction), "Expected a ctree.jit.ConcreteSpecializedFunction, but got a %s." % type(csf)
             self.concrete_functions[config_hash] = csf

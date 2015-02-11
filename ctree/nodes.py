@@ -172,7 +172,7 @@ class File(CommonNode):
         self.name = name
         self.body = body or []
         self.config_target = 'c'
-        self.path = path or '.'
+        self.path = path or ctree.CONFIG.get('jit','COMPILE_PATH')
         self._program_hash = None
 
     @property

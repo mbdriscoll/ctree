@@ -279,6 +279,9 @@ class PyBasicConversions(NodeTransformer):
         operation_body = []
         swap_body = []
         for target, value in target_value_list:
+            if not isinstance(target, SymbolRef):
+                operation_body.append(Assign(target, value))
+                continue
             if isinstance(value, Literal) and not isinstance(value, SymbolRef):
                 operation_body.append(Assign(target, value))
                 continue
@@ -305,7 +308,7 @@ class PyBasicConversions(NodeTransformer):
     def visit_Lambda(self, node):
 
         if isinstance(node, ast.Lambda):
-            def_node = ast.FunctionDef(name = "default", args = node.args, body = node.body, decorator_list = None)
+            def_node = ast.FunctionDef(name="default", args=node.args, body=node.body, decorator_list=None)
 
             params = [self.visit(p) for p in def_node.args.args]
             defn = [Return(self.visit(def_node.body))]
@@ -462,7 +465,8 @@ class DeclarationFiller(NodeTransformer):
                 elif isinstance(value, SymbolRef):
                     node.left.type = self.__lookup(value.name)
                 elif isinstance(value, FunctionCall):
-                    node.left.type = self.__lookup(value.func)
+                    if self.__has_key(value.func):
+                        node.left.type = self.__lookup(value.func)
 
                 self.__add_entry(node.left.name, node.left.type)
         return node

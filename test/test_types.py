@@ -1,6 +1,6 @@
 import ctypes
 
-from ctree.types import get_ctype
+from ctree.types import get_ctype, get_common_ctype
 from util import CtreeTest
 from ctree.c.nodes import SymbolRef, FunctionDecl
 
@@ -77,3 +77,8 @@ class TestTypeCodeGen(CtreeTest):
         class Bad(object): pass
         with self.assertRaises(ValueError):
             SymbolRef("i", Bad()).codegen()
+
+class TestTypeCoercion(CtreeTest):
+    def test_coercion(self):
+        types = (ctypes.c_long, ctypes.c_double, ctypes.c_int)
+        self.assertEqual(get_common_ctype(types), ctypes.c_double)

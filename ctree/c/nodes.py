@@ -54,7 +54,7 @@ class CFile(CNode, File):
         old_hash = self.program_hash
         hash_match = old_hash == program_hash
         log.info("Old hash: %s \n New hash: %s", old_hash, program_hash)
-        recreate_c_src = program_text != self.empty and not hash_match
+        recreate_c_src = program_text and program_text != self.empty and not hash_match
         recreate_ll_bc = recreate_c_src or not ll_bc_file_exists
 
         log.info("RECREATE_C_SRC: %s \t RECREATE_LL_BC: %s \t HASH_MATCH: %s", recreate_c_src, recreate_ll_bc, hash_match)
@@ -96,8 +96,8 @@ class CFile(CNode, File):
             ll_module = llvm.core.Module.from_bitcode(bc)
 
         # syntax-highlight and print LLVM program
-        highlighted = highlight(str(ll_module), 'llvm')
-        log.debug("generated LLVM Program: (((\n%s\n)))", highlighted)
+        #preserve_src_drhighlighted = highlight(str(ll_module), 'llvm')
+        #log.debug("generated LLVM Program: (((\n%s\n)))", highlighted)
 
         return ll_module
 
