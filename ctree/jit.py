@@ -42,7 +42,7 @@ def getFile(filepath):
     path, filename = os.path.split(filepath)
     name, ext = os.path.splitext(filename)
     filetype = ext_map[ext]
-    return filetype(name=name.encode(), path=path.encode())
+    return filetype(name=name, path=path)
 
 
 class JitModule(object):
