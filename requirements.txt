@@ -1,0 +1,4 @@
+pycl
+numpy
+-e git://github.com/leonardt/llvmlite.git#egg=llvmlite
+enum34
