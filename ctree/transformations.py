@@ -8,6 +8,7 @@ from ctypes import c_long, c_int, c_byte, c_short, c_char_p, c_void_p
 import ctypes
 from collections import deque
 
+import ctree
 from ctree.nodes import Project
 from ctree.c.nodes import Constant, String, SymbolRef, BinaryOp, TernaryOp, Return, While, MultiNode
 from ctree.c.nodes import If, CFile, FunctionCall, FunctionDecl, For, Assign, ArrayRef
@@ -77,6 +78,13 @@ class PyBasicConversions(NodeTransformer):
         # TODO list the rest
     }
 
+    PY_UOP_TO_CTREE_UOP = {
+        'UAdd': Op.Add,
+        'USub': Op.Sub,
+        'Not': Op.Not,
+        'Invert': Op.BitNot
+    }
+
     def visit_Num(self, node):
         return Constant(node.n)
 
@@ -95,6 +103,11 @@ class PyBasicConversions(NodeTransformer):
         rhs = self.visit(node.right)
         op = self.PY_OP_TO_CTREE_OP.get(type(node.op), type(node.op))()
         return BinaryOp(lhs, op, rhs)
+
+    def visit_UnaryOp(self, node):
+        op = self.PY_UOP_TO_CTREE_UOP[node.op.__class__.__name__]()
+        operand = self.visit(node.operand)
+        return UnaryOp(op, operand)
 
     def visit_Return(self, node):
         if hasattr(node, 'value'):
@@ -206,27 +219,24 @@ class PyBasicConversions(NodeTransformer):
         op = type(node.op)
         target = self.visit(node.target)
         value = self.visit(node.value)
-        if op is ast.Add:
-            return AddAssign(target, value)
-        elif op is ast.Sub:
-            return SubAssign(target, value)
-        elif op is ast.Mult:
-            return MulAssign(target, value)
-        elif op is ast.Div:
-            return DivAssign(target, value)
-        elif op is ast.BitXor:
-            return BitXorAssign(target, value)
-        elif op is ast.BitAnd:
-            return BitAndAssign(target, value)
-        elif op is ast.BitOr:
-            return BitOrAssign(target, value)
-        elif op is ast.Mod:
-            return ModAssign(target, value)
-        elif op is ast.LShift:
-            return BitShLAssign(target, value)
-        elif op is ast.RShift:
-            return BitShRAssign(target, value)
-        # TODO: Error?
+        # if op is ast.Add:
+        #     return AddAssign(target, value)
+        # elif op is ast.Sub:
+        #     return SubAssign(target, value)
+        # elif op is ast.Mult:
+        #     return MulAssign(target, value)
+        # elif op is ast.Div:
+        #     return DivAssign(target, value)
+        # elif op is ast.BitXor:
+        #     return BitXorAssign(target, value)
+        # # TODO: Error?
+        lookup = {
+            ast.Add: 'AddAssign', ast.Sub: 'SubAssign', ast.Mult: 'MulAssign', ast.Div: 'DivAssign',
+            ast.BitAnd: 'BitAndAssign', ast.BitOr: 'BitOrAssign', ast.BitXor: 'BitXorAssign',
+            ast.LShift: 'BitShLAssign', ast.RShift: 'BitShRAssign'
+        }
+        if op in lookup:
+            return getattr(ctree.c.nodes, lookup[op])(target, value)
         return node
 
     def visit_Assign(self, node):

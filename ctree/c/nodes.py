@@ -91,10 +91,11 @@ class CFile(CNode, File):
 
 
         # load llvm bitcode
-        import llvm.core
+        # import llvm.core
+        import llvmlite.binding as llvm
 
         with open(ll_bc_file, 'rb') as bc:
-            ll_module = llvm.core.Module.from_bitcode(bc)
+            ll_module = llvm.module.parse_bitcode(bc.read())
 
         # syntax-highlight and print LLVM program
         #preserve_src_drhighlighted = highlight(str(ll_module), 'llvm')

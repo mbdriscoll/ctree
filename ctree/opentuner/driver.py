@@ -14,6 +14,7 @@ from opentuner.resultsdb.models import Result
 from opentuner.tuningrunmain import TuningRunMain
 from opentuner.search.manipulator import ConfigurationManipulator
 from opentuner.measurement.inputmanager import FixedInputManager
+from opentuner.api import TuningRunManager
 
 
 class OpenTunerDriver(TuningDriver):
@@ -28,33 +29,38 @@ class OpenTunerDriver(TuningDriver):
         to run the tuning logic.
         """
         super(OpenTunerDriver, self).__init__()
-        self._results = queue.Queue(1)
-        self._configs = queue.Queue(1)
         self._best_config = None
-        self._thread = OpenTunerThread(self, *ot_args, **ot_kwargs)
-        self._thread.start()
+        interface = CtreeMeasurementInterface(self, *ot_args, **ot_kwargs)
+        arg_parser = argparse.ArgumentParser(parents=opentuner.argparsers())
+        config_args = CONFIG.get("opentuner", "args").split()
+        tuner_args = arg_parser.parse_args(config_args)
+        self.manager = TuningRunManager(interface, tuner_args)
         self._converged = False
 
     def _get_configs(self):
         """Get the next configuration to test."""
         timeout = CONFIG.getint("opentuner", "timeout")
         while True:
-            try:
-                yield self._configs.get(True, timeout)
-            except queue.Empty:
+            self.curr_desired_result = self.manager.get_next_desired_result()
+            if self.curr_desired_result is None:
                 break
+            yield self.curr_desired_result.configuration.data
+            print("Best configuration", self.manager.get_best_configuration())
 
         log.info("exhausted stream of configurations.")
-        assert self._best_config != None, "No best configuration reported."
+        best_config = self.manager.get_best_configuration()
+        assert best_config != None, "No best configuration reported."
         self._converged = True
         while True:
-            yield self._best_config
+            yield best_config
 
     def report(self, **kwargs):
         """Report the performance of the most recent configuration."""
         if not self._converged:
-            result = Result(**kwargs)
-            self._results.put_nowait(result)
+            print("Tuning run result:", self.curr_desired_result.configuration.data, kwargs)
+            self.manager.report_result(self.curr_desired_result, Result(**kwargs))
+            # result = Result(**kwargs)
+            # self._results.put_nowait(result)
 
 
 class OpenTunerThread(threading.Thread):

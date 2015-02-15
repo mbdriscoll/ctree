@@ -16,12 +16,12 @@ try:
     libOpenCL = ctypes.util.find_library("OpenCL")
     log.info("loading libOpenCL from %s", libOpenCL)
 
-    import llvm.core
+    import llvmlite.binding.dylib as dylib
 
-    llvm.core.load_library_permanently(libOpenCL)
+    dylib.load_library_permanently(libOpenCL)
 
-except:
-    log.warn("Failed to load OpenCL runtime.")
+except RuntimeError as e:
+    log.warn("Failed to load OpenCL runtime. %s", e)
 
 
 import pycl

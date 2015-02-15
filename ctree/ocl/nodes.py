@@ -4,6 +4,7 @@ OpenCL nodes supported by ctree.
 
 from ctree.nodes import *
 import hashlib
+import llvmlite.ir as ll
 
 
 class OclNode(CtreeNode):
@@ -49,8 +50,7 @@ class OclFile(OclNode, File):
                 cl_file.write(program_text)
         else:
             log.info("OpenCL file already generated")
-        import llvm.core
-        return llvm.core.Module.new("empty cl module")
+        return None
 
     def codegen(self, indent=0):
         if self.body:
