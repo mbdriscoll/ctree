@@ -32,7 +32,8 @@ before_install:
 
 install:
   - export PYTHON_VERSION=$(python -c 'import sys; print(sys.version_info[0:2])')
-  - pip install coveralls coverage setuptools nose pygments pycl opentuner
+  - pip install coveralls coverage setuptools nose pygments pycl
+  - if [ $PY_MAJOR_MINOR \< "3.0" ]; then pip install opentuner; fi
   - pip install -e git://github.com/leonardt/llvmlite.git#egg=llvmlite
   - nosetests --version
   - coverage --version
