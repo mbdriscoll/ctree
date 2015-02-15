@@ -20,7 +20,7 @@ before_install:
   - conda create -n travisci --yes python=$PY_MAJOR_MINOR
   - source activate travisci
   - conda install --yes -c numba llvmdev
-  - conda install --yes numpy pip
+  - conda install --yes numpy pip matplotlib pysqlite
   - if [ $PY_MAJOR_MINOR \< "3.4" ]; then conda install --yes enum34; fi
   # We need this line to have g++ 4.8 available in apt
   # (Travis' default gcc version doesn't support C++11).
