@@ -72,7 +72,7 @@ def parseprint(code, filename="<string>", mode="exec", **kwargs):
 # Short name: pdp = parse, dump, print
 pdp = parseprint
 
-def load_ipython_extension(ip):
+def load_ipython_extension(ip):  # pragma: no cover
     from IPython.core.magic import Magics, magics_class, cell_magic
     from IPython.core import magic_arguments
 
@@ -93,7 +93,7 @@ def load_ipython_extension(ip):
 
     ip.register_magics(AstMagics)
 
-if __name__ == '__main__':
+if __name__ == '__main__':  # pragma: no cover
     import sys, tokenize
     for filename in sys.argv[1:]:
         print('=' * 50)
