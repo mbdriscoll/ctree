@@ -9,16 +9,13 @@ env:
   global:
   - secure: QBB2KT4EFUdSkH9fjo5J/02zuZlD0FbVsKwYJgW6c4INp1UY/nx0nrsgjPSZQMD2HBztdfEZInugoVrOJwXBzWJ5Ioc19T9oYhnzaIF6oJRo1mTYDhragvdwiLfb0AyylGq7bgP4lgoMBtE1Oxauf0rKVEYiVeEhvHJup/di6A4=
   matrix:
-  - LLVM_VERSION=3.4
+  - LLVM_VERSION=3.5
 before_install:
-  - if [ ${TRAVIS_PYTHON_VERSION:0:1} == "2" ]; then wget http://repo.continuum.io/miniconda/Miniconda-3.5.2-Linux-x86_64.sh
-    -O miniconda.sh; else wget http://repo.continuum.io/miniconda/Miniconda3-3.5.2-Linux-x86_64.sh
-    -O miniconda.sh; fi
+  - wget http://repo.continuum.io/miniconda/Miniconda3-3.7.0-Linux-x86_64.sh -O miniconda.sh
   - chmod +x miniconda.sh
   - ./miniconda.sh -b
-  - if [ ${TRAVIS_PYTHON_VERSION:0:1} == "2" ]; then export PATH=/home/travis/miniconda/bin:$PATH;
-    else export PATH=/home/travis/miniconda3/bin:$PATH; fi
-  - conda update --yes conda
+  - export PATH=$HOME/miniconda3/bin:$PATH
+  # Setup environment
   - conda create -n travisci --yes python=${TRAVIS_PYTHON_VERSION:0:3} llvmdev numpy pip
   - source activate travisci
   - sudo apt-get update -qq
