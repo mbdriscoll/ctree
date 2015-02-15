@@ -9,7 +9,7 @@ import ctypes
 from collections import deque
 
 from ctree.nodes import Project
-from ctree.c.nodes import Constant, String, SymbolRef, BinaryOp, TernaryOp, Return, While, MultiNode
+from ctree.c.nodes import Constant, String, SymbolRef, BinaryOp, TernaryOp, Return, While, MultiNode, UnaryOp
 from ctree.c.nodes import If, CFile, FunctionCall, FunctionDecl, For, Assign, ArrayRef
 from ctree.c.nodes import Lt, Gt, AddAssign, SubAssign, MulAssign, DivAssign, BitAndAssign, BitShRAssign, BitShLAssign
 from ctree.c.nodes import BitOrAssign, BitXorAssign, ModAssign, Break, Continue, Pass, Array, Literal
@@ -17,7 +17,6 @@ from ctree.c.nodes import Op
 from ctree.visitors import NodeTransformer
 
 from ctree.types import get_ctype, get_common_ctype
-
 
 
 #conditional imports
@@ -73,7 +72,9 @@ class PyBasicConversions(NodeTransformer):
         ast.LShift: Op.BitShL,
         ast.RShift: Op.BitShR,
         ast.Is: Op.Eq,
-        ast.IsNot: Op. NotEq
+        ast.IsNot: Op.NotEq,
+        ast.USub:Op.SubUnary,
+        ast.UAdd:Op.AddUnary,
         # TODO list the rest
     }
 
@@ -333,6 +334,11 @@ class PyBasicConversions(NodeTransformer):
         types = [get_type(elt) for elt in elts]
         array_type = get_common_ctype(types)
         return Array(type=ctypes.POINTER(array_type)(), body=elts)
+
+    def visit_UnaryOp(self, node):
+        argument = self.visit(node.operand)
+        op = self.PY_OP_TO_CTREE_OP.get(type(node.op), type(node.op))()
+        return UnaryOp(op, argument)
 
 class ResolveGeneratedPathRefs(NodeTransformer):
     """
