@@ -20,7 +20,7 @@ before_install:
   - conda create -n travisci --yes python=$PY_MAJOR_MINOR
   - source activate travisci
   - conda install --yes -c numba llvmdev
-  - conda install --yes numpy pip
+  - conda install --yes numpy pip matplotlib
   - if [ $PY_MAJOR_MINOR \< "3.4" ]; then conda install --yes enum34; fi
   # We need this line to have g++ 4.8 available in apt
   # (Travis' default gcc version doesn't support C++11).
@@ -32,7 +32,7 @@ before_install:
 
 install:
   - export PYTHON_VERSION=$(python -c 'import sys; print(sys.version_info[0:2])')
-  - pip install Sphinx coveralls coverage setuptools nose pygments pycl opentuner
+  - pip install coveralls coverage setuptools nose pygments pycl opentuner
   - pip install -e git://github.com/leonardt/llvmlite.git#egg=llvmlite
   - nosetests --version
   - coverage --version
@@ -43,29 +43,6 @@ script:
   - cd ${TRAVIS_BUILD_DIR}
   - nosetests --verbose --with-coverage --cover-package=ctree --cover-min-percentage=90
     --cover-erase
-after_success:
-  - if [[ "x${TRAVIS_REPO_SLUG}" != 'xucb-sejits/ctree' ]]; then echo 'skipping coveralls/sphinx
-    for non ucb-sejits/ctree builds.'; exit 0; fi
-  - if [[ "x$PYTHON_VERSION" != "x(2, 7)" ]]; then echo 'Not Python 2.7; skipping doc
-    build.'; exit 0; fi
-  - coveralls
-  - if [[ "x${TRAVIS_BRNACH}" != 'master' ]]; then echo 'skipping sphinx
-    for non master_branch.'; exit 0; fi
-  - make -C doc html
-  - git clone "https://github.com/ucb-sejits/ctree-docs.git" ${HOME}/ctree-docs
-  - cd ${HOME}/ctree-docs
-  - git fetch origin gh-pages
-  - git checkout gh-pages
-  - rsync -a ${TRAVIS_BUILD_DIR}/doc/_build/html/ ./
-  - git add .
-  - git status
-  - git config --global user.name 'Ctree Doc Bot'
-  - git config --global user.email 'mbdriscoll+ctreeoauth@gmail.com'
-  - git commit -m "Updating documentation from Travis Build ${TRAVIS_BUILD_ID}."
-  - git config credential.helper "store --file=.git/credentials"
-  - echo "https://${GH_TOKEN}:x-oauth-basic@github.com" > .git/credentials
-  - git push origin gh-pages
-  - cd ${TRAVIS_BUILD_DIR}
 notifications:
   slack: ucb-sejits:cPZxBunxagWZ763mcsIXOV0W
 deploy:
