@@ -40,8 +40,6 @@ install:
   - python setup.py install
 script:
   - cd ${TRAVIS_BUILD_DIR}
-  - nosetests --where=${TRAVIS_BUILD_DIR}/test
-  - cd ${TRAVIS_BUILD_DIR}
   - nosetests --verbose --with-coverage --cover-package=ctree --cover-min-percentage=90
     --cover-erase
 notifications:
