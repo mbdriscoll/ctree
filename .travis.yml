@@ -15,9 +15,12 @@ before_install:
   - chmod +x miniconda.sh
   - ./miniconda.sh -b
   - export PATH=$HOME/miniconda3/bin:$PATH
+  - PY_MAJOR_MINOR=${TRAVIS_PYTHON_VERSION:0:3}
   # Setup environment
-  - conda create -n travisci --yes python=${TRAVIS_PYTHON_VERSION:0:3} llvmdev numpy pip
+  - conda create -n travisci --yes python=$PY_MAJOR_MINOR
   - source activate travisci
+  - conda install --yes -c llvmdev numpy pip
+  - if [ $PY_MAJOR_MINOR \< "3.4" ]; then conda install --yes enum34; fi
   - sudo apt-get update -qq
   - sudo apt-get install -qq fglrx=2:8.960-0ubuntu1 opencl-headers
 install:
