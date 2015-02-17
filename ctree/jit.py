@@ -84,7 +84,6 @@ class JitModule(object):
         import ctypes
         lib = ctypes.cdll.LoadLibrary(self.so_file_name)
         func_ptr = getattr(lib, entry_point_name)
-        print(entry_point_typesig._argtypes_)
         func_ptr.argtypes = entry_point_typesig._argtypes_
         func_ptr.restype = entry_point_typesig._restype_
         # func = func_ptr
