@@ -49,7 +49,7 @@ class CFile(CNode, File):
         return "{}.so".format(self.name)
 
     def _compile(self, program_text):
-        print(repr(self.path), repr(self.get_filename()))
+        # print(repr(self.path), repr(self.get_filename()))
         c_src_file = os.path.join(self.path, self.get_filename())
         so_file = os.path.join(self.path, self.get_so_filename())
         program_hash = hashlib.sha512(program_text.strip().encode()).hexdigest()
