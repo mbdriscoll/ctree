@@ -9,6 +9,12 @@ See the [website](http://ucb-sejits.github.io/ctree/) or [documentation](https:/
 [![Coverage Status](https://coveralls.io/repos/ucb-sejits/ctree/badge.png)](https://coveralls.io/r/ucb-sejits/ctree)
 [![Documentation Status](https://readthedocs.org/projects/ctree/badge/?version=latest)](https://readthedocs.org/projects/ctree/?badge=latest)
 
-Install
+Quick Install
 -------------
-[See the wiki](https://github.com/ucb-sejits/ctree/wiki/Installation)
+```shell
+pip install ctree
+```
+
+Development
+-----------
+[See the wiki](https://github.com/ucb-sejits/ctree/wiki)
