@@ -23,6 +23,8 @@ script:
   - cd ${TRAVIS_BUILD_DIR}
   - nosetests --verbose --with-coverage --cover-package=ctree --cover-min-percentage=90
     --cover-erase
+after_success:
+  - curl -X POST http://readthedocs.org/build/ctree
 notifications:
   slack: ucb-sejits:cPZxBunxagWZ763mcsIXOV0W
 deploy:
