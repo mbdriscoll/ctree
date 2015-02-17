@@ -13,6 +13,7 @@ import logging
 import inspect
 import hashlib
 import json
+import datetime
 from collections import namedtuple
 import tempfile
 
@@ -232,10 +233,12 @@ class LazySpecializedFunction(object):
                 obj = getattr(obj, part)
             return obj
 
+        time = str(datetime.datetime.now()).replace(" ", "_")
         path_parts = [
             self.sub_dir,
-            str(program_config.args_subconfig),
-            str(program_config.tuner_subconfig)
+            time
+            # str(program_config.args_subconfig),
+            # str(program_config.tuner_subconfig)
             ]
 
         for attrib in self._directory_fields:
