@@ -83,7 +83,9 @@ class CFile(CNode, File):
             log.info('Regenerating so.')
             CC = ctree.CONFIG.get(self.config_target, 'CC')
             CFLAGS = ctree.CONFIG.get(self.config_target, 'CFLAGS')
-            compile_cmd = "%s -shared %s -o %s %s" % (CC, CFLAGS, so_file, c_src_file)
+            LDFLAGS = ctree.CONFIG.get(self.config_target, 'LDFLAGS')
+            compile_cmd = "%s -shared %s -o %s %s %s" % (CC, CFLAGS, so_file,
+                    c_src_file, LDFLAGS)
             log.info("compilation command: %s", compile_cmd)
             subprocess.check_call(compile_cmd, shell=True)
             log.info("file for generated so: %s", so_file)
