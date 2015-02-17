@@ -10,7 +10,7 @@ import ast
 from ctree.dotgen import DotGenLabeller
 
 
-class PyDotLabeller(DotGenLabeller):
+class PyDotLabeller(DotGenLabeller):  # pragma: no cover
     """
     Manages generation of DOT.
     """

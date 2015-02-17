@@ -63,33 +63,6 @@ class OpenTunerDriver(TuningDriver):
             # self._results.put_nowait(result)
 
 
-class OpenTunerThread(threading.Thread):
-    """
-    Thread to drive OpenTuner.
-    """
-    def __init__(self, driver, *ot_args, **ot_kwargs):
-        super(OpenTunerThread, self).__init__()
-        self._ctree_driver = driver
-        self._ot_args = ot_args
-        self._ot_kwargs = ot_kwargs
-        self._tuningrun = None
-
-        # variables for Thread class
-        self.name = "opentuner_driver"
-        self.daemon = True
-
-    def run(self):
-        """Starts the main OpenTuner loop."""
-        log.info("tuning thread '%s' starting (%d total threads now).", \
-            self.name, threading.active_count())
-        arg_parser = argparse.ArgumentParser(parents=opentuner.argparsers())
-        config_args = CONFIG.get("opentuner", "args").split()
-        tuner_args = arg_parser.parse_args(config_args)
-        interface = CtreeMeasurementInterface(self._ctree_driver, *self._ot_args, **self._ot_kwargs)
-        TuningRunMain(interface, tuner_args).main()
-        log.info("tuning thread '%s' terminating.", self.name)
-
-
 class CtreeMeasurementInterface(MeasurementInterface):
     """
     Ctree interface to opentuner.

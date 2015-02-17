@@ -4,7 +4,6 @@ OpenCL nodes supported by ctree.
 
 from ctree.nodes import *
 import hashlib
-import llvmlite.ir as ll
 
 
 class OclNode(CtreeNode):

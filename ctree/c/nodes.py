@@ -45,20 +45,23 @@ class CFile(CNode, File):
     def get_bc_filename(self):
         return "%s.bc" % self.name
 
+    def get_so_filename(self):
+        return "{}.so".format(self.name)
+
     def _compile(self, program_text):
         print(repr(self.path), repr(self.get_filename()))
         c_src_file = os.path.join(self.path, self.get_filename())
-        ll_bc_file = os.path.join(self.path, self.get_bc_filename())
+        so_file = os.path.join(self.path, self.get_so_filename())
         program_hash = hashlib.sha512(program_text.strip().encode()).hexdigest()
-        c_src_exists = os.path.exists(c_src_file)
-        ll_bc_file_exists = os.path.exists(ll_bc_file)
+        so_file_exists = os.path.exists(so_file)
         old_hash = self.program_hash
         hash_match = old_hash == program_hash
         log.info("Old hash: %s \n New hash: %s", old_hash, program_hash)
         recreate_c_src = program_text and program_text != self.empty and not hash_match
-        recreate_ll_bc = recreate_c_src or not ll_bc_file_exists
+        recreate_so = recreate_c_src or not so_file_exists
 
-        log.info("RECREATE_C_SRC: %s \t RECREATE_LL_BC: %s \t HASH_MATCH: %s", recreate_c_src, recreate_ll_bc, hash_match)
+        log.info("RECREATE_C_SRC: %s \t RECREATE_so: %s \t HASH_MATCH: %s",
+                 recreate_c_src, recreate_so, hash_match)
 
         if not program_text:
             log.info("Program not found. Attempting to use cached version")
@@ -75,33 +78,35 @@ class CFile(CNode, File):
 
 
         #create ll_bc_file
-        if recreate_ll_bc:
+        if recreate_so:
             # call clang to generate LLVM bitcode file
-            log.info('Regenerating LLVM Bitcode.')
+            log.info('Regenerating so.')
             CC = ctree.CONFIG.get(self.config_target, 'CC')
             CFLAGS = ctree.CONFIG.get(self.config_target, 'CFLAGS')
-            compile_cmd = "%s -emit-llvm %s -o '%s' -c '%s'" % (CC, CFLAGS, ll_bc_file, c_src_file)
+            LDFLAGS = ctree.CONFIG.get(self.config_target, 'LDFLAGS')
+            compile_cmd = "%s -shared %s -o %s %s %s" % (CC, CFLAGS, so_file,
+                    c_src_file, LDFLAGS)
             log.info("compilation command: %s", compile_cmd)
             subprocess.check_call(compile_cmd, shell=True)
-            log.info("file for generated LLVM: %s", ll_bc_file)
+            log.info("file for generated so: %s", so_file)
 
         #use cached version otherwise
-        if not (ll_bc_file_exists or recreate_ll_bc):
+        if not (so_file_exists or recreate_so):
             raise NotImplementedError('No Cached version found')
 
 
         # load llvm bitcode
         # import llvm.core
-        import llvmlite.binding as llvm
+        # import llvmlite.binding as llvm
 
-        with open(ll_bc_file, 'rb') as bc:
-            ll_module = llvm.module.parse_bitcode(bc.read())
+        # with open(ll_bc_file, 'rb') as bc:
+        #     ll_module = llvm.module.parse_bitcode(bc.read())
 
         # syntax-highlight and print LLVM program
         #preserve_src_drhighlighted = highlight(str(ll_module), 'llvm')
         #log.debug("generated LLVM Program: (((\n%s\n)))", highlighted)
 
-        return ll_module
+        return so_file
 
 
 class MultiNode(CNode):
