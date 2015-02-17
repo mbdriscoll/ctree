@@ -64,3 +64,4 @@ opentuner.log
 
 # compiled files
 compiled/*
+/README.md
