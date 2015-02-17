@@ -13,7 +13,6 @@ import logging
 import inspect
 import hashlib
 import json
-import datetime
 from collections import namedtuple
 import tempfile
 
@@ -84,6 +83,7 @@ class JitModule(object):
         import ctypes
         lib = ctypes.cdll.LoadLibrary(self.so_file_name)
         func_ptr = getattr(lib, entry_point_name)
+        print(entry_point_typesig._argtypes_)
         func_ptr.argtypes = entry_point_typesig._argtypes_
         func_ptr.restype = entry_point_typesig._restype_
         # func = func_ptr
@@ -195,14 +195,14 @@ class LazySpecializedFunction(object):
             return json.dump(dictionary, info_file)
 
 
-    # @staticmethod
-    # def _hash(o):
-    #     if isinstance(o, dict):
-    #         return hash(frozenset(
-    #             LazySpecializedFunction._hash(item) for item in o.items()
-    #         ))
-    #     else:
-    #         return hash(str(o))
+    @staticmethod
+    def _hash(o):
+        if isinstance(o, dict):
+            return hash(frozenset(
+                LazySpecializedFunction._hash(item) for item in o.items()
+            ))
+        else:
+            return hash(str(o))
 
     def __hash__(self):
         mro = type(self).mro()
@@ -232,12 +232,10 @@ class LazySpecializedFunction(object):
                 obj = getattr(obj, part)
             return obj
 
-        time = str(datetime.datetime.now()).replace(" ", "_")
         path_parts = [
             self.sub_dir,
-            time
-            # str(program_config.args_subconfig),
-            # str(program_config.tuner_subconfig)
+            str(self._hash(program_config.args_subconfig)),
+            str(self._hash(program_config.tuner_subconfig))
             ]
 
         for attrib in self._directory_fields:
