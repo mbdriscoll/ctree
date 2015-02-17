@@ -96,7 +96,7 @@ class OpTranslator(LazySpecializedFunction):
 
         }
         """, {'n': Constant(len_A + 32 - (len_A % 32))})
-        cfile = CFile("generated", [control])
+        cfile = CFile("generated", [control], config_target='opencl')
         return kernel, cfile
 
     def finalize(self, transform_result, program_config):
