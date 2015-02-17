@@ -3,6 +3,7 @@ OpenCL nodes supported by ctree.
 """
 
 from ctree.nodes import *
+import hashlib
 
 
 class OclNode(CtreeNode):
@@ -25,26 +26,33 @@ class OclFile(OclNode, File):
     """Represents a .cl file."""
     _ext = "cl"
 
-    def __init__(self, name="generated", body=None):
-        if not body:
-            body = []
-        self.kernel_name = None
+    def __init__(self, name="generated", body=None, path = None):
         #TODO: Inspect complains about 2 args to __init__
-        super(OclFile, self).__init__(name, body)
+        super(OclFile, self).__init__(name, body, path)
 
-    def _compile(self, program_text, compilation_dir):
+    def _compile(self, program_text):
         """
         write the ocl program to a text file and compile it
         """
         import os
-        cl_src_file = os.path.join(compilation_dir, self.get_filename())
-        log.info("file for generated OpenCL: %s" % cl_src_file)
-        log.info("generated OpenCL code: (((\n%s\n)))" % program_text)
+        new_hash = hashlib.sha512(program_text.strip().encode()).hexdigest()
+        recreate_source = program_text != self._empty and new_hash != self.program_hash
+        self.program_hash = new_hash
+        cl_src_file = os.path.join(self.path, self.get_filename())
+        if recreate_source:
+            log.info('Recreating source')
+            log.info("file for generated OpenCL: %s" % cl_src_file)
+            log.info("generated OpenCL code: (((\n%s\n)))" % program_text)
 
-        # write program text to C file
-        with open(cl_src_file, 'w') as cl_file:
-            cl_file.write(program_text)
+            # write program text to CL file
+            with open(cl_src_file, 'w') as cl_file:
+                cl_file.write(program_text)
+        else:
+            log.info("OpenCL file already generated")
+        return None
 
-        import llvm.core
-
-        return llvm.core.Module.new("empty cl module")
+    def codegen(self, indent=0):
+        if self.body:
+            return super(OclFile, self).codegen(indent)
+        with open(os.path.join(self.path, self.get_filename())) as cl_file:
+            return cl_file.read()

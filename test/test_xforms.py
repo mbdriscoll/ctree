@@ -1,8 +1,4 @@
-import ast
-import sys
 import unittest
-
-from ctypes import c_long
 
 from fixtures.sample_asts import *
 from ctree.transformations import *
@@ -57,11 +53,11 @@ class TestStripDocstrings(unittest.TestCase):
         ]))
         self._check(tree)
 
-
 class TestBasicConversions(unittest.TestCase):
     def _check(self, py_ast, expected_c_ast, names_dict ={}, constants_dict={}):
         actual_c_ast = PyBasicConversions(names_dict, constants_dict).visit(py_ast)
-        self.assertEqual(str(actual_c_ast), str(expected_c_ast))
+        self.assertEqual(str(actual_c_ast).strip('\n;'), str(expected_c_ast).strip('\n;'))
+
 
     def test_num_float(self):
         py_ast = ast.Num(123.4)
@@ -84,9 +80,16 @@ class TestBasicConversions(unittest.TestCase):
         self._check(py_ast, c_ast)
 
     def test_binop(self):
-        py_ast = ast.BinOp(ast.Num(1), ast.Add(), ast.Num(2))
-        c_ast = Add(Constant(1), Constant(2))
-        self._check(py_ast, c_ast)
+        for py_op, c_op in (
+                (ast.Add, Add),
+                (ast.Sub, Sub),
+                (ast.BitXor, BitXor),
+                (ast.BitAnd, BitAnd),
+                (ast.BitOr, BitOr)
+        ):
+            py_ast = ast.BinOp(ast.Num(1), py_op(), ast.Num(2))
+            c_ast = c_op(Constant(1), Constant(2))
+            self._check(py_ast, c_ast)
 
     def test_return(self):
         py_ast = ast.Return()
@@ -230,6 +233,25 @@ class TestBasicConversions(unittest.TestCase):
         c_ast = DivAssign(SymbolRef('i'), Constant(3))
         self._check(py_ast, c_ast)
 
+    def test_AugAssign(self):
+
+        for py_op, c_op in (
+                (
+                        (ast.Div, DivAssign),
+                        (ast.Add, AddAssign),
+                        (ast.Mult, MulAssign),
+                        (ast.BitOr, BitOrAssign),
+                        (ast.BitAnd, BitAndAssign),
+                        (ast.BitXor, BitXorAssign),
+                        (ast.LShift, BitShLAssign),
+                        (ast.RShift, BitShRAssign)
+                )
+        ):
+            py_ast = ast.AugAssign(ast.Name('i', ast.Load()),
+                                   py_op(), ast.Num(3))
+            c_ast = c_op(SymbolRef('i'), Constant(3))
+            self._check(py_ast, c_ast)
+
     def test_Assign(self):
         py_ast = ast.Assign([ast.Name('i', ast.Load())],
                             ast.Num(3))
@@ -252,22 +274,23 @@ class TestBasicConversions(unittest.TestCase):
         c_ast = ArrayRef(SymbolRef('i'),Constant(1))
         self._check(py_ast,c_ast)
 
-    def test_UnaryAdd(self):
-        py_ast = ast.UnaryOp(ast.UAdd(), ast.Name('i', ast.Load()))
-        c_ast = Add(SymbolRef('i'))
-        self._check(py_ast, c_ast)
+    def test_Range_ValueError(self):
+        py_ast = ast.For(target=ast.Name(id='i', ctx=ast.Store()), iter=ast.Call(func=ast.Name(id='range', ctx=ast.Load()), args=[
+            ast.Num(n=1),
+            ast.Num(n=0),
+            ast.Num(n=0),
+            ], keywords=[], starargs=None, kwargs=None), body=[
+            Pass(),
+            ], orelse=[])
+        with self.assertRaises(ValueError):
+            PyBasicConversions().visit(py_ast)
 
-    def test_UnarySub(self):
-        py_ast = ast.UnaryOp(ast.USub(), ast.Name('i', ast.Load()))
-        c_ast = Sub(SymbolRef('i'))
-        self._check(py_ast, c_ast)
-
-    def test_UnaryNot(self):
-        py_ast = ast.UnaryOp(ast.Not(), ast.Name('i', ast.Load()))
-        c_ast = Not(SymbolRef('i'))
-        self._check(py_ast, c_ast)
-
-    def test_UnaryInvert(self):
-        py_ast = ast.UnaryOp(ast.Invert(), ast.Name('i', ast.Load()))
-        c_ast = BitNot(SymbolRef('i'))
-        self._check(py_ast, c_ast)
+    def test_Range_NoOp(self):
+        py_ast = ast.For(target=ast.Name(id='i', ctx=ast.Store()), iter=ast.Call(func=ast.Name(id='range', ctx=ast.Load()), args=[
+            ast.Num(n=1),
+            ast.Num(n=1),
+            ast.Num(n=3),
+            ], keywords=[], starargs=None, kwargs=None), body=[
+            Pass(),
+            ], orelse=[])
+        self.assertEqual(PyBasicConversions().visit(py_ast), None)

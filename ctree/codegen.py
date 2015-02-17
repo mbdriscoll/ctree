@@ -1,3 +1,5 @@
+from __future__ import print_function
+
 """
 base class for generating code appropriate to the selected backend
 """

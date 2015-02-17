@@ -61,3 +61,6 @@ opentuner.log
 
 # rope library
 .ropeproject
+
+# compiled files
+compiled/*

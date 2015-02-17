@@ -64,6 +64,7 @@ class OpTranslator(LazySpecializedFunction):
         inner_type = A._dtype_.type()
         # browser_show_ast(py_ast,'tmp.png')
         apply_one = PyBasicConversions().visit(py_ast.body[0])
+        apply_one.name = 'apply'
         apply_one.return_type = inner_type
         apply_one.params[0].type = inner_type
 
@@ -73,7 +74,7 @@ class OpTranslator(LazySpecializedFunction):
                 Assign(SymbolRef("i", ct.c_int()), get_global_id(0)),
                 If(Lt(SymbolRef("i"), Constant(len_A)), [
                     Assign(ArrayRef(SymbolRef("A"), SymbolRef("i")),
-                           FunctionCall(SymbolRef("apply"),
+                           FunctionCall(SymbolRef(apply_one.name),
                                         [ArrayRef(SymbolRef("A"), SymbolRef("i"))])),
                 ], []),
             ]
@@ -95,8 +96,12 @@ class OpTranslator(LazySpecializedFunction):
 
         }
         """, {'n': Constant(len_A + 32 - (len_A % 32))})
+        cfile = CFile("generated", [control], config_target='opencl')
+        return kernel, cfile
 
-        proj = Project([kernel, CFile("generated", [control])])
+    def finalize(self, transform_result, program_config):
+        kernel, cfile = transform_result
+        proj = Project([kernel, cfile])
         fn = OpFunction()
 
         program = cl.clCreateProgramWithSource(fn.context, kernel.codegen()).build()
@@ -105,21 +110,6 @@ class OpTranslator(LazySpecializedFunction):
         entry_type = ct.CFUNCTYPE(None, cl.cl_command_queue, cl.cl_kernel, cl.cl_mem)
         return fn.finalize(apply_kernel_ptr, proj, "apply_all", entry_type)
 
-
-class ArrayOp(object):
-    """
-    A class for managing independent operation on elements
-    in numpy arrays.
-    """
-
-    def __init__(self):
-        """Instantiate translator."""
-        self.translator = OpTranslator(get_ast(self.apply))
-
-    def __call__(self, A):
-        """Apply the operator to the arguments via a generated function."""
-        return self.translator(A)
-
     def interpret(self, A):
         return np.vectorize(self.apply)(A)
 
@@ -127,38 +117,39 @@ class ArrayOp(object):
 # ---------------------------------------------------------------------------
 # user code
 
-class Doubler(ArrayOp):
-    """Double elements of the array."""
 
-    @staticmethod
-    def apply(x):
-        return x * 2
+def double(x):
+    return x * 2
 
 
-class Squarer(ArrayOp):
-    """Double elements of the array."""
-
-    @staticmethod
-    def apply(x):
-        return x * x
+def square(x):
+    return x * x
 
 
 def main():
+    doubler = OpTranslator.from_function(double, 'Doubler')
+    squarer = OpTranslator.from_function(square, 'Squarer')
+
     data = np.arange(123, dtype=np.float32)
 
     # squaring floats
-    squarer = Squarer()
     actual   = squarer(data)
-    expected = squarer.interpret(data)
+    expected = np.vectorize(square)(data)
     np.testing.assert_array_equal(actual, expected)
     print("Squarer works.")
 
     # doubling floats
-    doubler = Doubler()
     actual = doubler(data)
-    expected = doubler.interpret(data)
+    expected = np.vectorize(double)(data)
     np.testing.assert_array_equal(actual, expected)
     print("Doubler works.")
 
 if __name__ == '__main__':
+    # Testing conventional (non-lambda) kernel function implementation
     main()
+
+    # Testing lambda kernel function implementation
+    double = lambda x: x * 2
+    square = lambda x: x * x
+    main()
+

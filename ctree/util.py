@@ -81,7 +81,7 @@ def highlight(code, language='c'):
     return highlight(code, TheLexer(), Terminal256Formatter(style=style))
 
 
-class Timer:
+class Timer:  # pragma: no cover
     def __enter__(self):
         self.start = time.clock()
         return self

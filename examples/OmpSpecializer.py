@@ -45,6 +45,11 @@ class GreeterTranslator(LazySpecializedFunction):
             ),
         ], 'omp')
         # entry_point_typesig = tree.find(FunctionDecl, name="hello").get_type().as_ctype()
+
+        return tree
+
+    def finalize(self, transform_result, program_config):
+        tree = transform_result[0]
         entry_type = CFUNCTYPE(None)
 
         fn = GreeterFunction()
@@ -55,7 +60,8 @@ class GreeterTranslator(LazySpecializedFunction):
 class ParallelGreeter(object):
     def __init__(self):
         """Instantiate translator."""
-        self.c_hello = GreeterTranslator(None)
+        import ast
+        self.c_hello = GreeterTranslator(ast.Module())
 
     def __call__(self):
         """Apply the operator to the arguments via a generated function."""

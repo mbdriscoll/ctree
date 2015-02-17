@@ -2,16 +2,37 @@
 A set of basic transformers for python asts
 """
 import os
+import sys
 import ast
-from ctypes import c_long
+from ctypes import c_long, c_int, c_byte, c_short, c_char_p, c_void_p
+import ctypes
+from collections import deque
 
+import ctree
 from ctree.nodes import Project
-from ctree.c.nodes import Op, Constant, String, SymbolRef, BinaryOp, TernaryOp, \
-    Return, If, CFile, FunctionCall, FunctionDecl, For, Assign, ArrayRef, Lt, \
-    AddAssign, SubAssign, MulAssign, DivAssign, UnaryOp
-import ctree.c.nodes
+from ctree.c.nodes import Constant, String, SymbolRef, BinaryOp, TernaryOp, Return, While, MultiNode, UnaryOp
+from ctree.c.nodes import If, CFile, FunctionCall, FunctionDecl, For, Assign, ArrayRef
+from ctree.c.nodes import Lt, Gt, AddAssign, SubAssign, MulAssign, DivAssign, BitAndAssign, BitShRAssign, BitShLAssign
+from ctree.c.nodes import BitOrAssign, BitXorAssign, ModAssign, Break, Continue, Pass, Array, Literal
+from ctree.c.nodes import Op
 from ctree.visitors import NodeTransformer
 
+from ctree.types import get_ctype, get_common_ctype
+
+
+#conditional imports
+
+if sys.version_info < (3,0):
+    from itertools import izip_longest
+else:
+    from itertools import zip_longest as izip_longest
+
+def get_type(node):
+    if hasattr(node, 'get_type'):
+        return type(node.get_type())
+    elif hasattr(node, 'type'):
+        return type(node.type)
+    return c_void_p
 
 class PyCtxScrubber(NodeTransformer):
     """
@@ -22,7 +43,6 @@ class PyCtxScrubber(NodeTransformer):
     def visit_Name(self, node):
         node.ctx = None
         return node
-
 
 class PyBasicConversions(NodeTransformer):
     """
@@ -53,7 +73,9 @@ class PyBasicConversions(NodeTransformer):
         ast.LShift: Op.BitShL,
         ast.RShift: Op.BitShR,
         ast.Is: Op.Eq,
-        ast.IsNot: Op. NotEq
+        ast.IsNot: Op.NotEq,
+        ast.USub:Op.SubUnary,
+        ast.UAdd:Op.AddUnary,
         # TODO list the rest
     }
 
@@ -99,7 +121,7 @@ class PyBasicConversions(NodeTransformer):
         if isinstance(node, ast.For) and \
            isinstance(node.iter, ast.Call) and \
            isinstance(node.iter.func, ast.Name) and \
-           node.iter.func.id == 'range':
+           node.iter.func.id in ('range', 'xrange'):
             Range = node.iter
             nArgs = len(Range.args)
             if nArgs == 1:
@@ -113,15 +135,37 @@ class PyBasicConversions(NodeTransformer):
             else:
                 raise Exception("Cannot convert a for...range with %d args." % nArgs)
 
-            # TODO allow any expressions castable to Long type
-            assert isinstance(stop.get_type(), c_long), "Can only convert range's with stop values of Long type."
-            assert isinstance(start.get_type(), c_long), "Can only convert range's with start values of Long type."
-            assert isinstance(step.get_type(), c_long), "Can only convert range's with step values of Long type."
 
-            target = SymbolRef(node.target.id, c_long())
+
+            #check no-op conditions.
+            if all(isinstance(item, Constant) for item in (start, stop, step)):
+                if step.value == 0:
+                    raise ValueError("range() step argument must not be zero")
+                if start.value == stop.value or \
+                        (start.value < stop.value and step.value < 0) or \
+                        (start.value > stop.value and step.value > 0):
+                    return None
+
+            # TODO allow any expressions castable to Long type
+            target_types = [c_long]
+            for el in (stop, start, step):
+                if hasattr(el, 'get_type'): #typed item to try and guess type off of. Imperfect right now.
+                    # TODO take the proper class instead of the last; if start, end are doubles, but step is long, target is double
+                    t = el.get_type()
+                    assert any(isinstance(t, klass) for klass in [
+                        c_byte, c_int, c_long, c_short
+                    ]), "Can only convert ranges with integer/long start/stop/step values"
+                    target_types.append(type(t))
+            target_type = get_common_ctype(target_types)()
+
+            target = SymbolRef(node.target.id, target_type)
+            op = Lt
+            if hasattr(start,'value') and hasattr(stop,'value'):
+                if start.value > stop.value:
+                    op = Gt
             for_loop = For(
                 Assign(target, start),
-                Lt(target.copy(), stop),
+                op(target.copy(), stop),
                 AddAssign(target.copy(), step),
                 [self.visit(stmt) for stmt in node.body],
             )
@@ -197,12 +241,67 @@ class PyBasicConversions(NodeTransformer):
         return node
 
     def visit_Assign(self, node):
-        if len(node.targets) > 1:
-            # Raise exception?
-            return node
-        target = self.visit(node.targets[0])
-        value = self.visit(node.value)
-        return Assign(target, value)
+
+        def parse_pairs(node):
+            def targets_to_list(targets): #parses target into nested lists
+                res = []
+                for elt in targets:
+                    if not isinstance(elt, (ast.List, ast.Tuple)):
+                        res.append(elt)
+                    elif isinstance(elt, (ast.Tuple, ast.List)):
+                        res.append(targets_to_list(elt.elts))
+                return res
+
+            def value_to_list(value): #parses value into nested lists for multiple assign
+                res = []
+                if not isinstance(value, (ast.List, ast.Tuple)):
+                    return value
+                for elt in value.elts:
+                    if not isinstance(value, (ast.List, ast.Tuple)):
+                        res.append(elt)
+                    else:
+                        res.append(value_to_list(elt))
+                return ast.List(elts=res)
+
+            def pair_lists(targets, values):
+                res = []
+                queue = deque((target, values) for target in targets)
+                sentinel = object()
+                while queue:
+                    target, value = queue.popleft()
+                    if isinstance(target, list):
+                        #target hasn't been completely unrolled yet
+                        for sub_target, sub_value in izip_longest(target, value.elts, fillvalue=sentinel):
+                            if sub_target is sentinel or sub_value is sentinel:
+                                raise ValueError('Incorrect number of values to unpack')
+                            queue.append((sub_target, sub_value))
+                    else:
+                        res.append((target, value))
+                return res
+
+            targets = targets_to_list(node.targets)
+            values = value_to_list(node.value)
+            return pair_lists(targets, values)
+
+
+        target_value_list = [(self.visit(target), self.visit(value)) for target, value in parse_pairs(node)]
+
+        # making a multinode no matter what. It's cleaner than branching a lot
+        operation_body = []
+        swap_body = []
+        for target, value in target_value_list:
+            if not isinstance(target, SymbolRef):
+                operation_body.append(Assign(target, value))
+                continue
+            if isinstance(value, Literal) and not isinstance(value, SymbolRef):
+                operation_body.append(Assign(target, value))
+                continue
+            new_target = target.copy()
+            new_target.name = "____temp__" + new_target.name
+            operation_body.append(Assign(new_target, value))
+            swap_body.append(Assign(target, new_target.copy()))
+        return MultiNode(body=operation_body + swap_body)
+
 
     def visit_Subscript(self, node):
         if isinstance(node.slice,ast.Index):
@@ -211,6 +310,45 @@ class PyBasicConversions(NodeTransformer):
             return ArrayRef(value,index)
         else:
             return node
+
+    def visit_While(self,node):
+        cond = self.visit(node.test)
+        body = [self.visit(i) for i in node.body]
+        return While(cond, body)
+
+    def visit_Lambda(self, node):
+
+        if isinstance(node, ast.Lambda):
+            def_node = ast.FunctionDef(name="default", args=node.args, body=node.body, decorator_list=None)
+
+            params = [self.visit(p) for p in def_node.args.args]
+            defn = [Return(self.visit(def_node.body))]
+            decl_node = FunctionDecl(None, def_node.name, params, defn)
+            Lifter().visit_FunctionDecl(decl_node)
+
+            return decl_node
+        else:
+            return node
+
+    def visit_Break(self, node):
+        return Break()
+
+    def visit_Continue(self, node):
+        return Continue()
+
+    def visit_Pass(self, node):
+        return Pass()
+
+    def visit_List(self, node):
+        elts = [self.visit(elt) for elt in node.elts]
+        types = [get_type(elt) for elt in elts]
+        array_type = get_common_ctype(types)
+        return Array(type=ctypes.POINTER(array_type)(), body=elts)
+
+    def visit_UnaryOp(self, node):
+        argument = self.visit(node.operand)
+        op = self.PY_OP_TO_CTREE_OP.get(type(node.op), type(node.op))()
+        return UnaryOp(op, argument)
 
 class ResolveGeneratedPathRefs(NodeTransformer):
     """
@@ -255,3 +393,97 @@ class Lifter(NodeTransformer):
                         new_includes.append(include)
             node.body = list(new_includes) + node.body
         return self.generic_visit(node)
+
+class DeclarationFiller(NodeTransformer):
+    def __init__(self):
+        self.__environments = [{}]
+
+    def __lookup(self, key):
+        """
+        :param key:
+        :return: Looks up the last value corresponding to key in self.__environments
+        """
+        if isinstance(key, SymbolRef):
+            key = key.name
+        value = sentinel = object()
+        for environment in self.__environments:
+            if key in environment:
+                value = environment[key]
+        if value is sentinel:
+            raise KeyError('Did not find {} in environments'.format(repr(key)))
+        return value
+
+    def __has_key(self, key):
+        try:
+            self.__lookup(key)
+            return True
+        except KeyError:
+            return False
+
+    def __add_entry(self, key, value):
+        if isinstance(key, SymbolRef):
+            key = key.name
+        self.__environments[-1][key] = value
+
+    def __add_environment(self):
+        self.__environments.append({})
+
+    def __pop_environment(self):
+        return self.__environments.pop()
+
+    def visit_FunctionDecl(self, node):
+        # add current FunctionDecl's return type onto environments
+        self.__add_entry(node.name, node.return_type)
+
+        # new environment every time we enter a function
+        self.__add_environment()
+
+        for param in node.params:
+            # binding types of parameters
+            self.__add_entry(param.name, param.type)
+
+        node.defn = [self.visit(i) for i in node.defn]
+        self.__pop_environment()
+        return node
+
+    def visit_SymbolRef(self, node):
+
+        if node.type:
+            self.__add_entry(node.name, node.type)
+        return node
+
+    def visit_FunctionCall(self, node):
+        if self.__has_key(node.func):
+            node.type = self.__lookup(node.func)
+        node.args = [self.visit(arg) for arg in node.args]
+        return node
+
+    def visit_BinaryOp(self, node):
+        if isinstance(node.op, Op.Assign):
+            node.left = self.visit(node.left)
+            if isinstance(node.left, BinaryOp):
+                return node
+            node.right = self.visit(node.right)
+            name = node.left
+            value = node.right
+            if hasattr(name, 'type') and name.type is not None:
+                return node
+            if hasattr(name, 'name') and not self.__has_key(name.name):
+                if name.name.startswith('____temp__'):                  # temporary variable types can be derived from the variables that they represent
+                    stripped_name = name.name.lstrip('____temp__')
+                    if self.__has_key(stripped_name):
+                        node.left.type = self.__lookup(stripped_name)
+
+                elif hasattr(value, 'get_type'):
+                    node.left.type = value.get_type()
+                elif isinstance(value, String):
+                    node.left.type = c_char_p()
+                elif isinstance(value, SymbolRef):
+                    node.left.type = self.__lookup(value.name)
+                elif isinstance(value, FunctionCall):
+                    if self.__has_key(value.func):
+                        node.left.type = self.__lookup(value.func)
+
+                self.__add_entry(node.left.name, node.left.type)
+        return node
+

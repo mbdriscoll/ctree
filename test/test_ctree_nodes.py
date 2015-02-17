@@ -1,8 +1,7 @@
 import unittest
-
-from ctree.nodes import *
-from ctree.c.nodes import *
 import ctypes as ct
+
+from ctree.c.nodes import *
 
 
 class TestCtreeNode(unittest.TestCase):
