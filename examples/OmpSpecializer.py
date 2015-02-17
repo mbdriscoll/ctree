@@ -60,7 +60,8 @@ class GreeterTranslator(LazySpecializedFunction):
 class ParallelGreeter(object):
     def __init__(self):
         """Instantiate translator."""
-        self.c_hello = GreeterTranslator(None)
+        import ast
+        self.c_hello = GreeterTranslator(ast.Module())
 
     def __call__(self):
         """Apply the operator to the arguments via a generated function."""

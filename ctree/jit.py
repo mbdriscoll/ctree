@@ -27,9 +27,9 @@ from ctree.c.nodes import CFile, MultiNode
 from ctree.ocl.nodes import OclFile
 from ctree.nodes import File
 
-import llvmlite.binding as llvm
-llvm.initialize()
-llvm.initialize_native_target()
+# import llvmlite.binding as llvm
+# llvm.initialize()
+# llvm.initialize_native_target()
 
 import logging
 
@@ -67,10 +67,11 @@ class JitModule(object):
         self.exec_engine = None
 
     def _link_in(self, submodule):
-        if self.ll_module is not None:
-            self.ll_module.link_in(submodule)
-        else:
-            self.ll_module = submodule
+        self.so_file_name = submodule
+        # if self.ll_module is not None:
+        #     self.ll_module.link_in(submodule)
+        # else:
+        #     self.ll_module = submodule
 
     def get_callable(self, entry_point_name, entry_point_typesig):
         """
@@ -78,16 +79,23 @@ class JitModule(object):
         """
 
         # get llvm represetation of function
-        ll_function = self.ll_module.get_function(entry_point_name)
+        # ll_function = self.ll_module.get_function(entry_point_name)
+        import ctypes
+        lib = ctypes.cdll.LoadLibrary(self.so_file_name)
+        func_ptr = getattr(lib, entry_point_name)
+        print(entry_point_typesig._argtypes_)
+        func_ptr.argtypes = entry_point_typesig._argtypes_
+        func_ptr.restype = entry_point_typesig._restype_
+        # func = func_ptr
 
         # run jit compiler
         # from llvm.ee import EngineBuilder
-        self.exec_engine = llvm.create_jit_compiler(self.ll_module)
+        # self.exec_engine = llvm.create_jit_compiler(self.ll_module)
 
-        c_func_ptr = self.exec_engine.get_pointer_to_global(ll_function)
+        # c_func_ptr = self.exec_engine.get_pointer_to_global(ll_function)
 
         # cast c_func_ptr to python callable using ctypes
-        return entry_point_typesig(c_func_ptr)
+        return func_ptr
 
 
 class ConcreteSpecializedFunction(object):
