@@ -115,8 +115,9 @@ class ConcreteSpecializedFunction(object):
 
         self._module = project_node.codegen(**kwargs)
 
-        highlighted = highlight(str(self._module.ll_module), 'llvm')
-        log.debug("full LLVM program is: <<<\n%s\n>>>" % highlighted)
+        if log.getEffectiveLevel() == 'debug':
+            highlighted = highlight(str(self._module.ll_module), 'llvm')
+            log.debug("full LLVM program is: <<<\n%s\n>>>" % highlight)
 
         return self._module.get_callable(entry_point_name, entry_point_typesig)
 
