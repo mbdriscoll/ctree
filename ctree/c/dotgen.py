@@ -21,7 +21,6 @@ class CDotGenLabeller(DotGenLabeller):
             s += r"__const "
         if node.type is not None:
             s += r"%s " % codegen_type(node.type)
-        print(node.type)
         s += r"%s" % node.name
         return s
 
