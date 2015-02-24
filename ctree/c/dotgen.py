@@ -4,6 +4,8 @@ DOT generator for C constructs.
 
 from ctree.dotgen import DotGenLabeller
 from ctree.types import codegen_type
+import numpy as np
+from ctree.np import codegen_ndptr
 
 
 class CDotGenLabeller(DotGenLabeller):
@@ -19,8 +21,9 @@ class CDotGenLabeller(DotGenLabeller):
             s += r"__local "
         if node._const:
             s += r"__const "
-        if node.type:
+        if node.type is not None:
             s += r"%s " % codegen_type(node.type)
+        print(node.type)
         s += r"%s" % node.name
         return s
 
