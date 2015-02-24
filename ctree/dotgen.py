@@ -42,9 +42,6 @@ class DotGenVisitor(NodeVisitor):
     Generates a representation of the AST in the DOT graph language.
     See http://en.wikipedia.org/wiki/DOT_(graph_description_language)
     """
-    def __init__(self):
-        self._visited = []
-
     @staticmethod
     def _qualified_name(obj):
         """
@@ -59,11 +56,6 @@ class DotGenVisitor(NodeVisitor):
         return r"%s\n%s" % (type(node).__name__, node.label())
 
     def generic_visit(self, node):
-        # abort if visited
-        if node in self._visited:
-            return ""
-        else:
-            self._visited.append(node)
 
         # label this node
         out_string = 'n%s [label="%s"];\n' % (id(node), self.label(node))
@@ -73,6 +65,7 @@ class DotGenVisitor(NodeVisitor):
             for index, child in enumerate_flatten(fieldvalue):
                 if isinstance(child, ast.AST):
                     suffix = "".join(["[%d]" % i for i in index])
-                    out_string += 'n%d -> n%d [label="%s%s"];\n' % (id(node), id(child), fieldname, suffix)
+                    out_string += 'n{} -> n{} [label="{}{}"];\n'.format(
+                        id(node), id(child), fieldname, suffix)
                     out_string += self.visit(child)
         return out_string

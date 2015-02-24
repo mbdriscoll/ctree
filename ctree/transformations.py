@@ -13,7 +13,8 @@ from ctree.nodes import Project
 from ctree.c.nodes import Constant, String, SymbolRef, BinaryOp, TernaryOp, Return, While, MultiNode, UnaryOp
 from ctree.c.nodes import If, CFile, FunctionCall, FunctionDecl, For, Assign, ArrayRef
 from ctree.c.nodes import Lt, Gt, AddAssign, SubAssign, MulAssign, DivAssign, BitAndAssign, BitShRAssign, BitShLAssign
-from ctree.c.nodes import BitOrAssign, BitXorAssign, ModAssign, Break, Continue, Pass, Array, Literal
+from ctree.c.nodes import BitOrAssign, BitXorAssign, ModAssign, Break, \
+    Continue, Pass, Array, Literal, And
 from ctree.c.nodes import Op
 from ctree.visitors import NodeTransformer
 
@@ -74,8 +75,9 @@ class PyBasicConversions(NodeTransformer):
         ast.RShift: Op.BitShR,
         ast.Is: Op.Eq,
         ast.IsNot: Op.NotEq,
-        ast.USub:Op.SubUnary,
-        ast.UAdd:Op.AddUnary,
+        ast.USub: Op.SubUnary,
+        ast.UAdd: Op.AddUnary,
+        ast.FloorDiv: Op.Div
         # TODO list the rest
     }
 
@@ -189,13 +191,16 @@ class PyBasicConversions(NodeTransformer):
         return TernaryOp(cond, then, elze)
 
     def visit_Compare(self, node):
-        assert len(node.ops) == 1, \
-            "PyBasicConversions doesn't support Compare nodes with more than one operator."
         lhs = self.visit(node.left)
 
-        op = self.PY_OP_TO_CTREE_OP.get(type(node.ops[0]),type(node.ops[0]))()
+        op = self.PY_OP_TO_CTREE_OP.get(type(node.ops[0]),
+                                        type(node.ops[0]))()
         rhs = self.visit(node.comparators[0])
-        return BinaryOp(lhs, op, rhs)
+        curr = BinaryOp(lhs, op, rhs)
+        for comp in node.comparators[1:]:
+            rhs = self.visit(comp)
+            curr = And(curr, BinaryOp(lhs, op, rhs))
+        return curr
 
     def visit_Module(self, node):
         body = [self.visit(s) for s in node.body]

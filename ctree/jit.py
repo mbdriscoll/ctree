@@ -252,18 +252,21 @@ class LazySpecializedFunction(object):
     def __call__(self, *args, **kwargs):
         """
             Determines the program_configuration to be run. If it has yet to be
-            built, build it. Then, execute it. If the selected program_configuration 
+            built, build it. Then, execute it. If the selected program_configuration
             for this function has already been code generated for, this method draws
             from the cache.
         """
         ctree.STATS.log("specialized function call")
-        assert not kwargs, \
-            "Passing kwargs to specialized functions isn't supported."
 
         log.info("detected specialized function call with arg types: %s",
-                 [type(a) for a in args])
+                 [type(a) for a in args] + [type(kwargs[key]) for key in kwargs])
 
-        args_subconfig = self.args_to_subconfig(args)
+        # Don't break old specializers that don't support kwargs
+        try:
+            args_subconfig = self.args_to_subconfig(args, kwargs)
+        except TypeError:
+            args_subconfig = self.args_to_subconfig(args)
+
         tuner_subconfig = next(self._tuner.configs)
         program_config = self.ProgramConfig(args_subconfig, tuner_subconfig)
         dir_name = self.config_to_dirname(program_config)
