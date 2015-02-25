@@ -190,21 +190,37 @@ class PyBasicConversions(NodeTransformer):
         elze = self.visit(node.orelse)
         return TernaryOp(cond, then, elze)
 
+    def visit_BoolOp(self, node):
+        first = self.visit(node.values[0])
+        second = self.visit(node.values[1])
+        op = self.PY_OP_TO_CTREE_OP.get(type(node.op),
+                                        type(node.op))()
+        curr = BinaryOp(first, op, second)
+        for value in node.values[2:]:
+            curr = BinaryOp(curr, op, self.visit(value))
+        return curr
+
     def visit_Compare(self, node):
         lhs = self.visit(node.left)
 
+        print(lhs)
+        print(node.ops)
+        print(node.comparators)
         op = self.PY_OP_TO_CTREE_OP.get(type(node.ops[0]),
                                         type(node.ops[0]))()
         rhs = self.visit(node.comparators[0])
         curr = BinaryOp(lhs, op, rhs)
-        for comp in node.comparators[1:]:
-            rhs = self.visit(comp)
+        for i in range(1, len(node.ops)):
+            op = self.PY_OP_TO_CTREE_OP.get(type(node.ops[i]),
+                                            type(node.ops[i]))()
+            rhs = self.visit(node.comparators[i])
+            lhs = self.visit(node.comparators[i-1])
             curr = And(curr, BinaryOp(lhs, op, rhs))
         return curr
 
     def visit_Module(self, node):
         body = [self.visit(s) for s in node.body]
-        return Project([CFile("module", body)])
+        return CFile("module", body)
 
     def visit_Call(self, node):
         args = [self.visit(a) for a in node.args]
