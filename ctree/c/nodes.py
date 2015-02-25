@@ -351,7 +351,8 @@ class BinaryOp(Expression):
         # FIXME: integer promotions and stuff like that
         if hasattr(self.left, 'get_type'):
             left_type = self.left.get_type()
-        elif isinstance(self.left, SymbolRef) and env._has_key(self.left.name):
+        elif isinstance(self.left, SymbolRef) and env is not None \
+                and env._has_key(self.left.name):
             left_type = env._lookup(self.left.name)
         elif hasattr(self.left, 'type'):
             left_type = self.left.type
@@ -359,13 +360,15 @@ class BinaryOp(Expression):
             left_type = None
         if hasattr(self.right, 'get_type'):
             right_type = self.right.get_type()
-        elif isinstance(self.right, SymbolRef) and env._has_key(self.right.name):
+        elif isinstance(self.right, SymbolRef) and env is not None \
+                and env._has_key(self.right.name):
             right_type = env._lookup(self.right.name)
         elif hasattr(self.right, 'type'):
             right_type = self.right.type
         else:
             right_type = None
-        return get_common_ctype(filter(lambda x: x is not None, [right_type, left_type]))
+        return get_common_ctype(filter(lambda x: x is not None, [right_type,
+                                                                 left_type]))
 
 
 class AugAssign(Expression):
