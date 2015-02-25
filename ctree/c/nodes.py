@@ -361,7 +361,7 @@ class BinaryOp(Expression):
             right_type = self.right.type
         else:
             right_type = None
-        return get_common_ctype([right_type, left_type])
+        return get_common_ctype(filter(lambda x: x, [right_type, left_type]))
 
 
 class AugAssign(Expression):

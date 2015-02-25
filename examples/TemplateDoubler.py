@@ -16,6 +16,7 @@ from ctree.templates.nodes import *
 from ctree.transformations import *
 from ctree.jit import LazySpecializedFunction
 from ctree.jit import ConcreteSpecializedFunction
+from ctree.nodes import Project
 
 # ---------------------------------------------------------------------------
 # Specializer code

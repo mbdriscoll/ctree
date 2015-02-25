@@ -9,24 +9,25 @@ import ctypes
 from collections import deque
 
 import ctree
-from ctree.nodes import Project
-from ctree.c.nodes import Constant, String, SymbolRef, BinaryOp, TernaryOp, Return, While, MultiNode, UnaryOp
-from ctree.c.nodes import If, CFile, FunctionCall, FunctionDecl, For, Assign, ArrayRef
-from ctree.c.nodes import Lt, Gt, AddAssign, SubAssign, MulAssign, DivAssign, BitAndAssign, BitShRAssign, BitShLAssign
-from ctree.c.nodes import BitOrAssign, BitXorAssign, ModAssign, Break, \
-    Continue, Pass, Array, Literal, And
+from ctree.c.nodes import Constant, String, SymbolRef, BinaryOp, TernaryOp, \
+    Return, While, MultiNode, UnaryOp
+from ctree.c.nodes import If, CFile, FunctionCall, FunctionDecl, For, Assign, \
+    ArrayRef
+from ctree.c.nodes import Lt, Gt, AddAssign
+from ctree.c.nodes import Break, Continue, Pass, Array, Literal, And
 from ctree.c.nodes import Op
 from ctree.visitors import NodeTransformer
 
-from ctree.types import get_ctype, get_common_ctype
+from ctree.types import get_common_ctype
 
 
-#conditional imports
+#  conditional imports
 
-if sys.version_info < (3,0):
+if sys.version_info < (3, 0):
     from itertools import izip_longest
 else:
     from itertools import zip_longest as izip_longest
+
 
 def get_type(node):
     if hasattr(node, 'get_type'):
@@ -34,6 +35,7 @@ def get_type(node):
     elif hasattr(node, 'type'):
         return type(node.type)
     return c_void_p
+
 
 class PyCtxScrubber(NodeTransformer):
     """
@@ -45,13 +47,14 @@ class PyCtxScrubber(NodeTransformer):
         node.ctx = None
         return node
 
+
 class PyBasicConversions(NodeTransformer):
     """
     Convert constructs with obvious C analogues.
     """
-    def __init__(self,names_dict={}, constants_dict={}):
+    def __init__(self, names_dict={}, constants_dict={}):
         self.names_dict = names_dict
-        self.constants_dict =constants_dict
+        self.constants_dict = constants_dict
 
     PY_OP_TO_CTREE_OP = {
         ast.Add: Op.Add,
@@ -107,11 +110,6 @@ class PyBasicConversions(NodeTransformer):
         op = self.PY_OP_TO_CTREE_OP.get(type(node.op), type(node.op))()
         return BinaryOp(lhs, op, rhs)
 
-    def visit_UnaryOp(self, node):
-        op = self.PY_UOP_TO_CTREE_UOP[node.op.__class__.__name__]()
-        operand = self.visit(node.operand)
-        return UnaryOp(op, operand)
-
     def visit_Return(self, node):
         if hasattr(node, 'value'):
             return Return(self.visit(node.value))
@@ -135,15 +133,14 @@ class PyBasicConversions(NodeTransformer):
             elif nArgs == 3:
                 start, stop, step = map(self.visit, Range.args)
             else:
-                raise Exception("Cannot convert a for...range with %d args." % nArgs)
+                raise Exception(
+                    "Cannot convert a for...range with %d args." % nArgs)
 
-
-
-            #check no-op conditions.
+            #  check no-op conditions.
             if all(isinstance(item, Constant) for item in (start, stop, step)):
                 if step.value == 0:
                     raise ValueError("range() step argument must not be zero")
-                if start.value == stop.value or \
+                elif start.value == stop.value or \
                         (start.value < stop.value and step.value < 0) or \
                         (start.value > stop.value and step.value > 0):
                     return None
@@ -151,20 +148,23 @@ class PyBasicConversions(NodeTransformer):
             # TODO allow any expressions castable to Long type
             target_types = [c_long]
             for el in (stop, start, step):
-                if hasattr(el, 'get_type'): #typed item to try and guess type off of. Imperfect right now.
-                    # TODO take the proper class instead of the last; if start, end are doubles, but step is long, target is double
+                #  typed item to try and guess type off of. Imperfect right now.
+                if hasattr(el, 'get_type'):
+                    # TODO take the proper class instead of the last; if start,
+                    # end are doubles, but step is long, target is double
                     t = el.get_type()
                     assert any(isinstance(t, klass) for klass in [
                         c_byte, c_int, c_long, c_short
-                    ]), "Can only convert ranges with integer/long start/stop/step values"
+                    ]), "Can only convert ranges with integer/long \
+                         start/stop/step values"
                     target_types.append(type(t))
             target_type = get_common_ctype(target_types)()
 
             target = SymbolRef(node.target.id, target_type)
             op = Lt
-            if hasattr(start,'value') and hasattr(stop,'value'):
-                if start.value > stop.value:
-                    op = Gt
+            if hasattr(start, 'value') and hasattr(stop, 'value') and \
+                    start.value > stop.value:
+                op = Gt
             for_loop = For(
                 Assign(target, start),
                 op(target.copy(), stop),
@@ -203,9 +203,6 @@ class PyBasicConversions(NodeTransformer):
     def visit_Compare(self, node):
         lhs = self.visit(node.left)
 
-        print(lhs)
-        print(node.ops)
-        print(node.comparators)
         op = self.PY_OP_TO_CTREE_OP.get(type(node.ops[0]),
                                         type(node.ops[0]))()
         rhs = self.visit(node.comparators[0])
@@ -253,59 +250,65 @@ class PyBasicConversions(NodeTransformer):
         #     return BitXorAssign(target, value)
         # # TODO: Error?
         lookup = {
-            ast.Add: 'AddAssign', ast.Sub: 'SubAssign', ast.Mult: 'MulAssign', ast.Div: 'DivAssign',
-            ast.BitAnd: 'BitAndAssign', ast.BitOr: 'BitOrAssign', ast.BitXor: 'BitXorAssign',
-            ast.LShift: 'BitShLAssign', ast.RShift: 'BitShRAssign'
+            ast.Add: 'AddAssign', ast.Sub: 'SubAssign', ast.Mult: 'MulAssign',
+            ast.Div: 'DivAssign', ast.BitAnd: 'BitAndAssign', ast.BitOr:
+            'BitOrAssign', ast.BitXor: 'BitXorAssign', ast.LShift:
+            'BitShLAssign', ast.RShift: 'BitShRAssign'
         }
         if op in lookup:
             return getattr(ctree.c.nodes, lookup[op])(target, value)
         return node
 
+    def targets_to_list(self, targets):
+        """parses target into nested lists"""
+        res = []
+        for elt in targets:
+            if not isinstance(elt, (ast.List, ast.Tuple)):
+                res.append(elt)
+            elif isinstance(elt, (ast.Tuple, ast.List)):
+                res.append(self.targets_to_list(elt.elts))
+        return res
+
+    def value_to_list(self, value):
+        """parses value into nested lists for multiple assign"""
+        res = []
+        if not isinstance(value, (ast.List, ast.Tuple)):
+            return value
+        for elt in value.elts:
+            if not isinstance(value, (ast.List, ast.Tuple)):
+                res.append(elt)
+            else:
+                res.append(self.value_to_list(elt))
+        return ast.List(elts=res)
+
+    def pair_lists(self, targets, values):
+        res = []
+        queue = deque((target, values) for target in targets)
+        sentinel = object()
+        while queue:
+            target, value = queue.popleft()
+            if isinstance(target, list):
+                #  target hasn't been completely unrolled yet
+                for sub_target, sub_value in izip_longest(
+                        target, value.elts, fillvalue=sentinel):
+                    if sub_target is sentinel or \
+                            sub_value is sentinel:
+                        raise ValueError(
+                            'Incorrect number of values to unpack')
+                    queue.append((sub_target, sub_value))
+            else:
+                res.append((target, value))
+        return res
+
+    def parse_pairs(self, node):
+        targets = self.targets_to_list(node.targets)
+        values = self.value_to_list(node.value)
+        return self.pair_lists(targets, values)
+
     def visit_Assign(self, node):
 
-        def parse_pairs(node):
-            def targets_to_list(targets): #parses target into nested lists
-                res = []
-                for elt in targets:
-                    if not isinstance(elt, (ast.List, ast.Tuple)):
-                        res.append(elt)
-                    elif isinstance(elt, (ast.Tuple, ast.List)):
-                        res.append(targets_to_list(elt.elts))
-                return res
-
-            def value_to_list(value): #parses value into nested lists for multiple assign
-                res = []
-                if not isinstance(value, (ast.List, ast.Tuple)):
-                    return value
-                for elt in value.elts:
-                    if not isinstance(value, (ast.List, ast.Tuple)):
-                        res.append(elt)
-                    else:
-                        res.append(value_to_list(elt))
-                return ast.List(elts=res)
-
-            def pair_lists(targets, values):
-                res = []
-                queue = deque((target, values) for target in targets)
-                sentinel = object()
-                while queue:
-                    target, value = queue.popleft()
-                    if isinstance(target, list):
-                        #target hasn't been completely unrolled yet
-                        for sub_target, sub_value in izip_longest(target, value.elts, fillvalue=sentinel):
-                            if sub_target is sentinel or sub_value is sentinel:
-                                raise ValueError('Incorrect number of values to unpack')
-                            queue.append((sub_target, sub_value))
-                    else:
-                        res.append((target, value))
-                return res
-
-            targets = targets_to_list(node.targets)
-            values = value_to_list(node.value)
-            return pair_lists(targets, values)
-
-
-        target_value_list = [(self.visit(target), self.visit(value)) for target, value in parse_pairs(node)]
+        target_value_list = [(self.visit(target), self.visit(value))
+                             for target, value in self.parse_pairs(node)]
 
         # making a multinode no matter what. It's cleaner than branching a lot
         operation_body = []
@@ -313,26 +316,25 @@ class PyBasicConversions(NodeTransformer):
         for target, value in target_value_list:
             if not isinstance(target, SymbolRef):
                 operation_body.append(Assign(target, value))
-                continue
-            if isinstance(value, Literal) and not isinstance(value, SymbolRef):
+            elif isinstance(value, Literal) and \
+                    not isinstance(value, SymbolRef):
                 operation_body.append(Assign(target, value))
-                continue
-            new_target = target.copy()
-            new_target.name = "____temp__" + new_target.name
-            operation_body.append(Assign(new_target, value))
-            swap_body.append(Assign(target, new_target.copy()))
+            else:
+                new_target = target.copy()
+                new_target.name = "____temp__" + new_target.name
+                operation_body.append(Assign(new_target, value))
+                swap_body.append(Assign(target, new_target.copy()))
         return MultiNode(body=operation_body + swap_body)
 
-
     def visit_Subscript(self, node):
-        if isinstance(node.slice,ast.Index):
+        if isinstance(node.slice, ast.Index):
             value = self.visit(node.value)
             index = self.visit(node.slice.value)
-            return ArrayRef(value,index)
+            return ArrayRef(value, index)
         else:
             return node
 
-    def visit_While(self,node):
+    def visit_While(self, node):
         cond = self.visit(node.test)
         body = [self.visit(i) for i in node.body]
         return While(cond, body)
@@ -340,7 +342,8 @@ class PyBasicConversions(NodeTransformer):
     def visit_Lambda(self, node):
 
         if isinstance(node, ast.Lambda):
-            def_node = ast.FunctionDef(name="default", args=node.args, body=node.body, decorator_list=None)
+            def_node = ast.FunctionDef(name="default", args=node.args,
+                                       body=node.body, decorator_list=None)
 
             params = [self.visit(p) for p in def_node.args.args]
             defn = [Return(self.visit(def_node.body))]
@@ -371,10 +374,11 @@ class PyBasicConversions(NodeTransformer):
         op = self.PY_OP_TO_CTREE_OP.get(type(node.op), type(node.op))()
         return UnaryOp(op, argument)
 
+
 class ResolveGeneratedPathRefs(NodeTransformer):
     """
-    Converts any instances of ctree.nodes.GeneratedPathRef into strings containing the absolute path
-    of the target file.
+    Converts any instances of ctree.nodes.GeneratedPathRef into strings
+    containing the absolute path of the target file.
     """
 
     def __init__(self, compilation_dir):
@@ -383,7 +387,8 @@ class ResolveGeneratedPathRefs(NodeTransformer):
 
     def visit_GeneratedPathRef(self, node):
         self.count += 1
-        return String(os.path.join(self.compilation_dir, node.target.get_filename()))
+        return String(os.path.join(self.compilation_dir,
+                                   node.target.get_filename()))
 
 
 class Lifter(NodeTransformer):
@@ -402,7 +407,7 @@ class Lifter(NodeTransformer):
                 for param in getattr(child, '_lift_params', []):
                     if param not in node.params:
                         node.params.append(param)
-                    #del child._lift_params
+                    #  del child._lift_params
         return self.generic_visit(node)
 
     def visit_CFile(self, node):
@@ -415,6 +420,7 @@ class Lifter(NodeTransformer):
             node.body = list(new_includes) + node.body
         return self.generic_visit(node)
 
+
 class DeclarationFiller(NodeTransformer):
     def __init__(self):
         self.__environments = [{}]
@@ -422,7 +428,8 @@ class DeclarationFiller(NodeTransformer):
     def __lookup(self, key):
         """
         :param key:
-        :return: Looks up the last value corresponding to key in self.__environments
+        :return: Looks up the last value corresponding to key in
+            self.__environments
         """
         if isinstance(key, SymbolRef):
             key = key.name
@@ -490,11 +497,14 @@ class DeclarationFiller(NodeTransformer):
             if hasattr(name, 'type') and name.type is not None:
                 return node
             if hasattr(name, 'name') and not self.__has_key(name.name):
-                if name.name.startswith('____temp__'):                  # temporary variable types can be derived from the variables that they represent
+                # temporary variable types can be derived from the variables
+                # that they represent
+                if name.name.startswith('____temp__'):
                     stripped_name = name.name.lstrip('____temp__')
                     if self.__has_key(stripped_name):
                         node.left.type = self.__lookup(stripped_name)
-
+                    elif hasattr(value, 'get_type'):
+                        node.left.type = value.get_type()
                 elif hasattr(value, 'get_type'):
                     node.left.type = value.get_type()
                 elif isinstance(value, String):
@@ -507,4 +517,3 @@ class DeclarationFiller(NodeTransformer):
 
                 self.__add_entry(node.left.name, node.left.type)
         return node
-
