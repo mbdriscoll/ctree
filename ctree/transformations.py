@@ -425,7 +425,7 @@ class DeclarationFiller(NodeTransformer):
     def __init__(self):
         self.__environments = [{}]
 
-    def __lookup(self, key):
+    def _lookup(self, key):
         """
         :param key:
         :return: Looks up the last value corresponding to key in
@@ -441,9 +441,9 @@ class DeclarationFiller(NodeTransformer):
             raise KeyError('Did not find {} in environments'.format(repr(key)))
         return value
 
-    def __has_key(self, key):
+    def _has_key(self, key):
         try:
-            self.__lookup(key)
+            self._lookup(key)
             return True
         except KeyError:
             return False
@@ -476,13 +476,13 @@ class DeclarationFiller(NodeTransformer):
 
     def visit_SymbolRef(self, node):
 
-        if node.type:
+        if node.type is not None:
             self.__add_entry(node.name, node.type)
         return node
 
     def visit_FunctionCall(self, node):
-        if self.__has_key(node.func):
-            node.type = self.__lookup(node.func)
+        if self._has_key(node.func):
+            node.type = self._lookup(node.func)
         node.args = [self.visit(arg) for arg in node.args]
         return node
 
@@ -496,24 +496,24 @@ class DeclarationFiller(NodeTransformer):
             value = node.right
             if hasattr(name, 'type') and name.type is not None:
                 return node
-            if hasattr(name, 'name') and not self.__has_key(name.name):
+            if hasattr(name, 'name') and not self._has_key(name.name):
                 # temporary variable types can be derived from the variables
                 # that they represent
                 if name.name.startswith('____temp__'):
                     stripped_name = name.name.lstrip('____temp__')
-                    if self.__has_key(stripped_name):
-                        node.left.type = self.__lookup(stripped_name)
+                    if self._has_key(stripped_name):
+                        node.left.type = self._lookup(stripped_name)
                     elif hasattr(value, 'get_type'):
-                        node.left.type = value.get_type()
+                        node.left.type = value.get_type(self)
                 elif hasattr(value, 'get_type'):
                     node.left.type = value.get_type()
                 elif isinstance(value, String):
                     node.left.type = c_char_p()
                 elif isinstance(value, SymbolRef):
-                    node.left.type = self.__lookup(value.name)
+                    node.left.type = self._lookup(value.name)
                 elif isinstance(value, FunctionCall):
-                    if self.__has_key(value.func):
-                        node.left.type = self.__lookup(value.func)
+                    if self._has_key(value.func):
+                        node.left.type = self._lookup(value.func)
 
                 self.__add_entry(node.left.name, node.left.type)
         return node
