@@ -56,15 +56,15 @@ class CFile(CNode, File):
         so_file_exists = os.path.exists(so_file)
         old_hash = self.program_hash
         hash_match = old_hash == program_hash
-        log.info("Old hash: %s \n New hash: %s", old_hash, program_hash)
+        log.debug("Old hash: %s \n New hash: %s", old_hash, program_hash)
         recreate_c_src = program_text and program_text != self.empty and not hash_match
         recreate_so = recreate_c_src or not so_file_exists
 
-        log.info("RECREATE_C_SRC: %s \t RECREATE_so: %s \t HASH_MATCH: %s",
+        log.debug("RECREATE_C_SRC: %s \t RECREATE_so: %s \t HASH_MATCH: %s",
                  recreate_c_src, recreate_so, hash_match)
 
         if not program_text:
-            log.info("Program not found. Attempting to use cached version")
+            log.debug("Program not found. Attempting to use cached version")
 
         #create c_src
         if recreate_c_src:
@@ -80,7 +80,7 @@ class CFile(CNode, File):
         #create ll_bc_file
         if recreate_so:
             # call clang to generate LLVM bitcode file
-            log.info('Regenerating so.')
+            log.debug('Regenerating so.')
             CC = ctree.CONFIG.get(self.config_target, 'CC')
             CFLAGS = ctree.CONFIG.get(self.config_target, 'CFLAGS')
             LDFLAGS = ctree.CONFIG.get(self.config_target, 'LDFLAGS')
@@ -88,7 +88,7 @@ class CFile(CNode, File):
                     c_src_file, LDFLAGS)
             log.info("compilation command: %s", compile_cmd)
             subprocess.check_call(compile_cmd, shell=True)
-            log.info("file for generated so: %s", so_file)
+            # log.info("file for generated so: %s", so_file)
 
         #use cached version otherwise
         if not (so_file_exists or recreate_so):
@@ -347,21 +347,28 @@ class BinaryOp(Expression):
         self.right = right
         super(BinaryOp, self).__init__()
 
-    def get_type(self):
+    def get_type(self, env=None):
         # FIXME: integer promotions and stuff like that
         if hasattr(self.left, 'get_type'):
             left_type = self.left.get_type()
+        elif isinstance(self.left, SymbolRef) and env is not None \
+                and env._has_key(self.left.name):
+            left_type = env._lookup(self.left.name)
         elif hasattr(self.left, 'type'):
             left_type = self.left.type
         else:
             left_type = None
         if hasattr(self.right, 'get_type'):
             right_type = self.right.get_type()
+        elif isinstance(self.right, SymbolRef) and env is not None \
+                and env._has_key(self.right.name):
+            right_type = env._lookup(self.right.name)
         elif hasattr(self.right, 'type'):
             right_type = self.right.type
         else:
             right_type = None
-        return get_common_ctype([right_type, left_type])
+        return get_common_ctype(filter(lambda x: x is not None, [right_type,
+                                                                 left_type]))
 
 
 class AugAssign(Expression):

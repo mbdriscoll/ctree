@@ -19,7 +19,7 @@ class CDotGenLabeller(DotGenLabeller):
             s += r"__local "
         if node._const:
             s += r"__const "
-        if node.type:
+        if node.type is not None:
             s += r"%s " % codegen_type(node.type)
         s += r"%s" % node.name
         return s

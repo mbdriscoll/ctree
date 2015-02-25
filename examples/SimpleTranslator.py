@@ -14,6 +14,7 @@ from ctree.frontend import get_ast, dump
 from ctree.jit import LazySpecializedFunction
 from ctree.jit import ConcreteSpecializedFunction
 from ctree.types import get_ctype
+from ctree.nodes import Project
 
 
 def fib(n):

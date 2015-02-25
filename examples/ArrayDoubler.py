@@ -9,6 +9,7 @@ import ctypes as ct
 import numpy as np
 
 from ctree.c.nodes import *
+from ctree.nodes import Project
 from ctree.transformations import *
 from ctree.jit import LazySpecializedFunction
 from ctree.jit import ConcreteSpecializedFunction
@@ -70,14 +71,14 @@ class OpTranslator(LazySpecializedFunction):
         return [c_doubler]
 
     def finalize(self, transform_result, program_config):
-        
+
         c_doubler = transform_result[0]
         proj = Project([c_doubler])
 
         arg_config, tuner_config = program_config
         array_type = arg_config['ptr']
         entry_type = ct.CFUNCTYPE(None, array_type)
- 
+
         concrete_Fn = ArrayFn()
         return concrete_Fn.finalize("apply_all", proj, entry_type)
 
