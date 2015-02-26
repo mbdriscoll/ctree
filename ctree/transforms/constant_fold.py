@@ -22,7 +22,7 @@ class ConstantFold(ast.NodeTransformer):
 
     def fold_sub(self, node):
         if isinstance(node.left, C.Constant) and node.left.value == 0:
-            return C.Op.SubUnary(node.right)
+            return C.Sub(node.right)
         elif isinstance(node.right, C.Constant) and node.right.value == 0:
             return node.left
         return node
