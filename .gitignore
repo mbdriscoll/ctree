@@ -65,3 +65,6 @@ opentuner.log
 
 # compiled files
 compiled/*
+
+*.sublime-project
+*.sublime-workspace
