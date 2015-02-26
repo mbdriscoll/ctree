@@ -9,6 +9,10 @@ class TestConstantFold(unittest.TestCase):
         tree = ConstantFold().visit(tree)
         self.assertEqual(tree, C.SymbolRef("a"))
 
+        tree = C.Add(C.Constant(0), C.SymbolRef("a"))
+        tree = ConstantFold().visit(tree)
+        self.assertEqual(tree, C.SymbolRef("a"))
+
     def test_add_constants(self):
         tree = C.Add(C.Constant(20), C.Constant(10))
         tree = ConstantFold().visit(tree)
@@ -31,6 +35,10 @@ class TestConstantFold(unittest.TestCase):
 
     def test_mul_by_0(self):
         tree = C.Mul(C.Constant(0), C.SymbolRef("b"))
+        tree = ConstantFold().visit(tree)
+        self.assertEqual(tree, C.Constant(0))
+
+        tree = C.Mul(C.SymbolRef("b"), C.Constant(0))
         tree = ConstantFold().visit(tree)
         self.assertEqual(tree, C.Constant(0))
 
