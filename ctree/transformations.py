@@ -13,6 +13,7 @@ from ctree.c.nodes import Constant, String, SymbolRef, BinaryOp, TernaryOp, \
     Return, While, MultiNode, UnaryOp
 from ctree.c.nodes import If, CFile, FunctionCall, FunctionDecl, For, Assign, \
     ArrayRef
+from ctree.nodes import CtreeNode
 from ctree.c.nodes import Lt, Gt, AddAssign
 from ctree.c.nodes import Break, Continue, Pass, Array, Literal, And
 from ctree.c.nodes import Op
@@ -144,6 +145,10 @@ class PyBasicConversions(NodeTransformer):
                         (start.value < stop.value and step.value < 0) or \
                         (start.value > stop.value and step.value > 0):
                     return None
+
+            if not all(isinstance(item, CtreeNode)
+                       for item in (start, stop, step)):
+                return node
 
             # TODO allow any expressions castable to Long type
             target_types = [c_long]
