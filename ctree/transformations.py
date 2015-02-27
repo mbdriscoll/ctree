@@ -148,6 +148,7 @@ class PyBasicConversions(NodeTransformer):
 
             if not all(isinstance(item, CtreeNode)
                        for item in (start, stop, step)):
+                node.body = list(map(self.visit, node.body))
                 return node
 
             # TODO allow any expressions castable to Long type
@@ -228,6 +229,9 @@ class PyBasicConversions(NodeTransformer):
         args = [self.visit(a) for a in node.args]
         fn = self.visit(node.func)
         return FunctionCall(fn, args)
+
+    def visit_Expr(self, node):
+        return self.visit(node.value)
 
     def visit_FunctionDef(self, node):
         if ast.get_docstring(node):
