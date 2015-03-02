@@ -128,7 +128,10 @@ class CCodeGen(CommonCodeGen):
 
     def visit_For(self, node):
         body = self._genblock(node.body)
-        return "for (%s; %s; %s) %s" % (node.init, node.test, node.incr, body)
+        s = ""
+        if node.pragma:
+            s += "#pragma %s\n" % node.pragma + self._tab()
+        return s + "for (%s; %s; %s) %s" % (node.init, node.test, node.incr, body)
 
     def visit_FunctionCall(self, node):
         args = ", ".join(map(str, node.args))
