@@ -257,10 +257,11 @@ class LazySpecializedFunction(object):
 
         return self.ProgramConfig(args_subconfig, tuner_subconfig)
 
-    def get_transform_result(self, program_config, dir_name):
+    def get_transform_result(self, program_config, dir_name, cache=True):
         info = self.get_info(dir_name)
         # check to see if the necessary code is in the persistent cache
-        if hash(self) != info['hash'] and self.original_tree is not None:
+        if hash(self) != info['hash'] and self.original_tree is not None \
+                or not cache:
             # need to run transform() for code generation
             log.info('Hash miss. Running Transform')
             ctree.STATS.log("Filesystem cache miss")

@@ -379,6 +379,10 @@ class PyBasicConversions(NodeTransformer):
         return Array(type=ctypes.POINTER(array_type)(), body=elts)
 
     def visit_UnaryOp(self, node):
+        # If it's already C unary op, recurse only
+        if isinstance(node, UnaryOp):
+            node.arg = self.visit(node.arg)
+            return node
         argument = self.visit(node.operand)
         op = self.PY_OP_TO_CTREE_OP.get(type(node.op), type(node.op))()
         return UnaryOp(op, argument)
