@@ -212,6 +212,9 @@ class Constant(Literal):
     def get_type(self):
         return get_ctype(self.value)
 
+class Hex(Constant):
+    pass
+
 
 class Block(Statement):
     """Cite me."""
@@ -239,7 +242,7 @@ class SymbolRef(Literal):
     _fields = ['name','type']
 
     def __init__(self, name=None, sym_type=None, _global=False,
-                 _local=False, _const=False):
+                 _local=False, _const=False, _static=False):
         """
         Create a new symbol with the given name. If a declaration
         type is specified, the symbol is considered a declaration
@@ -250,6 +253,7 @@ class SymbolRef(Literal):
         self._global = _global
         self._local = _local
         self._const = _const
+        self._static =  _static
         super(SymbolRef, self).__init__()
 
     def set_global(self, value=True):
@@ -262,6 +266,10 @@ class SymbolRef(Literal):
 
     def set_const(self, value=True):
         self._const = value
+        return self
+
+    def set_static(self, value=True):
+        self._static = value
         return self
 
     @classmethod

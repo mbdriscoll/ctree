@@ -95,6 +95,8 @@ class CCodeGen(CommonCodeGen):
             s += "__global "
         if node._local:
             s += "__local "
+        if node._static:
+            s += "static "
         if node._const:
             s += "const "
         if node.type is not None:
@@ -142,8 +144,7 @@ class CCodeGen(CommonCodeGen):
         return '// <file: %s>%s' % (node.get_filename(), stmts)
 
     def visit_ArrayDef(self, node):
-        body = ", ".join(map(str, node.body))
-        return "%s[%s] = { %s }" % (node.target, node.size, body)
+        return "%s[%s] = " % (node.target, node.size) + self.visit(node.body)
 
     def visit_Break(self, node):
         return 'break'
@@ -153,4 +154,8 @@ class CCodeGen(CommonCodeGen):
 
     def visit_Array(self, node):
         return "{%s}" % ', '.join([i.codegen() for i in node.body])
+
+    def visit_Hex(self, node):
+        return hex(node.value)
+
 
