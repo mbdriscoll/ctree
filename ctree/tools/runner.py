@@ -45,7 +45,7 @@ def main(*args):
     if args.startproject:
         specializer_name = args.startproject
 
-        print "create project specializer %s" % specializer_name
+        print ("create project specializer %s" % specializer_name)
 
         builder = Builder.Builder("create", specializer_name, verbose=args.verbose)
         builder.build(None, None)

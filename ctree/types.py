@@ -125,6 +125,7 @@ def codegen_type(ctype):
             pass
     raise ValueError("No code generator defined for %s." % type(ctype))
 
+
 def get_common_ctype(ctypes_list):
     """
     :param ctypes_list: iterable of ctypes
@@ -142,8 +143,9 @@ def get_common_ctype(ctypes_list):
         Both operands are promoted to int
     """
 
-    #lowest ranking takes precedence
-    rankings = [ctypes.c_longdouble, ctypes.c_double, ctypes.c_float, ctypes.c_long, ctypes.c_uint, ctypes.c_int, ctypes.c_byte,
+    # lowest ranking takes precedence
+    rankings = [ctypes.c_longdouble, ctypes.c_double, ctypes.c_float,
+                ctypes.c_long, ctypes.c_uint, ctypes.c_int, ctypes.c_byte,
                 ctypes.c_wchar, ctypes.c_char, ctypes.c_bool, ctypes.c_void_p]
     filtered = []
     for c_type in ctypes_list:

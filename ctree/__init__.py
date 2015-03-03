@@ -120,6 +120,8 @@ if not CONFIG.getboolean('jit', 'CACHE'):
 _TYPE_CODEGENERATORS = {}
 _TYPE_RECOGNIZERS = {}
 
+import ctree.np
+
 import ast
 import inspect
 import ctree.frontend
