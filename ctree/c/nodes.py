@@ -291,6 +291,9 @@ class SymbolRef(Literal):
         and unparsed with the type.
         """
         self.name = name
+
+        if sym_type is not None:
+            assert not isinstance(sym_type, type)
         self.type = sym_type
         self._global = _global
         self._local = _local
