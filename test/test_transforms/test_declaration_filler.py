@@ -46,3 +46,24 @@ void fib(n) {
         stripped_actual = str(filled_ast).replace(" ", "").replace("\n", "")
         stripped_expected = expected.replace(" ", "").replace("\n", "")
         self.assertEqual(stripped_actual, stripped_expected)
+
+    def test_fmin(self):
+        def func():
+            a = 3.0
+            b = 4.0
+            c = fmax(a + b, 0.0)
+            return c
+        py_ast = get_ast(func).body[0]
+        c_ast = PyBasicConversions().visit(py_ast)
+        filled_ast = DeclarationFiller().visit(c_ast)
+        expected = """
+void func() {
+    double a = 3.0;
+    double b = 4.0;
+    double ____temp__c = fmax(a + b, 0.0);
+    double c = ____temp__c;
+    return c;
+}"""
+        stripped_actual = str(filled_ast).replace(" ", "").replace("\n", "")
+        stripped_expected = expected.replace(" ", "").replace("\n", "")
+        self.assertEqual(stripped_actual, stripped_expected)

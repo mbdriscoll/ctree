@@ -107,11 +107,6 @@ class DeclarationFiller(ast.NodeTransformer):
                     node.left.type = ct.c_char_p()
                 elif isinstance(value, C.SymbolRef):
                     node.left.type = self._lookup(value.name)
-                elif isinstance(value, C.FunctionCall):
-                    if self._has_key(value.func):
-                        node.left.type = self._lookup(value.func)
-                    else:
-                        raise NotImplementedError(value.type)
 
                 self.__add_entry(node.left.name, node.left.type)
         return node
