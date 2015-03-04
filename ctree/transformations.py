@@ -494,9 +494,18 @@ class DeclarationFiller(NodeTransformer):
         return node
 
     def visit_FunctionCall(self, node):
+        node.args = [self.visit(arg) for arg in node.args]
         if self._has_key(node.func):
             node.type = self._lookup(node.func)
-        node.args = [self.visit(arg) for arg in node.args]
+        elif node.func.name in {'fmax', 'fmin'}:
+            # Assume type of last argument for now
+            # TODO: Is there something smarter we can do?
+            if isinstance(node.args[0], SymbolRef):
+                node.type = self._lookup(node.args[0])
+            elif hasattr(node.args[0], 'get_type'):
+                node.type = node.args[0].get_type(self)
+            else:
+                raise NotImplementedError(node.args[0])
         return node
 
     def visit_BinaryOp(self, node):
@@ -518,6 +527,11 @@ class DeclarationFiller(NodeTransformer):
                         node.left.type = self._lookup(stripped_name)
                     elif hasattr(value, 'get_type'):
                         node.left.type = value.get_type(self)
+                    elif isinstance(value, FunctionCall):
+                        if self._has_key(value.func):
+                            node.left.type = self._lookup(value.func)
+                        elif hasattr(value, 'type'):
+                            node.left.type = value.type
                 elif hasattr(value, 'get_type'):
                     node.left.type = value.get_type()
                 elif isinstance(value, String):
@@ -527,6 +541,8 @@ class DeclarationFiller(NodeTransformer):
                 elif isinstance(value, FunctionCall):
                     if self._has_key(value.func):
                         node.left.type = self._lookup(value.func)
+                    else:
+                        raise NotImplementedError(value.type)
 
                 self.__add_entry(node.left.name, node.left.type)
         return node
