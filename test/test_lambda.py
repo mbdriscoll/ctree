@@ -3,7 +3,8 @@ import ctypes as ct
 import ast
 import sys
 
-from ctree.transformations import PyBasicConversions, DeclarationFiller
+from ctree.transformations import PyBasicConversions
+from ctree.transforms import DeclarationFiller
 from ctree.c.nodes import *
 
 

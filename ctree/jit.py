@@ -19,7 +19,7 @@ import ctree
 from ctree.nodes import Project
 from ctree.analyses import VerifyOnlyCtreeNodes
 from ctree.frontend import get_ast
-from ctree.transformations import DeclarationFiller
+from ctree.transforms import DeclarationFiller
 from ctree.c.nodes import CFile, MultiNode
 from ctree.ocl.nodes import OclFile
 from ctree.nodes import File

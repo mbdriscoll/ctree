@@ -2,7 +2,8 @@ __author__ = 'nzhang-dev'
 
 import ast
 
-from ctree.transformations import DeclarationFiller, PyBasicConversions
+from ctree.transforms import DeclarationFiller
+from ctree.transformations import PyBasicConversions
 from ctree.frontend import *
 from ctree.c.nodes import MultiNode
 

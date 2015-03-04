@@ -23,7 +23,7 @@ class CNode(CtreeNode):
 
     def codegen(self, indent=0):
         from ctree.c.codegen import CCodeGen
-        from ctree.transformations import DeclarationFiller
+        from ctree.transforms import DeclarationFiller
 
         return CCodeGen(indent).visit(self)
 

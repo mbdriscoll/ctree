@@ -10,7 +10,7 @@ class TestArrayDefs(CtreeTest):
         self._check_code(ArrayDef(
             SymbolRef('hi', ct.c_int()), Constant(2),
             Array(body=[Constant(0), Constant(1)]),
-        ), "int hi[2] = { 0, 1 }")
+        ), "int hi[2] = {0, 1}")
 
     def test_complex(self):
         node = ArrayDef(
@@ -21,4 +21,4 @@ class TestArrayDefs(CtreeTest):
                 Mul(Sub(Constant(99), SymbolRef('d')), Constant(200))
             ])
         )
-        self._check_code(node, "int myArray[2] = { b + c, (99 - d) * 200 }")
+        self._check_code(node, "int myArray[2] = {b + c, (99 - d) * 200}")
