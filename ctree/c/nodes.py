@@ -32,6 +32,47 @@ class CNode(CtreeNode):
 
         return CDotGenLabeller().visit(self)
 
+    def __add__(self, other):
+        return Add(self, other)
+
+    def __neg__(self):
+        return BitNot(self)
+
+    def __sub__(self, other):
+        return Sub(self, other)
+
+    def __or__(self, other):
+        return BitOr(self, other)
+
+    def __and__(self, other):
+        return BitAnd(self, other)
+
+    def __xor__(self, other):
+        return BitXor(self, other)
+
+    def __lshift__(self, other):
+        if isinstance(other, int):
+            return BitShL(self, Constant(other))
+        return BitShL(self, other)
+
+    def __rshift__(self, other):
+        if isinstance(other, int):
+            return BitShR(self, Constant(other))
+        return BitShR(self, other)
+
+    def __mul__(self, other):
+        return Mul(self, other)
+
+    def __div__(self, other):
+        return Div(self, other)
+
+    __truediv__ = __div__
+
+    def __mod__(self, other):
+        return Mod(self, other)
+
+
+
 
 class CFile(CNode, File):
     """Represents a .c file."""
@@ -425,7 +466,7 @@ class ArrayDef(Expression):
 class Array(Expression):
     _fields = ['type', 'size', 'body']
 
-    def __init__(self, type, size = None, body = None):
+    def __init__(self, type=None, size = None, body = None):
         self.body = body or []
         self.size = size or len(self.body)
         self.type = type

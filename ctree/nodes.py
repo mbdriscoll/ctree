@@ -108,6 +108,7 @@ class CtreeNode(ast.AST):
         return self.__dict__ == getattr(other, '__dict__', None)
 
 
+
 # ---------------------------------------------------------------------------
 # Common nodes
 
