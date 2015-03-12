@@ -8,6 +8,8 @@ from ctree.types import codegen_type
 from ctree.precedence import UnaryOp, BinaryOp, TernaryOp, Cast
 from ctree.precedence import get_precedence, is_left_associative
 
+from numbers import Number
+
 from ctree.nodes import CommonCodeGen
 
 class CCodeGen(CommonCodeGen):
