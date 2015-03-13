@@ -74,8 +74,7 @@ setup(
 
     install_requires=[
         'numpy',
-        'pyserial',
-        'pycl'
+        'pyserial'
     ],
 
     data_files=data_file_list,

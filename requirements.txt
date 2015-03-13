@@ -1,3 +1,2 @@
-pycl
 numpy
 pygments
