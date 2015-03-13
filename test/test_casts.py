@@ -13,9 +13,9 @@ class TestCastOps(CtreeTest):
         self._check_code(tree, "(void*) foo")
 
     def test_int(self):
-        tree = Cast(c_long(), self.foo)
-        self._check_code(tree, "(long) foo")
+        tree = Cast(c_int(), self.foo)
+        self._check_code(tree, "(int) foo")
 
     def test_int_p(self):
-        tree = Cast(POINTER(c_long)(), self.foo)
-        self._check_code(tree, "(long*) foo")
+        tree = Cast(POINTER(c_int)(), self.foo)
+        self._check_code(tree, "(int*) foo")

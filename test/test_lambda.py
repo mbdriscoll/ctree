@@ -3,7 +3,8 @@ import ctypes as ct
 import ast
 import sys
 
-from ctree.transformations import PyBasicConversions, DeclarationFiller
+from ctree.transformations import PyBasicConversions
+from ctree.transforms import DeclarationFiller
 from ctree.c.nodes import *
 
 
@@ -21,10 +22,10 @@ class TestAssigns(unittest.TestCase):
         transformed_node = PyBasicConversions().visit(node)
 
         transformed_node.name = "apply"
-        transformed_node.return_type = ct.c_int32()
+        transformed_node.return_type = ct.c_float()
 
         for param in transformed_node.params:
-            param.type = ct.c_int32()
+            param.type = ct.c_float()
 
         return transformed_node
 
@@ -49,7 +50,7 @@ class TestAssigns(unittest.TestCase):
         # simulating __call__()
         type_inferred_node = self.mini__call__(square_lambda_node)
 
-        self.assertEqual(str(type_inferred_node), "int apply(int x) {\n" + \
+        self.assertEqual(str(type_inferred_node), "float apply(float x) {\n" + \
                                                 "    return x * x;\n}")
 
 
@@ -63,5 +64,5 @@ class TestAssigns(unittest.TestCase):
         # simulating __call__()
         type_inferred_node = self.mini__call__(add_lambda_node)
 
-        self.assertEqual(str(type_inferred_node), "int apply(int x, int y) {\n" + \
+        self.assertEqual(str(type_inferred_node), "float apply(float x, float y) {\n" + \
                                                 "    return x + y;\n}")

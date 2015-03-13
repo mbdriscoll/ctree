@@ -8,6 +8,8 @@ from ctree.types import codegen_type
 from ctree.precedence import UnaryOp, BinaryOp, TernaryOp, Cast
 from ctree.precedence import get_precedence, is_left_associative
 
+from numbers import Number
+
 from ctree.nodes import CommonCodeGen
 
 class CCodeGen(CommonCodeGen):
@@ -95,6 +97,8 @@ class CCodeGen(CommonCodeGen):
             s += "__global "
         if node._local:
             s += "__local "
+        if node._static:
+            s += "static "
         if node._const:
             s += "const "
         if node.type is not None:
@@ -128,7 +132,10 @@ class CCodeGen(CommonCodeGen):
 
     def visit_For(self, node):
         body = self._genblock(node.body)
-        return "for (%s; %s; %s) %s" % (node.init, node.test, node.incr, body)
+        s = ""
+        if node.pragma:
+            s += "#pragma %s\n" % node.pragma + self._tab()
+        return s + "for (%s; %s; %s) %s" % (node.init, node.test, node.incr, body)
 
     def visit_FunctionCall(self, node):
         args = ", ".join(map(str, node.args))
@@ -142,8 +149,7 @@ class CCodeGen(CommonCodeGen):
         return '// <file: %s>%s' % (node.get_filename(), stmts)
 
     def visit_ArrayDef(self, node):
-        body = ", ".join(map(str, node.body))
-        return "%s[%s] = { %s }" % (node.target, node.size, body)
+        return "%s[%s] = " % (node.target, node.size) + self.visit(node.body)
 
     def visit_Break(self, node):
         return 'break'
@@ -153,4 +159,8 @@ class CCodeGen(CommonCodeGen):
 
     def visit_Array(self, node):
         return "{%s}" % ', '.join([i.codegen() for i in node.body])
+
+    def visit_Hex(self, node):
+        return hex(node.value)
+
 

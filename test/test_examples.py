@@ -5,6 +5,7 @@ The 'examples' directory needs to be in PYTHONPATH for these to pass.
 """
 
 import unittest
+import ctree
 
 try:
   import examples
@@ -40,6 +41,7 @@ class TestAllExamples(unittest.TestCase):
         from examples import TuningSpecializer
         TuningSpecializer.main()
 
+    @unittest.skipUnless(ctree.OCL_ENABLED, "OpenCL mode not enabled")
     def test_OclDoubler(self):
         from examples import OclDoubler
         OclDoubler.main()

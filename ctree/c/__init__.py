@@ -21,9 +21,17 @@ register_type_recognizers(
     }
 )
 
+import sys
+
+if sys.maxsize > 2 ** 32:
+    X64_BIT = True
+else:
+    # Python alias c_int to c_long on 32 bit platforms
+    X64_BIT = False
+
 register_type_codegenerators({
     ctypes.c_int: lambda t: "int",
-    ctypes.c_long: lambda t: "long",
+    ctypes.c_long: lambda t: "long" if X64_BIT else "int",
     ctypes.c_float: lambda t: "float",
     ctypes.c_double: lambda t: "double",
     ctypes.c_char: lambda t: "char",
@@ -31,6 +39,7 @@ register_type_codegenerators({
     ctypes.c_void_p: lambda t: "void*",
     ctypes.c_bool: lambda t: "bool",
     ctypes.c_ulong: lambda t: "size_t",
+    ctypes.c_uint32: lambda t: "uint32_t",
     type(None): lambda n: "void",
 
     _ctypes.Array: lambda ct: "%s*" % codegen_type(ct._type_()),

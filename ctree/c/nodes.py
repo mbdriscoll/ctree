@@ -16,6 +16,7 @@ import ctree
 from ctree.util import singleton, highlight, truncate
 from ctree.types import get_ctype, get_common_ctype
 import hashlib
+import ctypes
 
 
 class CNode(CtreeNode):
@@ -23,7 +24,7 @@ class CNode(CtreeNode):
 
     def codegen(self, indent=0):
         from ctree.c.codegen import CCodeGen
-        from ctree.transformations import DeclarationFiller
+        from ctree.transforms import DeclarationFiller
 
         return CCodeGen(indent).visit(self)
 
@@ -31,6 +32,47 @@ class CNode(CtreeNode):
         from ctree.c.dotgen import CDotGenLabeller
 
         return CDotGenLabeller().visit(self)
+
+    def __add__(self, other):
+        return Add(self, other)
+
+    def __neg__(self):
+        return BitNot(self)
+
+    def __sub__(self, other):
+        return Sub(self, other)
+
+    def __or__(self, other):
+        return BitOr(self, other)
+
+    def __and__(self, other):
+        return BitAnd(self, other)
+
+    def __xor__(self, other):
+        return BitXor(self, other)
+
+    def __lshift__(self, other):
+        if isinstance(other, int):
+            return BitShL(self, Constant(other))
+        return BitShL(self, other)
+
+    def __rshift__(self, other):
+        if isinstance(other, int):
+            return BitShR(self, Constant(other))
+        return BitShR(self, other)
+
+    def __mul__(self, other):
+        return Mul(self, other)
+
+    def __div__(self, other):
+        return Div(self, other)
+
+    __truediv__ = __div__
+
+    def __mod__(self, other):
+        return Mod(self, other)
+
+
 
 
 class CFile(CNode, File):
@@ -109,17 +151,6 @@ class CFile(CNode, File):
         return so_file
 
 
-class MultiNode(CNode):
-    """
-        Some Python nodes need to be translated to a block of nodes but Visitors can't do that.
-    """
-
-    _fields = ['body']
-    _requires_semicolon = lambda self: False
-
-    def __init__(self, body = None):
-        self.body = body or []
-        CNode.__init__(self)
 
 
 class Statement(CNode):
@@ -174,11 +205,12 @@ class DoWhile(Statement):
 class For(Statement):
     _fields = ['init', 'test', 'incr', 'body']
 
-    def __init__(self, init=None, test=None, incr=None, body=None):
+    def __init__(self, init=None, test=None, incr=None, body=None, pragma=None):
         self.init = init
         self.test = test
         self.incr = incr
         self.body = body
+        self.pragma = pragma
         super(For, self).__init__()
 
 
@@ -212,6 +244,9 @@ class Constant(Literal):
     def get_type(self):
         return get_ctype(self.value)
 
+class Hex(Constant):
+    pass
+
 
 class Block(Statement):
     """Cite me."""
@@ -223,6 +258,13 @@ class Block(Statement):
 
     def _requires_semicolon(self):
         return False
+
+
+class MultiNode(Block):
+    """
+        Some Python nodes need to be translated to a block of nodes but Visitors can't do that.
+    """
+
 
 
 class String(Literal):
@@ -239,17 +281,21 @@ class SymbolRef(Literal):
     _fields = ['name','type']
 
     def __init__(self, name=None, sym_type=None, _global=False,
-                 _local=False, _const=False):
+                 _local=False, _const=False, _static=False):
         """
         Create a new symbol with the given name. If a declaration
         type is specified, the symbol is considered a declaration
         and unparsed with the type.
         """
         self.name = name
+
+        if sym_type is not None:
+            assert not isinstance(sym_type, type)
         self.type = sym_type
         self._global = _global
         self._local = _local
         self._const = _const
+        self._static =  _static
         super(SymbolRef, self).__init__()
 
     def set_global(self, value=True):
@@ -262,6 +308,10 @@ class SymbolRef(Literal):
 
     def set_const(self, value=True):
         self._const = value
+        return self
+
+    def set_static(self, value=True):
+        self._static = value
         return self
 
     @classmethod
@@ -416,7 +466,7 @@ class ArrayDef(Expression):
 class Array(Expression):
     _fields = ['type', 'size', 'body']
 
-    def __init__(self, type, size = None, body = None):
+    def __init__(self, type=None, size = None, body = None):
         self.body = body or []
         self.size = size or len(self.body)
         self.type = type

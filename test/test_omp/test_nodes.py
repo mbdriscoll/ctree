@@ -1,5 +1,5 @@
 from textwrap import dedent
-from ctypes import c_int
+from ctypes import c_float
 
 from ctree.omp.nodes import *
 from ctree.omp.macros import *
@@ -47,7 +47,7 @@ class TestOmpCodegen(CtreeTest):
     def test_sections_1(self):
         node = OmpParallelSections(sections=[
                 OmpSection(body=[
-                    Assign(SymbolRef("i", c_int()), Constant(2)),
+                    Assign(SymbolRef("i", c_float()), Constant(2)),
                 ]),
         ])
         self._check_code(node, """\
@@ -55,7 +55,7 @@ class TestOmpCodegen(CtreeTest):
         {
             #pragma omp section
             {
-                int i = 2;
+                float i = 2;
             }
         }""")
 

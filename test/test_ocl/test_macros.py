@@ -1,8 +1,10 @@
 import unittest
 
+import ctree
 from ctree.ocl.macros import *
 
 
+@unittest.skipUnless(ctree.OCL_ENABLED, "OpenCL not enabled.")
 class TestOclMacros(unittest.TestCase):
     def test_CL_SUCCESS(self):
         tree = CL_SUCCESS()
