@@ -51,7 +51,7 @@ class TestSymbols(unittest.TestCase):
         self._check(ref2, "foo")
 
     def test_copy_with_declare(self):
-        ref1 = SymbolRef("foo", ct.c_int())
+        ref1 = SymbolRef("foo", ct.c_float())
         ref2 = ref1.copy(declare=True)
-        self._check(ref2, "int foo")
+        self._check(ref2, "float foo")
 

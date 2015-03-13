@@ -12,6 +12,14 @@ class TestNoPygments(unittest.TestCase):
             self.assertEqual(code, highlighted)
 
 
+PYGMENTS_INSTALLED = True
+try:
+    import pygments
+except:
+    PYGMENTS_INSTALLED = False
+
+
+@unittest.skipUnless(PYGMENTS_INSTALLED, "Skipping pygments tests")
 class TestHighlights(unittest.TestCase):
     def test_highlight_c(self):
         highlighted = highlight("int a = 0;", "c")

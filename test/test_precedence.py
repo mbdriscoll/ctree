@@ -75,13 +75,13 @@ class TestPrecedence(unittest.TestCase):
 
     def test_cast1(self):
         a, b, c = self.args
-        tree = Add(Cast(ct.c_int(), a), b)
-        self._check(tree, "(int) a + b")
+        tree = Add(Cast(ct.c_float(), a), b)
+        self._check(tree, "(float) a + b")
 
     def test_cast2(self):
         a, b, c = self.args
-        tree = Cast(ct.c_int(), Add(a, b))
-        self._check(tree, "(int) (a + b)")
+        tree = Cast(ct.c_float(), Add(a, b))
+        self._check(tree, "(float) (a + b)")
 
 
 class TestAssociativityPrecedence(unittest.TestCase):

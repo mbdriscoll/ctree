@@ -12,17 +12,17 @@ class TestLifter(CtreeTest):
 
     def test_one_param(self):
         inner = SymbolRef("foo")
-        inner.lift(params=[SymbolRef(inner.name, c_int())])
+        inner.lift(params=[SymbolRef(inner.name, c_double())])
 
         tree = FunctionDecl(None, "fn", [], [
-            Assign(inner, Constant(123)),
+            Assign(inner, Constant(123.0)),
         ])
 
         tree = Lifter().visit(tree)
 
         self._check_code(actual=tree, expected="""\
-        void fn(int foo) {
-            foo = 123;
+        void fn(double foo) {
+            foo = 123.0;
         }""")
 
     def test_two_params(self):
@@ -55,7 +55,7 @@ class TestLifter(CtreeTest):
         self._check_code(actual=tree, expected="""\
         // <file: generated.c>
         #include <stdio.h>
-        long get_two() {
+        int get_two() {
             return 2;
         };
         """)
@@ -75,7 +75,7 @@ class TestLifter(CtreeTest):
         #include <stdio.h>
         #include <stdlib.h>
         #include <float.h>
-        long get_two() {
+        int get_two() {
             return 2;
         };
         """)
