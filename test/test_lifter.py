@@ -3,6 +3,7 @@ from copy import deepcopy
 from util import CtreeTest
 from fixtures.sample_asts import *
 from ctree.transformations import Lifter
+import sys
 
 class TestLifter(CtreeTest):
     def test_nop(self):
@@ -52,13 +53,22 @@ class TestLifter(CtreeTest):
 
         tree = Lifter().visit(tree)
 
-        self._check_code(actual=tree, expected="""\
-        // <file: generated.c>
-        #include <stdio.h>
-        int get_two() {
-            return 2;
-        };
-        """)
+        if sys.maxsize > 2 ** 32:
+            self._check_code(actual=tree, expected="""\
+            // <file: generated.c>
+            #include <stdio.h>
+            long get_two() {
+                return 2;
+            };
+            """)
+        else:
+            self._check_code(actual=tree, expected="""\
+            // <file: generated.c>
+            #include <stdio.h>
+            int get_two() {
+                return 2;
+            };
+            """)
 
     def test_multi_includes(self):
         tree = CFile("generated", [deepcopy(get_two_ast)])
@@ -70,12 +80,23 @@ class TestLifter(CtreeTest):
 
         tree = Lifter().visit(tree)
 
-        self._check_code(actual=tree, expected="""\
-        // <file: generated.c>
-        #include <stdio.h>
-        #include <stdlib.h>
-        #include <float.h>
-        int get_two() {
-            return 2;
-        };
+        if sys.maxsize > 2 ** 32:
+            self._check_code(actual=tree, expected="""\
+            // <file: generated.c>
+            #include <stdio.h>
+            #include <stdlib.h>
+            #include <float.h>
+            long get_two() {
+                return 2;
+            };
+            """)
+        else:
+            self._check_code(actual=tree, expected="""\
+            // <file: generated.c>
+            #include <stdio.h>
+            #include <stdlib.h>
+            #include <float.h>
+            int get_two() {
+                return 2;
+            };
         """)

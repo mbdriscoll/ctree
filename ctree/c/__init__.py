@@ -29,7 +29,6 @@ else:
     # Python alias c_int to c_long on 32 bit platforms
     X64_BIT = False
 
-
 register_type_codegenerators({
     ctypes.c_int: lambda t: "int",
     ctypes.c_long: lambda t: "long" if X64_BIT else "int",
