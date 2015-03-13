@@ -45,7 +45,7 @@ data_file_list = make_data_file_list("ctree/tools/generators/templates", "ctree/
 
 setup(
     name='ctree',
-    version='0.1.8',
+    version='0.1.9',
     description='A C-family AST implementation designed to be an IR for DSL compilers.',
 
     packages=[
@@ -74,8 +74,7 @@ setup(
 
     install_requires=[
         'numpy',
-        'pyserial',
-        'pycl'
+        'pyserial'
     ],
 
     data_files=data_file_list,
