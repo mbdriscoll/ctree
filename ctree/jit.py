@@ -221,7 +221,7 @@ class LazySpecializedFunction(object):
     def config_to_dirname(self, program_config):
         """Returns the subdirectory name under .compiled/funcname"""
         # fixes the directory names and squishes invalid chars
-        regex_filter = re.compile(r"""[/\?%*:|"<>()'{} ]""")
+        regex_filter = re.compile(r"""[/\?%*:|"<>()'{} -]""")
 
         def deep_getattr(obj, s):
             parts = s.split('.')
