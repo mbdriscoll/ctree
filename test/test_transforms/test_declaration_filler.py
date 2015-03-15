@@ -8,7 +8,7 @@ from ctree.transforms import DeclarationFiller
 
 
 def fib(n):
-    a, b = 0, 1
+    a, b = 0.0, 1.0
     k = "hello"
     while n > 0:
         a, b = b, a + b
@@ -26,16 +26,16 @@ class DeclarationTest(unittest.TestCase):
         expected = """
 void fib(n) {
 
-    long a = 0;
-    long b = 1;
+    double a = 0.0;
+    double b = 1.0;
 
 
     char* k = "hello";
 
     while (n > 0) {
 
-        long ____temp__a = b;
-        long ____temp__b = a + b;
+        double ____temp__a = b;
+        double ____temp__b = a + b;
         a = ____temp__a;
         b = ____temp__b;
 

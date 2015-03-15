@@ -126,7 +126,7 @@ import numpy as np
 
 
 def l2norm(A):
-    return math.sqrt(sum(x*x for x in A))
+    return np.sqrt(np.sum(np.square(A)))
 
 l2norm_ast = CFile("generated", [
     CppInclude("math.h"),
@@ -139,7 +139,7 @@ l2norm_ast = CFile("generated", [
                      SymbolRef("n", c_int()),
                      ],
                  defn=[
-                     SymbolRef("sum", c_double()),
+                     Assign(SymbolRef("sum", c_double()), Constant(0)),
                      For(Assign(SymbolRef("i", c_int()), Constant(0)),
                          Lt(SymbolRef("i"), SymbolRef("n")),
                          PostInc(SymbolRef("i")), [

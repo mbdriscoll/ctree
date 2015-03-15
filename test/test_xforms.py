@@ -91,6 +91,20 @@ class TestBasicConversions(unittest.TestCase):
             c_ast = c_op(Constant(1), Constant(2))
             self._check(py_ast, c_ast)
 
+    def test_boolop(self):
+        def fn():
+            1 or 2 or 3
+        py_ast = get_ast(fn).body[0].body[0]
+        c_ast = Or(Or(Constant(1), Constant(2)), Constant(3))
+        self._check(py_ast, c_ast)
+
+    def test_compare(self):
+        def fn():
+            0 < a < 3
+        py_ast = get_ast(fn).body[0].body[0]
+        c_ast = And(Gt(0, SymbolRef("a")), Lt(SymbolRef("a"), Constant(3)))
+        self._check(py_ast, c_ast)
+
     def test_return(self):
         py_ast = ast.Return()
         c_ast = Return()
