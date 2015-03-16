@@ -1,6 +1,7 @@
 import unittest
 from ctypes import c_char_p
 
+import ctree
 from ctree.nodes import *
 from ctree.c.nodes import *
 
@@ -18,6 +19,7 @@ class TestPathRefs(unittest.TestCase):
         # self.assertIsNone( proj.find(GeneratedPathRef) )
         # self.assertIsNotNone( proj.find(String) )
 
+    @unittest.skipUnless(ctree.OCL_ENABLED, "OpenCL not enabled")
     def test_other_ref(self):
         from ctree.ocl.nodes import OclFile
 

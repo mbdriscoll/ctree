@@ -21,7 +21,8 @@ from ctree.analyses import VerifyOnlyCtreeNodes
 from ctree.frontend import get_ast
 from ctree.transforms import DeclarationFiller
 from ctree.c.nodes import CFile, MultiNode
-from ctree.ocl.nodes import OclFile
+if ctree.OCL_ENABLED:
+    from ctree.ocl.nodes import OclFile
 from ctree.nodes import File
 
 log = logging.getLogger(__name__)
@@ -32,9 +33,10 @@ def getFile(filepath):
     Takes a filepath and returns a specialized File instance (i.e. OclFile,
     CFile, etc)
     """
-    ext_map = {'.'+t._ext: t for t in (
-        CFile, OclFile
-    )}
+    file_types = [CFile]
+    if ctree.OCL_ENABLED:
+        file_types.append(OclFile)
+    ext_map = {'.'+t._ext: t for t in file_types}
     path, filename = os.path.split(filepath)
     name, ext = os.path.splitext(filename)
     filetype = ext_map[ext]
@@ -221,7 +223,7 @@ class LazySpecializedFunction(object):
     def config_to_dirname(self, program_config):
         """Returns the subdirectory name under .compiled/funcname"""
         # fixes the directory names and squishes invalid chars
-        regex_filter = re.compile(r"""[/\?%*:|"<>()'{} ]""")
+        regex_filter = re.compile(r"""[/\?%*:|"<>()'{} -]""")
 
         def deep_getattr(obj, s):
             parts = s.split('.')

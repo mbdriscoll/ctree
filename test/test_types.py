@@ -1,4 +1,5 @@
 import ctypes
+import sys
 
 from ctree.types import get_ctype, get_common_ctype
 from util import CtreeTest
@@ -43,7 +44,11 @@ class TestTypeCodeGen(CtreeTest):
 
     def test_long(self):
         tree = SymbolRef("i", ctypes.c_long())
-        self._check_code(tree, "long i")
+        if sys.maxsize > 2 ** 32:
+            self._check_code(tree, "long i")
+        else:
+            # int == long
+            self._check_code(tree, "int i")
 
     def test_float(self):
         tree = SymbolRef("i", ctypes.c_double())

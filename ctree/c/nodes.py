@@ -16,6 +16,7 @@ import ctree
 from ctree.util import singleton, highlight, truncate
 from ctree.types import get_ctype, get_common_ctype
 import hashlib
+import ctypes
 
 
 class CNode(CtreeNode):
@@ -150,17 +151,6 @@ class CFile(CNode, File):
         return so_file
 
 
-class MultiNode(CNode):
-    """
-        Some Python nodes need to be translated to a block of nodes but Visitors can't do that.
-    """
-
-    _fields = ['body']
-    _requires_semicolon = lambda self: False
-
-    def __init__(self, body = None):
-        self.body = body or []
-        CNode.__init__(self)
 
 
 class Statement(CNode):
@@ -219,6 +209,8 @@ class For(Statement):
         self.init = init
         self.test = test
         self.incr = incr
+        if body is None:
+            body = []
         self.body = body
         self.pragma = pragma
         super(For, self).__init__()
@@ -268,6 +260,13 @@ class Block(Statement):
 
     def _requires_semicolon(self):
         return False
+
+
+class MultiNode(Block):
+    """
+        Some Python nodes need to be translated to a block of nodes but Visitors can't do that.
+    """
+
 
 
 class String(Literal):

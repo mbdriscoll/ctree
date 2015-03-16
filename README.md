@@ -14,6 +14,10 @@ Quick Install
 ```shell
 pip install ctree
 ```
+For OpenCL support, install the pycl package.
+```shell
+pip install pycl
+```
 
 Development
 -----------

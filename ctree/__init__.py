@@ -120,6 +120,12 @@ if not CONFIG.getboolean('jit', 'CACHE'):
 _TYPE_CODEGENERATORS = {}
 _TYPE_RECOGNIZERS = {}
 
+OCL_ENABLED = True
+try:
+    import pycl
+except ImportError:
+    OCL_ENABLED = False
+
 import ctree.np
 
 import ast

@@ -228,6 +228,11 @@ class PyBasicConversions(NodeTransformer):
     def visit_Call(self, node):
         args = [self.visit(a) for a in node.args]
         fn = self.visit(node.func)
+        if node.starargs is not None:
+            node.func = fn
+            node.args = args
+            node.starargs = self.visit(node.starargs)
+            return node
         return FunctionCall(fn, args)
 
     def visit_Expr(self, node):

@@ -5,28 +5,31 @@ ctree extensions for OpenCL.
 import logging
 
 log = logging.getLogger(__name__)
+import ctree
 
 
-import pycl
+if ctree.OCL_ENABLED:
 
-from ctree.types import (
-    codegen_type,
-    register_type_recognizers,
-    register_type_codegenerators,
-)
+    import pycl
 
-register_type_recognizers({
-})
+    from ctree.types import (
+        codegen_type,
+        register_type_recognizers,
+        register_type_codegenerators,
+    )
 
-register_type_codegenerators({
-    pycl.cl_context:        lambda t: "cl_context",
-    pycl.cl_command_queue:  lambda t: "cl_command_queue",
-    pycl.cl_kernel:         lambda t: "cl_kernel",
-    pycl.cl_mem:            lambda t: "cl_mem",
-})
+    register_type_recognizers({
+    })
+
+    register_type_codegenerators({
+        pycl.cl_context:        lambda t: "cl_context",
+        pycl.cl_command_queue:  lambda t: "cl_command_queue",
+        pycl.cl_kernel:         lambda t: "cl_kernel",
+        pycl.cl_mem:            lambda t: "cl_mem",
+    })
 
 
-devices_context_queue_map = {}
+    devices_context_queue_map = {}
 
 
 def get_context_and_queue_from_devices(devices):
