@@ -210,7 +210,8 @@ class For(Statement):
         self.test = test
         self.incr = incr
         if body is None:
-            self.body = body
+            body = []
+        self.body = body
         self.pragma = pragma
         super(For, self).__init__()
 
