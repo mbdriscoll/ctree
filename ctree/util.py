@@ -14,6 +14,17 @@ def singleton(cls):
     return instance
 
 
+def product(nums):
+    result = 1
+    for x in nums:
+        result *= x
+    return result
+
+
+def strides(shape):
+    return [product(shape[x:]) for x in range(1, len(shape))] + [1]
+
+
 def truncate(text):
     max_display_lines = ctree.CONFIG.getint("log", "max_lines_per_source")
     n_lines = len(text.splitlines())
