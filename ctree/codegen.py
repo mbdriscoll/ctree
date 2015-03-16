@@ -29,10 +29,13 @@ class CodeGenVisitor(NodeVisitor):
             self._indent += 1
         body = ""
         for tree in flatten(forest):
-            semicolon_opt = ";" if tree._requires_semicolon() else ""
-            block = tree.codegen(self._indent)
-            if block is not "":
-                body += self._tab() + block + semicolon_opt + "\n"
+            if not hasattr(tree, '_requires_semicolon'):
+                body += self._tab() + str(tree) + "\n"
+            else:
+                semicolon_opt = ";" if tree._requires_semicolon() else ""
+                block = tree.codegen(self._indent)
+                if block is not "":
+                    body += self._tab() + block + semicolon_opt + "\n"
         if increase_indent:
             self._indent -= 1
         if insert_curly_brackets:
