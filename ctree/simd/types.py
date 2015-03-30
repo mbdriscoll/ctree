@@ -1,7 +1,4 @@
-from ctree.types import CtreeType
-
-
-class SimdType(CtreeType):
+class SimdType(object):
     """Base class for all SIMD Types."""
 
     def codegen(self, indent=0):
