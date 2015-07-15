@@ -327,6 +327,8 @@ class PyBasicConversions(NodeTransformer):
         # making a multinode no matter what. It's cleaner than branching a lot
         operation_body = []
         swap_body = []
+        if len(target_value_list) == 1:
+            return Assign(target_value_list[0][0], target_value_list[0][1])
         for target, value in target_value_list:
             if not isinstance(target, SymbolRef):
                 operation_body.append(Assign(target, value))
