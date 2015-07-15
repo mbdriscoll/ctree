@@ -103,8 +103,6 @@ class DeclarationFiller(ast.NodeTransformer):
                             node.left.type = value.type
                 elif hasattr(value, 'get_type'):
                     node.left.type = value.get_type()
-                elif hasattr(value, 'type'):
-                    node.left.type = value.type
                 elif isinstance(value, C.String):
                     node.left.type = ct.c_char_p()
                 elif isinstance(value, C.SymbolRef):
