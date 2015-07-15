@@ -60,8 +60,7 @@ void fib(n) {
 void func() {
     double a = 3.0;
     double b = 4.0;
-    double ____temp__c = fmax(a + b, 0.0);
-    double c = ____temp__c;
+    double c = fmax(a + b, 0.0);
     return c;
 }"""
         stripped_actual = str(filled_ast).replace(" ", "").replace("\n", "")
