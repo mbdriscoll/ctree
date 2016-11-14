@@ -29,18 +29,19 @@ class TuningDriver(object):
         pass
 
 
-class NullTuningDriver(TuningDriver):
+class ConstantTuningDriver(TuningDriver):
     """
-    Provides a stream of None's, and ignores reports()s.
+    Provides a stream of the same config, and ignores reports()s.
     """
-    def __init__(self):
+    def __init__(self, config=None):
         """Do nothing."""
-        super(NullTuningDriver, self).__init__()
+        super(ConstantTuningDriver, self).__init__()
+        self._config = config
 
     def _get_configs(self):
         """Yield the empty configuration."""
         while True:
-            yield {}
+            yield self._config
 
     def report(self, *args, **kwargs):
         """Ignore reports."""
@@ -53,6 +54,10 @@ class Parameter(object):
     def __init__(self, name):
         """Create a parameter with the given name."""
         self.name = name
+        self._values = []
+
+    def values(self):
+        return self._values
 
 
 class IntegerParameter(Parameter):
@@ -62,8 +67,46 @@ class IntegerParameter(Parameter):
         super(IntegerParameter, self).__init__(name)
         self._values = range(lower_bound, upper_bound)
 
-    def values(self):
-        return self._values
+
+class BooleanParameter(Parameter):
+    """A boolean parameter."""
+    def __init__(self, name):
+        """Create a bool parameter."""
+        super(BooleanParameter, self).__init__(name)
+        self._values = [True, False]
+
+
+class EnumParameter(Parameter):
+    """A enum parameter."""
+    def __init__(self, name, values):
+        """Create an enum parameter."""
+        super(EnumParameter, self).__init__(name)
+        self._values = values
+
+
+class IntegerArrayParameter(Parameter):
+    """An array of integers."""
+    def __init__(self, name, count=1, lower_bound=0, upper_bound=1):
+        """Create an IntArray parameter."""
+        super(IntegerArrayParameter, self).__init__(name)
+        self._values = itertools.product(range(lower_bound,upper_bound), repeat=count)
+
+
+class EnumArrayParameter(Parameter):
+    """An array of enums."""
+    def __init__(self, name, count=1, values=None):
+        """Create an EnumArray parameter."""
+        super(EnumArrayParameter, self).__init__(name)
+        values = values if values else []
+        self._values = itertools.product(values, repeat=count)
+
+
+class BooleanArrayParameter(Parameter):
+    """An array of booleans."""
+    def __init__(self, name, count=1):
+        """Create an BooleanArray parameter."""
+        super(BooleanArrayParameter, self).__init__(name)
+        self._values = itertools.product([True,False], repeat=count)
 
 
 class Result(object):

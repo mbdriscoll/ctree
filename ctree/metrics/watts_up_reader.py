@@ -42,7 +42,6 @@ import time
 import select
 import collections
 import argparse
-import sys
 
 
 class WattsUpReader(object):
@@ -57,7 +56,7 @@ class WattsUpReader(object):
     )
 
     def __init__(self, port_name=None, verbose=False):
-        if port_name == None:
+        if port_name is None:
             from ctree import CONFIG
             port_name = CONFIG.get('wattsup', 'port')
         self.port_name = port_name
@@ -295,8 +294,6 @@ class WattsUpReader(object):
 
 
 if __name__ == "__main__":
-    # default port name is based on right hand side usb on macbookpro
-    # usb_port_name = "/dev/tty.usbserial-A600KI7M" if len(sys.argv) < 2 else sys.argv[1]
     parser = argparse.ArgumentParser(description="interface to WattsUpPro usb power meter")
     parser.add_argument(
         '-i', '--interactive', help='interactive mode, allows direct communcation with device', action="store_true"

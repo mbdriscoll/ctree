@@ -1,25 +1,21 @@
-import unittest
+from ctypes import *
 
+from util import CtreeTest
 from ctree.c.nodes import *
-from ctree.c.types import *
 
 
-class TestCastOps(unittest.TestCase):
+class TestCastOps(CtreeTest):
     def setUp(self):
         self.foo = SymbolRef('foo')
 
-    def _check(self, tree, expected):
-        actual = str(tree)
-        self.assertEqual(actual, expected)
-
     def test_void(self):
-        tree = Cast(Ptr(Void()), self.foo)
-        self._check(tree, "(void*) foo")
+        tree = Cast(c_void_p(), self.foo)
+        self._check_code(tree, "(void*) foo")
 
     def test_int(self):
-        tree = Cast(Int(), self.foo)
-        self._check(tree, "(int) foo")
+        tree = Cast(c_int(), self.foo)
+        self._check_code(tree, "(int) foo")
 
     def test_int_p(self):
-        tree = Cast(Ptr(Int()), self.foo)
-        self._check(tree, "(int*) foo")
+        tree = Cast(POINTER(c_int)(), self.foo)
+        self._check_code(tree, "(int*) foo")

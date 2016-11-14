@@ -1,11 +1,12 @@
-import unittest
+from textwrap import dedent
+from ctypes import c_float
 
 from ctree.omp.nodes import *
 from ctree.omp.macros import *
 from ctree.c.nodes import *
+from util import CtreeTest
 
-
-class TestOmpCodegen(unittest.TestCase):
+class TestOmpCodegen(CtreeTest):
     def test_parallel(self):
         node = OmpParallel()
         self.assertEqual(str(node), "#pragma omp parallel")
@@ -33,11 +34,45 @@ class TestOmpCodegen(unittest.TestCase):
     def test_no_semicolons(self):
         """There shouldn't be semicolons after Omp statementss."""
         node = Block([OmpParallel(), Assign(SymbolRef("x"), Constant(3))])
-        self.assertEqual(str(node), """{
-    #pragma omp parallel
-    x = 3;
-}""")
+        self.assertEqual(str(node), dedent("""\
+        {
+            #pragma omp parallel
+            x = 3;
+        }"""))
 
     def test_get_wtime(self):
         node = omp_get_wtime()
         self.assertEqual(str(node), "omp_get_wtime()")
+
+    def test_sections_1(self):
+        node = OmpParallelSections(sections=[
+                OmpSection(body=[
+                    Assign(SymbolRef("i", c_float()), Constant(2)),
+                ]),
+        ])
+        self._check_code(node, """\
+        #pragma omp parallel sections
+        {
+            #pragma omp section
+            {
+                float i = 2;
+            }
+        }""")
+
+
+class TestOmpMacros(CtreeTest):
+    def test_num_threads(self):
+        tree = omp_get_num_threads()
+        self._check_code(tree, "omp_get_num_threads()")
+
+    def test_thread_num(self):
+        tree = omp_get_thread_num()
+        self._check_code(tree, "omp_get_thread_num()")
+
+    def test_get_wtime(self):
+        tree = omp_get_wtime()
+        self._check_code(tree, "omp_get_wtime()")
+
+    def test_include(self):
+        tree = IncludeOmpHeader()
+        self._check_code(tree, "#include <omp.h>")

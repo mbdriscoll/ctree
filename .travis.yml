@@ -1,90 +1,38 @@
+cache:
+  - apt
+  - pip
 language: python
-
 python:
-  - "2.7"
-  - "3.2"
-  - "3.3"
-
+  - '2.7'
+  - '3.4'
 env:
   global:
-    # encrypted OAuth token so Travis can commit docs back to Github
-    - secure: "QBB2KT4EFUdSkH9fjo5J/02zuZlD0FbVsKwYJgW6c4INp1UY/nx0nrsgjPSZQMD2HBztdfEZInugoVrOJwXBzWJ5Ioc19T9oYhnzaIF6oJRo1mTYDhragvdwiLfb0AyylGq7bgP4lgoMBtE1Oxauf0rKVEYiVeEhvHJup/di6A4="
-  matrix:
-    - LLVM_VERSION=3.3
-
+  - secure: QBB2KT4EFUdSkH9fjo5J/02zuZlD0FbVsKwYJgW6c4INp1UY/nx0nrsgjPSZQMD2HBztdfEZInugoVrOJwXBzWJ5Ioc19T9oYhnzaIF6oJRo1mTYDhragvdwiLfb0AyylGq7bgP4lgoMBtE1Oxauf0rKVEYiVeEhvHJup/di6A4=
 before_install:
-
   - sudo apt-get update -qq
-  - sudo apt-get install -qq llvm-$LLVM_VERSION
-
-
+  - sudo apt-get install -qq fglrx=2:8.960-0ubuntu1 opencl-headers
 install:
-  # make 'x.y' version string
   - export PYTHON_VERSION=$(python -c 'import sys; print(sys.version_info[0:2])')
-
-  # coverage and doc generator
-  - pip install numpy Sphinx coveralls coverage nose pygments
+  - pip install -r requirements.txt
+  - if [ $PY_MAJOR_MINOR \< "3.0" ]; then pip install opentuner; fi
+  - pip install coverage nose pycl
   - nosetests --version
   - coverage --version
-
-  # install llvmpy
-  - git clone git://github.com/llvmpy/llvmpy.git ${HOME}/llvmpy
-  - cd ${HOME}/llvmpy
-  - LLVM_CONFIG_PATH=/usr/bin/llvm-config-$LLVM_VERSION python setup.py install
-
-  # install opentuner
-  - git clone https://github.com/mbdriscoll/opentuner.git ${HOME}/opentuner
-  - cd ${HOME}/opentuner
-  - sudo apt-get install `cat debian-packages-deps | tr '\n' ' '`
-  - "if [[ \"x$PYTHON_VERSION\" -eq \"x(2.7)\" ]]; then pip install -r python-packages; fi"
-  - export PYTHONPATH=`pwd`:$PYTHONPATH
-
-  # install ctree via setup.py
-  - cd ${TRAVIS_BUILD_DIR}
   - python setup.py install
-
 script:
-
-  # run test suite from home directory to verify installation
-  - cd ${HOME}
-  - nosetests --where=${TRAVIS_BUILD_DIR}/test
-
-  # run test suite again from build dir to get coverage info
   - cd ${TRAVIS_BUILD_DIR}
-  - nosetests --verbose --with-coverage --cover-package=ctree --cover-min-percentage=90 --cover-erase
-
-
+  - nosetests --verbose --with-coverage --cover-package=ctree --cover-min-percentage=90
+    --cover-erase
 after_success:
-
-  # return early if not building ucb-sejits/ctree
-  - "if [[ \"x${TRAVIS_REPO_SLUG}\" != 'xucb-sejits/ctree' ]]; then echo 'skipping coveralls/sphinx for non ucb-sejits/ctree builds.'; exit 0; fi"
-
-  # only build docs using Python 2.7
-  - "if [[ \"x$PYTHON_VERSION\" != \"x(2, 7)\" ]]; then echo 'Not Python 2.7; skipping doc build.'; exit 0; fi"
-
-  # publish coverage report
-  - coveralls
-
-  # build documentation
-  - make -C doc html
-
-  # merge documentation
-  - git clone "https://github.com/ucb-sejits/ctree-docs.git" ${HOME}/ctree-docs
-  - cd ${HOME}/ctree-docs
-  - git fetch origin gh-pages
-  - git checkout gh-pages
-  - rsync -a ${TRAVIS_BUILD_DIR}/doc/_build/html/ ./
-  - git add .
-  - git status
-
-  # commit documentation
-  - git config --global user.name 'Ctree Doc Bot'
-  - git config --global user.email 'mbdriscoll+ctreeoauth@gmail.com'
-  - git commit -m "Updating documentation from Travis Build ${TRAVIS_BUILD_ID}."
-
-  # set up oauth for push
-  - git config credential.helper "store --file=.git/credentials"
-  - echo "https://${GH_TOKEN}:x-oauth-basic@github.com" > .git/credentials
-
-  # commit new docs to ctree-docs
-  - git push origin gh-pages
+  - curl -X POST http://readthedocs.org/build/ctree
+notifications:
+  slack: ucb-sejits:cPZxBunxagWZ763mcsIXOV0W
+deploy:
+  provider: pypi
+  user: leonardt
+  password:
+    secure: SMiyQflUvfG0M8bR07Sri8VXnPSFKprNxA3RF7sljk99Aj9BuuuBRLkcOhkYtIRYfgHUSEnFeYYe+rb8y6BV/LnulCQiw9bCIqmPY9IYGy63DNjUGxh65MyO9HDjwz4hi+4endwZTXaUL3X4de9Xk3NnDhHISiLd7WymR9YQ7eE=
+  on:
+    tags: true
+    all_branches: true
+    repo: ucb-sejits/ctree

@@ -20,10 +20,10 @@ class OmpNode(CtreeNode):
 
         return OmpCodeGen(indent).visit(self)
 
-    def _to_dot(self):
-        from ctree.omp.dotgen import OmpDotGen
+    def label(self):
+        from ctree.omp.dotgen import OmpDotLabeller
 
-        return OmpDotGen().visit(self)
+        return OmpDotLabeller().visit(self)
 
     def _requires_semicolon(self):
         return False
@@ -45,6 +45,24 @@ class OmpParallelFor(OmpNode):
 
     def __init__(self, clauses=None):
         self.clauses = clauses if clauses else []
+
+
+class OmpParallelSections(OmpNode):
+    """ #pragma omp parallel sections... """
+    _fields = ['clauses', 'sections']
+
+    def __init__(self, clauses=None, sections=None):
+        self.clauses = clauses or []
+        self.sections = sections or []
+
+
+class OmpSection(OmpNode):
+    """ #pragma omp section ... """
+    _fields = ['clauses', 'body']
+
+    def __init__(self, clauses=None, body=None):
+        self.clauses = clauses or []
+        self.body = body or []
 
 
 class OmpIvDep(OmpNode):

@@ -26,7 +26,7 @@ class TestBlocks(unittest.TestCase):
         a;
         'b';
         a;
-    };
+    }
     'b';
     a;
 }""")

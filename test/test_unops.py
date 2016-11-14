@@ -40,3 +40,6 @@ class TestUnaryOps(unittest.TestCase):
 
     def test_postdec(self):
         self._check(PostDec, "foo --")
+
+    def test_sizeof(self):
+        self._check(SizeOf, "sizeof foo")

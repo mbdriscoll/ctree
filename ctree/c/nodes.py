@@ -3,14 +3,20 @@ AST nodes for C constructs.
 """
 
 import os
+import types
 import subprocess
 
 import logging
 
 log = logging.getLogger(__name__)
 
+from ctypes import CFUNCTYPE
 from ctree.nodes import CtreeNode, File
-from ctree.util import singleton, highlight
+import ctree
+from ctree.util import singleton, highlight, truncate
+from ctree.types import get_ctype, get_common_ctype
+import hashlib
+import ctypes
 
 
 class CNode(CtreeNode):
@@ -18,62 +24,133 @@ class CNode(CtreeNode):
 
     def codegen(self, indent=0):
         from ctree.c.codegen import CCodeGen
+        from ctree.transforms import DeclarationFiller
 
         return CCodeGen(indent).visit(self)
 
-    def _to_dot(self):
-        from ctree.c.dotgen import CDotGen
+    def label(self):
+        from ctree.c.dotgen import CDotGenLabeller
 
-        return CDotGen().visit(self)
+        return CDotGenLabeller().visit(self)
+
+    def __add__(self, other):
+        return Add(self, other)
+
+    def __neg__(self):
+        return BitNot(self)
+
+    def __sub__(self, other):
+        return Sub(self, other)
+
+    def __or__(self, other):
+        return BitOr(self, other)
+
+    def __and__(self, other):
+        return BitAnd(self, other)
+
+    def __xor__(self, other):
+        return BitXor(self, other)
+
+    def __lshift__(self, other):
+        if isinstance(other, int):
+            return BitShL(self, Constant(other))
+        return BitShL(self, other)
+
+    def __rshift__(self, other):
+        if isinstance(other, int):
+            return BitShR(self, Constant(other))
+        return BitShR(self, other)
+
+    def __mul__(self, other):
+        return Mul(self, other)
+
+    def __div__(self, other):
+        return Div(self, other)
+
+    __truediv__ = __div__
+
+    def __mod__(self, other):
+        return Mod(self, other)
+
+
 
 
 class CFile(CNode, File):
     """Represents a .c file."""
+    _ext = "c"
 
-    def __init__(self, name="generated", body=None):
-        if not body:
-            body = []
-        super(CFile, self).__init__(name, body)
-        self._ext = "c"
+    def __init__(self, name="generated", body=None, config_target='c', path = None):
+        CNode.__init__(self)
+        File.__init__(self, name, body, path)
+        self.config_target = config_target
 
     def get_bc_filename(self):
         return "%s.bc" % self.name
 
-    def _compile(self, program_text, compilation_dir):
-        import ctree
-        from ctree.util import truncate
+    def get_so_filename(self):
+        return "{}.so".format(self.name)
 
-        c_src_file = os.path.join(compilation_dir, self.get_filename())
-        ll_bc_file = os.path.join(compilation_dir, self.get_bc_filename())
-        log.info("file for generated C: %s", c_src_file)
-        log.info("file for generated LLVM: %s", ll_bc_file)
+    def _compile(self, program_text):
+        # print(repr(self.path), repr(self.get_filename()))
+        c_src_file = os.path.join(self.path, self.get_filename())
+        so_file = os.path.join(self.path, self.get_so_filename())
+        program_hash = hashlib.sha512(program_text.strip().encode()).hexdigest()
+        so_file_exists = os.path.exists(so_file)
+        old_hash = self.program_hash
+        hash_match = old_hash == program_hash
+        log.debug("Old hash: %s \n New hash: %s", old_hash, program_hash)
+        recreate_c_src = program_text and program_text != self.empty and not hash_match
+        recreate_so = recreate_c_src or not so_file_exists
 
-        # syntax-highlight and print C program
-        highlighted = highlight(program_text, 'c')
-        log.info("generated C program: (((\n%s\n)))", highlighted)
+        log.debug("RECREATE_C_SRC: %s \t RECREATE_so: %s \t HASH_MATCH: %s",
+                 recreate_c_src, recreate_so, hash_match)
 
-        # write program text to C file
-        with open(c_src_file, 'w') as c_file:
-            c_file.write(program_text)
+        if not program_text:
+            log.debug("Program not found. Attempting to use cached version")
 
-        # call clang to generate LLVM bitcode file
-        CC = ctree.CONFIG.get('jit', 'CC')
-        CFLAGS = ctree.CONFIG.get('jit', 'CFLAGS')
-        compile_cmd = "%s -emit-llvm %s -o %s -c %s" % (CC, CFLAGS, ll_bc_file, c_src_file)
-        log.info("compilation command: %s", compile_cmd)
-        subprocess.check_call(compile_cmd, shell=True)
+        #create c_src
+        if recreate_c_src:
+            with open(c_src_file, 'w') as c_file:
+                c_file.write(program_text)
+            log.info("file for generated C: %s", c_src_file)
+            # syntax-highlight and print C program
+            highlighted = highlight(program_text, 'c')
+            log.info("generated C program: (((\n%s\n)))", highlighted)
+            self.program_hash = program_hash
+
+
+        #create ll_bc_file
+        if recreate_so:
+            # call clang to generate LLVM bitcode file
+            log.debug('Regenerating so.')
+            CC = ctree.CONFIG.get(self.config_target, 'CC')
+            CFLAGS = ctree.CONFIG.get(self.config_target, 'CFLAGS')
+            LDFLAGS = ctree.CONFIG.get(self.config_target, 'LDFLAGS')
+            compile_cmd = "%s -shared %s -o %s %s %s" % (CC, CFLAGS, so_file,
+                    c_src_file, LDFLAGS)
+            log.info("compilation command: %s", compile_cmd)
+            subprocess.check_call(compile_cmd, shell=True)
+            # log.info("file for generated so: %s", so_file)
+
+        #use cached version otherwise
+        if not (so_file_exists or recreate_so):
+            raise NotImplementedError('No Cached version found')
+
 
         # load llvm bitcode
-        import llvm.core
+        # import llvm.core
+        # import llvmlite.binding as llvm
 
-        with open(ll_bc_file, 'rb') as bc:
-            ll_module = llvm.core.Module.from_bitcode(bc)
+        # with open(ll_bc_file, 'rb') as bc:
+        #     ll_module = llvm.module.parse_bitcode(bc.read())
 
         # syntax-highlight and print LLVM program
-        highlighted = highlight(str(ll_module), 'llvm')
-        log.debug("generated LLVM Program: (((\n%s\n)))", highlighted)
+        #preserve_src_drhighlighted = highlight(str(ll_module), 'llvm')
+        #log.debug("generated LLVM Program: (((\n%s\n)))", highlighted)
 
-        return ll_module
+        return so_file
+
+
 
 
 class Statement(CNode):
@@ -83,11 +160,6 @@ class Statement(CNode):
 
 class Expression(CNode):
     """Cite me."""
-
-    def get_type(self):
-        from ctree.c.types import CTypeFetcher
-
-        return CTypeFetcher().visit(self)
 
 
 class Return(Statement):
@@ -113,6 +185,7 @@ class If(Statement):
 class While(Statement):
     """Cite me."""
     _fields = ['cond', 'body']
+    _requires_semicolon = lambda self: False
 
     def __init__(self, cond=None, body=None):
         self.cond = cond
@@ -132,11 +205,14 @@ class DoWhile(Statement):
 class For(Statement):
     _fields = ['init', 'test', 'incr', 'body']
 
-    def __init__(self, init=None, test=None, incr=None, body=None):
+    def __init__(self, init=None, test=None, incr=None, body=None, pragma=None):
         self.init = init
         self.test = test
         self.incr = incr
+        if body is None:
+            body = []
         self.body = body
+        self.pragma = pragma
         super(For, self).__init__()
 
 
@@ -161,10 +237,17 @@ class Literal(Expression):
 
 class Constant(Literal):
     """Section B.1.4 6.1.3."""
+    _fields = ['value']
 
     def __init__(self, value=None):
         self.value = value
         super(Constant, self).__init__()
+
+    def get_type(self):
+        return get_ctype(self.value)
+
+class Hex(Constant):
+    pass
 
 
 class Block(Statement):
@@ -174,6 +257,16 @@ class Block(Statement):
     def __init__(self, body=None):
         self.body = body if body else []
         super(Block, self).__init__()
+
+    def _requires_semicolon(self):
+        return False
+
+
+class MultiNode(Block):
+    """
+        Some Python nodes need to be translated to a block of nodes but Visitors can't do that.
+    """
+
 
 
 class String(Literal):
@@ -187,19 +280,24 @@ class String(Literal):
 class SymbolRef(Literal):
     """Cite me."""
     _next_id = 0
+    _fields = ['name','type']
 
     def __init__(self, name=None, sym_type=None, _global=False,
-                 _local=False, _const=False):
+                 _local=False, _const=False, _static=False):
         """
         Create a new symbol with the given name. If a declaration
         type is specified, the symbol is considered a declaration
         and unparsed with the type.
         """
         self.name = name
+
+        if sym_type is not None:
+            assert not isinstance(sym_type, type)
         self.type = sym_type
         self._global = _global
         self._local = _local
         self._const = _const
+        self._static =  _static
         super(SymbolRef, self).__init__()
 
     def set_global(self, value=True):
@@ -212,6 +310,10 @@ class SymbolRef(Literal):
 
     def set_const(self, value=True):
         self._const = value
+        return self
+
+    def set_static(self, value=True):
+        self._static = value
         return self
 
     @classmethod
@@ -229,9 +331,6 @@ class SymbolRef(Literal):
         else:
             return SymbolRef(self.name)
 
-    def get_ctype(self):
-        return self.type.as_ctype()
-
 class FunctionDecl(Statement):
     """Cite me."""
     _fields = ['params', 'defn']
@@ -247,9 +346,25 @@ class FunctionDecl(Statement):
         super(FunctionDecl, self).__init__()
 
     def get_type(self):
-        from ctree.c.types import FuncType
-        arg_types = [p.get_type() for p in self.params]
-        return FuncType(self.return_type, arg_types)
+        type_sig = []
+
+        # return type
+        if self.return_type is None:
+            type_sig.append(self.return_type)
+        else:
+            assert not isinstance(self.return_type, type), \
+                "Expected a ctypes instance or None, got %s (%s)." % \
+                    (self.return_type, type(self.return_type))
+            type_sig.append( type(self.return_type) )
+
+        # parameter types
+        for param in self.params:
+            assert not isinstance(param.type, type), \
+                "Expected a ctypes instance or None, got %s (%s)." % \
+                    (param.type, type(param.type))
+            type_sig.append( type(param.type) )
+
+        return CFUNCTYPE(*type_sig)
 
     def set_inline(self, value=True):
         self.inline = value
@@ -261,14 +376,6 @@ class FunctionDecl(Statement):
 
     def set_kernel(self, value=True):
         self.kernel = value
-        return self
-
-    def set_typesig(self, func_type):
-        from ctree.c.types import FuncType
-        assert isinstance(func_type, FuncType)
-        self.return_type = func_type.return_type
-        for sym, ty in zip(self.params, func_type.arg_types):
-            sym.type = ty
         return self
 
 
@@ -284,13 +391,36 @@ class UnaryOp(Expression):
 
 class BinaryOp(Expression):
     """Cite me."""
-    _fields = ['left', 'right']
+    _fields = ['left', 'op', 'right']
 
     def __init__(self, left=None, op=None, right=None):
         self.left = left
         self.op = op
         self.right = right
         super(BinaryOp, self).__init__()
+
+    def get_type(self, env=None):
+        # FIXME: integer promotions and stuff like that
+        if hasattr(self.left, 'get_type'):
+            left_type = self.left.get_type()
+        elif isinstance(self.left, SymbolRef) and env is not None \
+                and env._has_key(self.left.name):
+            left_type = env._lookup(self.left.name)
+        elif hasattr(self.left, 'type'):
+            left_type = self.left.type
+        else:
+            left_type = None
+        if hasattr(self.right, 'get_type'):
+            right_type = self.right.get_type()
+        elif isinstance(self.right, SymbolRef) and env is not None \
+                and env._has_key(self.right.name):
+            right_type = env._lookup(self.right.name)
+        elif hasattr(self.right, 'type'):
+            right_type = self.right.type
+        else:
+            right_type = None
+        return get_common_ctype(filter(lambda x: x is not None, [right_type,
+                                                                 left_type]))
 
 
 class AugAssign(Expression):
@@ -327,16 +457,42 @@ class Cast(Expression):
 
 class ArrayDef(Expression):
     """doc"""
-    _fields = ['body']
+    _fields = ['target', 'size', 'body']
 
-    def __init__(self, body=None):
+    def __init__(self, target=None, size=None, body=None):
+        self.target = target
+        self.size = size
         self.body = body if body else []
         super(ArrayDef, self).__init__()
+
+class Array(Expression):
+    _fields = ['type', 'size', 'body']
+
+    def __init__(self, type=None, size = None, body = None):
+        self.body = body or []
+        self.size = size or len(self.body)
+        self.type = type
+        super(Array, self).__init__()
+
+    def get_type(self):
+        return self.type
+
+class Break(Statement):
+    _requires_semicolon = lambda self : True
+
+class Continue(Statement):
+    _requires_semicolon = lambda self : True
+
+class Pass(Statement):
+    _requires_semicolon = lambda self: False
 
 
 @singleton
 class Op:
     class _Op(object):
+        def __init__(self):
+            self._force_parentheses = False
+
         def __str__(self):
             return self._c_str
 
@@ -440,7 +596,7 @@ class Op:
         _c_str = "="
 
     class ArrayRef(_Op):
-        _c_str = "??"
+        _c_str = "[]"
 
 
 # ---------------------------------------------------------------------------

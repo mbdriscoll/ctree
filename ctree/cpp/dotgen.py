@@ -2,19 +2,19 @@
 DOT generation for C preprocessor directives.
 """
 
-from ctree.dotgen import DotGenVisitor
+from ctree.dotgen import DotGenLabeller
 
 
-class CppDotGen(DotGenVisitor):
+class CppDotLabeller(DotGenLabeller):
     """
     Visitor to generator DOT.
     """
 
-    def label_CppInclude(self, node):
+    def visit_CppInclude(self, node):
         if node.angled_brackets:
             return "target: <%s>" % node.target
         else:
             return 'target: "%s"' % node.target
 
-    def label_Comment(self, node):
-        return node.text.replace('"', r"\"")
+    def visit_CppComment(self, node):
+        return "// " + node.text.replace('"', r"\"")

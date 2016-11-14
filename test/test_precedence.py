@@ -1,4 +1,5 @@
 import unittest
+import ctypes as ct
 
 from ctree.c.nodes import *
 from ctree.precedence import *
@@ -72,6 +73,16 @@ class TestPrecedence(unittest.TestCase):
         tree = PostInc(Sub(a))
         self._check(tree, "(- a) ++")
 
+    def test_cast1(self):
+        a, b, c = self.args
+        tree = Add(Cast(ct.c_float(), a), b)
+        self._check(tree, "(float) a + b")
+
+    def test_cast2(self):
+        a, b, c = self.args
+        tree = Cast(ct.c_float(), Add(a, b))
+        self._check(tree, "(float) (a + b)")
+
 
 class TestAssociativityPrecedence(unittest.TestCase):
     """
@@ -128,6 +139,12 @@ class TestAssociativityPrecedence(unittest.TestCase):
     def test_bad_precedence_arg(self):
         with self.assertRaises(Exception):
             get_precedence(Constant(2.3))
+
+    def test_bad_op(self):
+        a, b, c = self.args
+        tree = BinaryOp(a, b, c)
+        with self.assertRaises(Exception):
+            get_precedence(tree)
 
     def test_bad_associativity_arg(self):
         with self.assertRaises(Exception):

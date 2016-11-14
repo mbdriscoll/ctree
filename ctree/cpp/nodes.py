@@ -13,10 +13,10 @@ class CppNode(CtreeNode):
 
         return CppCodeGen(indent).visit(self)
 
-    def _to_dot(self):
-        from ctree.cpp.dotgen import CppDotGen
+    def label(self):
+        from ctree.cpp.dotgen import CppDotLabeller
 
-        return CppDotGen().visit(self)
+        return CppDotLabeller().visit(self)
 
     def _requires_semicolon(self):
         return False
@@ -30,14 +30,15 @@ class CppInclude(CppNode):
         self.angled_brackets = angled_brackets
 
 
-class Comment(CppNode):
+class CppComment(CppNode):
     """Represents // foo"""
 
     def __init__(self, text=""):
-        assert "\n" not in text, "Comment only supports single-line comments."
         self.text = text
 
+
 class CppDefine(CppNode):
+    _fields = ['name', 'params', 'body']
 
     def __init__(self, name=None, params=None, body=None):
         self.name = name

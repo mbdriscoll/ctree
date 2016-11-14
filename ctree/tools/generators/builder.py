@@ -57,8 +57,8 @@ class Builder:
         try:
             os.makedirs(target_dir)
         except OSError as exception:
-            print "Unable to create %s error (%d) %s" % \
-                (target_dir,exception.errno,exception.strerror)
+            print ("Unable to create %s error (%d) %s" % \
+                (target_dir,exception.errno,exception.strerror))
             exit(1)
 
         if target_dir[-4:] == '/bin':

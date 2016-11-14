@@ -51,7 +51,7 @@ class StencilConvert(LazySpecializedFunction):
         self.input_grids = input_grids
         self.output_grid = output_grid
         self.constants = constants
-        super(StencilConvert, self).__init__(get_ast(func), entry_point)
+        super(StencilConvert, self).__init__(get_ast(func))
 
     def args_to_subconfig(self, args):
         conf = ()

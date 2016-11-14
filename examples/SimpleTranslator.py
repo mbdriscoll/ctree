@@ -7,12 +7,14 @@ import logging
 logging.basicConfig(level=20)
 
 import numpy as np
+import ctypes as ct
 
-from ctree.c.types import FuncType
 from ctree.transformations import *
-from ctree.frontend import get_ast
+from ctree.frontend import get_ast, dump
 from ctree.jit import LazySpecializedFunction
-from ctree.types import get_ctree_type
+from ctree.jit import ConcreteSpecializedFunction
+from ctree.types import get_ctype
+from ctree.nodes import Project
 
 
 def fib(n):
@@ -22,27 +24,49 @@ def fib(n):
         return fib(n - 1) + fib(n - 2)
 
 
+class BasicFunction(ConcreteSpecializedFunction):
+    def __init__(self, entry_name, project_node, entry_typesig):
+        self._c_function = self._compile(entry_name, project_node, entry_typesig)
+
+
+    def __call__(self, *args, **kwargs):
+        return self._c_function(*args, **kwargs)
+
+
 class BasicTranslator(LazySpecializedFunction):
-    def __init__(self, func):
-        super(BasicTranslator, self).__init__(get_ast(func), func.__name__)
 
     def args_to_subconfig(self, args):
-        return {'arg_type': get_ctree_type(args[0])}
+        return {'arg_type': type(get_ctype(args[0]))}
 
     def transform(self, tree, program_config):
         """Convert the Python AST to a C AST."""
+
         tree = PyBasicConversions().visit(tree)
 
-        fib_fn = tree.find(FunctionDecl, name="fib")
-        fib_arg_type = program_config[0]['arg_type']
-        fib_type = FuncType(fib_arg_type, [fib_arg_type])
-        fib_fn.set_typesig(fib_type)
+        fib_fn = tree.find(FunctionDecl, name="apply")
+        arg_type = program_config[0]['arg_type']
+        fib_fn.return_type = arg_type()
+        fib_fn.params[0].type = arg_type()
+        c_translator = CFile("generated", [tree])
 
-        return tree, fib_type.as_ctype()
+        return [c_translator]
+
+    def finalize(self, transform_result, program_config):
+
+        c_translator = transform_result[0]
+        proj = Project([c_translator])
+
+        arg_config, tuner_config = program_config
+        arg_type = arg_config['arg_type']
+        entry_type = ct.CFUNCTYPE(arg_type, arg_type)
+
+        return BasicFunction("apply", proj, entry_type)
 
 
 def main():
-    c_fib = BasicTranslator(fib)
+
+    # create a class called Doubler that has the function double(n) as an @staticmethod
+    c_fib = BasicTranslator.from_function(fib, "Translator")
 
     assert fib(10) == c_fib(10)
     assert fib(11) == c_fib(11)

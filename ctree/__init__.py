@@ -5,6 +5,8 @@ The ctree package
 """
 from __future__ import print_function
 
+
+
 # ---------------------------------------------------------------------------
 # explicit version check
 
@@ -54,11 +56,15 @@ if sys.version_info.major == 2:
 else:
     from io import StringIO as Memfile
 
+from ctree.util import highlight
+
 CONFIGFILE = Memfile()
 CONFIG.write(CONFIGFILE)
 CONFIG_TXT = CONFIGFILE.getvalue()
-LOG.info("using configuration:\n%s", CONFIG_TXT)
+LOG.info("using configuration:\n%s", highlight(CONFIG_TXT, language='ini'))
 CONFIGFILE.close()
+if CONFIG.has_option('log','level'):
+    logging.basicConfig(level=getattr(logging,CONFIG.get('log','level')))
 
 
 # ---------------------------------------------------------------------------
@@ -68,7 +74,7 @@ import atexit
 import collections
 
 
-class Counter(object):
+class LogInfo(object):
     """Tracks events, reports counts upon garbage collections."""
 
     def __init__(self):
@@ -86,8 +92,43 @@ class Counter(object):
         LOG.info("execution statistics: (((\n%s)))", key_values_string)
 
 
-STATS = Counter()
+STATS = LogInfo()
 atexit.register(STATS.report)
+
+#----------------------------------------------------------------------------
+#Temporary directory stuff
+import tempfile
+import shutil
+import os.path
+
+if CONFIG.getboolean('jit', 'CACHE'):
+    STATS.log("recognized that caching is enabled")
+else:
+    STATS.log("recognized that caching is disabled")
+
+if not CONFIG.getboolean('jit', 'CACHE'):
+    compile_path_old = CONFIG.get('jit', 'COMPILE_PATH')
+    temporary_path = tempfile.mkdtemp()
+    CONFIG.set('jit', 'COMPILE_PATH', temporary_path)
+
+    def reset():
+        CONFIG.set('jit', 'COMPILE_PATH', compile_path_old)
+        if(os.path.isdir(temporary_path)):
+            shutil.rmtree(temporary_path)
+
+    atexit.register(reset)
+
+# Registries for type-based logic in extension packages.
+_TYPE_CODEGENERATORS = {}
+_TYPE_RECOGNIZERS = {}
+
+OCL_ENABLED = True
+try:
+    import pycl
+except ImportError:
+    OCL_ENABLED = False
+
+import ctree.np
 
 import ast
 import inspect
@@ -106,13 +147,15 @@ def ipython_show_ast(tree):
     converts tree in place to a dot format
     then renders that into a png file
     """
+    import ctree.dotgen
     return DotManager.dot_ast_to_image(tree)
 
 
-def browser_show_ast(tree, file_name):
+def browser_show_ast(tree, file_name=None):
     """
     convenience method to display an AST in ipython
     converts tree in place to a dot format
     then renders that into a png file
     """
+    import ctree.dotgen
     return DotManager.dot_ast_to_browser(tree, file_name)

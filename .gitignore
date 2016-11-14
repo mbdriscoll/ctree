@@ -5,6 +5,7 @@
 
 # C extensions
 *.so
+*.o
 
 # Packages
 *.egg
@@ -37,6 +38,7 @@ nosetests.xml
 .mr.developer.cfg
 .project
 .pydevproject
+.idea
 
 # vim temp files
 .*.swp
@@ -52,7 +54,17 @@ htmlcov
 
 # virtualenv subdirs
 venv-*
+.venv
 
 # opentuner stuff
 opentuner.db
 opentuner.log
+
+# rope library
+.ropeproject
+
+# compiled files
+compiled/*
+
+*.sublime-project
+*.sublime-workspace

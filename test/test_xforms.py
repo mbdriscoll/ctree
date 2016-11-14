@@ -1,66 +1,9 @@
-import ast
-import sys
 import unittest
 
 from fixtures.sample_asts import *
 from ctree.transformations import *
 from ctree.c.nodes import *
-from ctree.c.types import *
 from ctree.frontend import get_ast
-
-
-class TestSetTypeSig(unittest.TestCase):
-    def _check(self, func_type, tree):
-        if isinstance(tree, FunctionDecl):
-            self.assertEqual(tree.return_type, func_type.return_type)
-            for param, expected_type in zip(tree.params, func_type.arg_types):
-                self.assertEqual(param.type, expected_type)
-        elif isinstance(tree, ast.Module):
-            self._check(func_type, tree.body[0])
-        else:
-            self.fail("Can't check param setting on %s object." % tree)
-
-    def test_no_args(self):
-        func_type = FuncType(Long())
-        get_two_ast.set_typesig(func_type)
-        self._check(func_type, get_two_ast)
-
-    def test_one_arg(self):
-        func_type = FuncType(Long(), [Long()])
-        fib_ast.set_typesig(func_type)
-        self._check(func_type, fib_ast)
-
-    def test_two_args(self):
-        func_type = FuncType(Long(), [Long(), Long()])
-        gcd_ast.set_typesig(func_type)
-        self._check(func_type, gcd_ast)
-
-    def test_mixed_args(self):
-        func_type = FuncType(Long(), [Double(), Long(), Long()])
-        choose_ast.set_typesig(func_type)
-        self._check(func_type, choose_ast)
-
-
-class TestFixUpParentPointers(unittest.TestCase):
-    def _check(self, root):
-        from ctree.analyses import VerifyParentPointers
-
-        VerifyParentPointers().visit(root)
-
-    def test_identity(self):
-        identity_ast.find(SymbolRef, name="x").parent = None
-        tree = FixUpParentPointers().visit(identity_ast)
-        self._check(tree)
-
-    def test_fib(self):
-        fib_ast.find(Constant, value=2).parent = None
-        tree = FixUpParentPointers().visit(fib_ast)
-        self._check(tree)
-
-    def test_gcd(self):
-        gcd_ast.find(Return).parent = None
-        tree = FixUpParentPointers().visit(gcd_ast)
-        self._check(tree)
 
 
 class TestCtxScrubber(unittest.TestCase):
@@ -110,11 +53,11 @@ class TestStripDocstrings(unittest.TestCase):
         ]))
         self._check(tree)
 
-
 class TestBasicConversions(unittest.TestCase):
-    def _check(self, py_ast, expected_c_ast):
-        actual_c_ast = PyBasicConversions().visit(py_ast)
-        self.assertEqual(str(actual_c_ast), str(expected_c_ast))
+    def _check(self, py_ast, expected_c_ast, names_dict ={}, constants_dict={}):
+        actual_c_ast = PyBasicConversions(names_dict, constants_dict).visit(py_ast)
+        self.assertEqual(str(actual_c_ast).strip('\n;'), str(expected_c_ast).strip('\n;'))
+
 
     def test_num_float(self):
         py_ast = ast.Num(123.4)
@@ -137,8 +80,29 @@ class TestBasicConversions(unittest.TestCase):
         self._check(py_ast, c_ast)
 
     def test_binop(self):
-        py_ast = ast.BinOp(ast.Num(1), ast.Add(), ast.Num(2))
-        c_ast = Add(Constant(1), Constant(2))
+        for py_op, c_op in (
+                (ast.Add, Add),
+                (ast.Sub, Sub),
+                (ast.BitXor, BitXor),
+                (ast.BitAnd, BitAnd),
+                (ast.BitOr, BitOr)
+        ):
+            py_ast = ast.BinOp(ast.Num(1), py_op(), ast.Num(2))
+            c_ast = c_op(Constant(1), Constant(2))
+            self._check(py_ast, c_ast)
+
+    def test_boolop(self):
+        def fn():
+            1 or 2 or 3
+        py_ast = get_ast(fn).body[0].body[0]
+        c_ast = Or(Or(Constant(1), Constant(2)), Constant(3))
+        self._check(py_ast, c_ast)
+
+    def test_compare(self):
+        def fn():
+            0 < a < 3
+        py_ast = get_ast(fn).body[0].body[0]
+        c_ast = And(Gt(0, SymbolRef("a")), Lt(SymbolRef("a"), Constant(3)))
         self._check(py_ast, c_ast)
 
     def test_return(self):
@@ -179,7 +143,7 @@ class TestBasicConversions(unittest.TestCase):
             [ast.Name("foo", ast.Load())],
             [],
         )
-        i = SymbolRef("i", Long())
+        i = SymbolRef("i", c_long())
         c_ast = For(
             Assign(i, Constant(0)),
             Lt(i.copy(), Constant(10)),
@@ -196,7 +160,7 @@ class TestBasicConversions(unittest.TestCase):
             [ast.Name("foo", ast.Load())],
             [],
         )
-        i = SymbolRef("i", Long())
+        i = SymbolRef("i", c_long())
         c_ast = For(
             Assign(i, Constant(2)),
             Lt(i.copy(), Constant(10)),
@@ -214,7 +178,7 @@ class TestBasicConversions(unittest.TestCase):
             [ast.Name("foo", ast.Load())],
             [],
         )
-        i = SymbolRef("i", Long())
+        i = SymbolRef("i", c_long())
         c_ast = For(
             Assign(i, Constant(2)),
             Lt(i.copy(), Constant(10)),
@@ -251,7 +215,7 @@ class TestBasicConversions(unittest.TestCase):
             [ast.Name("foo", ast.Load())],
             [],
         )
-        i = SymbolRef("i", Long())
+        i = SymbolRef("i", c_long())
         c_ast = For(
             Assign(i, Add(Constant(2), Constant(3))),
             Lt(i.copy(), Mul(Constant(4), Constant(10))),
@@ -282,3 +246,65 @@ class TestBasicConversions(unittest.TestCase):
                                ast.Div(), ast.Num(3))
         c_ast = DivAssign(SymbolRef('i'), Constant(3))
         self._check(py_ast, c_ast)
+
+    def test_AugAssign(self):
+
+        for py_op, c_op in (
+                (
+                        (ast.Div, DivAssign),
+                        (ast.Add, AddAssign),
+                        (ast.Mult, MulAssign),
+                        (ast.BitOr, BitOrAssign),
+                        (ast.BitAnd, BitAndAssign),
+                        (ast.BitXor, BitXorAssign),
+                        (ast.LShift, BitShLAssign),
+                        (ast.RShift, BitShRAssign)
+                )
+        ):
+            py_ast = ast.AugAssign(ast.Name('i', ast.Load()),
+                                   py_op(), ast.Num(3))
+            c_ast = c_op(SymbolRef('i'), Constant(3))
+            self._check(py_ast, c_ast)
+
+    def test_Assign(self):
+        py_ast = ast.Assign([ast.Name('i', ast.Load())],
+                            ast.Num(3))
+        c_ast = Assign(SymbolRef('i'), Constant(3))
+        self._check(py_ast, c_ast)
+
+    def test_namesDict(self):
+        py_ast = ast.Name('i',ast.Load())
+        c_ast = SymbolRef('d')
+        self._check(py_ast,c_ast,names_dict={'i':'d'})
+
+    def test_constantsDict(self):
+        py_ast = ast.Name('i',ast.Load())
+        c_ast = Constant(234)
+        self._check(py_ast,c_ast,constants_dict={'i':234})
+
+    def test_Subscript(self):
+        py_ast = ast.Subscript(value=ast.Name('i',ast.Load()),
+                               slice=ast.Index(value=ast.Num(n=1), ctx=ast.Load()))
+        c_ast = ArrayRef(SymbolRef('i'),Constant(1))
+        self._check(py_ast,c_ast)
+
+    def test_Range_ValueError(self):
+        py_ast = ast.For(target=ast.Name(id='i', ctx=ast.Store()), iter=ast.Call(func=ast.Name(id='range', ctx=ast.Load()), args=[
+            ast.Num(n=1),
+            ast.Num(n=0),
+            ast.Num(n=0),
+            ], keywords=[], starargs=None, kwargs=None), body=[
+            Pass(),
+            ], orelse=[])
+        with self.assertRaises(ValueError):
+            PyBasicConversions().visit(py_ast)
+
+    def test_Range_NoOp(self):
+        py_ast = ast.For(target=ast.Name(id='i', ctx=ast.Store()), iter=ast.Call(func=ast.Name(id='range', ctx=ast.Load()), args=[
+            ast.Num(n=1),
+            ast.Num(n=1),
+            ast.Num(n=3),
+            ], keywords=[], starargs=None, kwargs=None), body=[
+            Pass(),
+            ], orelse=[])
+        self.assertEqual(PyBasicConversions().visit(py_ast), None)

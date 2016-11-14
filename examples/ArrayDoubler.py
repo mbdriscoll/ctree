@@ -2,19 +2,18 @@
 Parses the python AST below, transforms it to C, JITs it, and runs it.
 """
 
-import logging
+#logging.basicConfig(level=10)
 
-logging.basicConfig(level=20)
+import ctypes as ct
 
 import numpy as np
 
-from ctree.frontend import get_ast
 from ctree.c.nodes import *
-from ctree.c.types import *
-from ctree.dotgen import to_dot
+from ctree.nodes import Project
 from ctree.transformations import *
 from ctree.jit import LazySpecializedFunction
-from ctree.types import get_ctree_type
+from ctree.jit import ConcreteSpecializedFunction
+# from ctypes import CFUNCTYPE
 
 # ---------------------------------------------------------------------------
 # Specializer code
@@ -29,10 +28,7 @@ class OpTranslator(LazySpecializedFunction):
         """
         A = args[0]
         return {
-            'A_len': len(A),
-            'A_dtype': A.dtype,
-            'A_ndim': A.ndim,
-            'A_shape': A.shape,
+            'ptr': np.ctypeslib.ndpointer(A.dtype, A.ndim, A.shape),
         }
 
     def transform(self, py_ast, program_config):
@@ -41,26 +37,22 @@ class OpTranslator(LazySpecializedFunction):
         given in program_config.
         """
         arg_config, tuner_config = program_config
-        len_A   = arg_config['A_len']
-        A_dtype = arg_config['A_dtype']
-        A_ndim  = arg_config['A_ndim']
-        A_shape = arg_config['A_shape']
-
-        inner_type = get_ctree_type(A_dtype)
-        array_type = NdPointer(A_dtype, A_ndim, A_shape)
-        apply_one_typesig = FuncType(inner_type, [inner_type])
+        array_type = arg_config['ptr']
+        nItems = np.prod(array_type._shape_)
+        inner_type = array_type._dtype_.type()
+        kernel_func_name = 'apply'
 
         tree = CFile("generated", [
             py_ast.body[0],
-            FunctionDecl(Void(), "apply_all",
-                         params=[SymbolRef("A", array_type)],
+            FunctionDecl(None, "apply_all",
+                         params=[SymbolRef("A", array_type())],
                          defn=[
-                             For(Assign(SymbolRef("i", Int()), Constant(0)),
-                                 Lt(SymbolRef("i"), Constant(len_A)),
+                             For(Assign(SymbolRef("i", c_int()), Constant(0)),
+                                 Lt(SymbolRef("i"), Constant(nItems)),
                                  PostInc(SymbolRef("i")),
                                  [
                                      Assign(ArrayRef(SymbolRef("A"), SymbolRef("i")),
-                                            FunctionCall(SymbolRef("apply"), [ArrayRef(SymbolRef("A"),
+                                            FunctionCall(SymbolRef(kernel_func_name), [ArrayRef(SymbolRef("A"),
                                                                                        SymbolRef("i"))])),
                                  ]),
                          ]
@@ -69,46 +61,49 @@ class OpTranslator(LazySpecializedFunction):
 
         tree = PyBasicConversions().visit(tree)
 
-        apply_one = tree.find(FunctionDecl, name="apply")
+        apply_one = PyBasicConversions().visit(tree.body[0])
+        apply_one.name = kernel_func_name
         apply_one.set_static().set_inline()
-        apply_one.set_typesig(apply_one_typesig)
+        apply_one.return_type = inner_type
+        apply_one.params[0].type = inner_type
 
-        entry_point_typesig = tree.find(FunctionDecl, name="apply_all").get_type().as_ctype()
+        c_doubler = CFile("generated", [tree])
+        return [c_doubler]
 
-        return Project([tree]), entry_point_typesig
+    def finalize(self, transform_result, program_config):
 
+        c_doubler = transform_result[0]
+        proj = Project([c_doubler])
 
-class ArrayOp(object):
-    """
-    A class for managing independent operation on elements
-    in numpy arrays.
-    """
+        arg_config, tuner_config = program_config
+        array_type = arg_config['ptr']
+        entry_type = ct.CFUNCTYPE(None, array_type)
 
-    def __init__(self):
-        """Instantiate translator."""
-        self.c_apply_all = OpTranslator(get_ast(self.apply), "apply_all")
+        concrete_Fn = ArrayFn()
+        return concrete_Fn.finalize("apply_all", proj, entry_type)
+
+class ArrayFn(ConcreteSpecializedFunction):
+    def finalize(self, entry_point_name, project_node, entry_typesig):
+        self._c_function = self._compile(entry_point_name, project_node, entry_typesig)
+        return self
 
     def __call__(self, A):
-        """Apply the operator to the arguments via a generated function."""
-        return self.c_apply_all(A)
-
+        return self._c_function(A)
 
 # ---------------------------------------------------------------------------
 # User code
 
-class Doubler(ArrayOp):
-    """Double elements of the array."""
-
-    def apply(n):
-        return n * 2
-
+def double(n):
+    return n * 2
 
 def py_doubler(A):
     A *= 2
 
-
 def main():
-    c_doubler = Doubler()
+
+    # create a class called Doubler that has the function double(n) as an @staticmethod
+    c_doubler= OpTranslator.from_function(double, "Doubler")
+
 
     # doubling doubles
     actual_d = np.ones(12, dtype=np.float64)
@@ -142,4 +137,10 @@ def main():
 
 
 if __name__ == '__main__':
+    # Testing conventional (non-lambda) kernel function implementation
     main()
+
+    # Testing lambda kernel function implementation
+    double = lambda x: x * 2
+    main()
+
