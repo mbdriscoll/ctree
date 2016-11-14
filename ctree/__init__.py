@@ -99,6 +99,7 @@ atexit.register(STATS.report)
 #Temporary directory stuff
 import tempfile
 import shutil
+import os.path
 
 if CONFIG.getboolean('jit', 'CACHE'):
     STATS.log("recognized that caching is enabled")
@@ -112,7 +113,8 @@ if not CONFIG.getboolean('jit', 'CACHE'):
 
     def reset():
         CONFIG.set('jit', 'COMPILE_PATH', compile_path_old)
-        shutil.rmtree(temporary_path)
+        if(os.path.isdir(temporary_path)):
+            shutil.rmtree(temporary_path)
 
     atexit.register(reset)
 
